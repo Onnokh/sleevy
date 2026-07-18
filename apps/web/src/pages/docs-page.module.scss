@@ -203,6 +203,88 @@
   }
 }
 
+.mcp {
+  margin-top: 2.5rem;
+  scroll-margin-top: var(--navbar-total-spacing);
+
+  > h2,
+  h3 {
+    margin: 0;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+  }
+
+  > h2 {
+    font-size: 1.25rem;
+  }
+
+  h3 {
+    font-size: 1rem;
+  }
+
+  p {
+    max-width: 46rem;
+    margin: 0.625rem 0 0;
+    color: #8d8d8d;
+    font-size: 0.875rem;
+    line-height: 1.65;
+  }
+
+  pre {
+    @include card-border;
+
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    margin: 1rem 0 0;
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.02);
+    color: #e6e6e6;
+    font-size: 0.8125rem;
+    line-height: 1.7;
+  }
+}
+
+.mcpSubsection {
+  margin-top: 1.75rem;
+  scroll-margin-top: var(--navbar-total-spacing);
+}
+
+.mcpToolTable {
+  @include card-border;
+
+  overflow: hidden;
+  margin-top: 1rem;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.mcpToolRow {
+  display: grid;
+  grid-template-columns: minmax(10rem, 0.4fr) minmax(0, 1fr);
+  gap: 1rem;
+  padding: 0.75rem 0.875rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  color: #e6e6e6;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+
+  &:first-child {
+    border-top: 0;
+  }
+
+  code {
+    color: #8d8d8d;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    overflow-wrap: anywhere;
+  }
+
+  @media (max-width: 480px) {
+    grid-template-columns: 1fr;
+    gap: 0.25rem;
+  }
+}
+
 .group {
   margin-top: 2.5rem;
   scroll-margin-top: var(--navbar-total-spacing);

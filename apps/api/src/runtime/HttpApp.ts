@@ -18,6 +18,7 @@ import {
   withApiKeyRateLimit,
 } from "./ApiRequestMiddleware.js"
 import { MCP_SCOPES } from "../modules/mcp/McpTools.js"
+import { PostgresClient } from "../modules/persistence/PostgresClient.js"
 import { AppConfig } from "./Config.js"
 import { makeMcpWebHandler } from "./McpApp.js"
 
@@ -80,7 +81,7 @@ export const withCors = async (
 export const makeApiWebHandler = Effect.gen(function* () {
   const config = yield* AppConfig
   const context = yield* Effect.context<
-    Analytics | AuthHandler | BetterAuth | CaptureService | EnrichmentWorkflow | SavedItemRepository | FolderRepository | ApiKeyRateLimiter | ConnectCodeRepository | ConnectAuthorizeRateLimiter | ConnectExchangeRateLimiter
+    Analytics | AuthHandler | BetterAuth | CaptureService | EnrichmentWorkflow | SavedItemRepository | FolderRepository | ApiKeyRateLimiter | ConnectCodeRepository | ConnectAuthorizeRateLimiter | ConnectExchangeRateLimiter | PostgresClient
   >()
   const authHandler = yield* AuthHandler
   const { auth } = yield* BetterAuth

@@ -24,6 +24,13 @@ const schemaOrder = [
 const methodOrder = ["get", "post", "put", "patch", "delete"] as const
 const methodColors: Record<string, string> = { get: "#6ee7a2", post: "#ff9da4", put: "#f3c087", patch: "#f3c087", delete: "#ff5f57" }
 
+const mcpTools = [
+  ["Save and find", "save_link, list_saved_items"],
+  ["Organize saved items", "set_saved_item_read_state, set_saved_item_folder"],
+  ["Manage folders", "list_folders, add_folder"],
+  ["Remove content", "delete_saved_item, remove_folder"],
+] as const
+
 const groups = buildGroups()
 
 function buildGroups() {
@@ -199,6 +206,11 @@ function SideNav() {
         <a href="#quick-start" className={styles.sidenavHeading}>quick start</a>
         <a href="#automation" className={styles.sidenavItem}>script example</a>
       </div>
+      <div className={styles.sidenavGroup}>
+        <a href="#mcp" className={styles.sidenavHeading}>connect an AI agent</a>
+        <a href="#mcp-install" className={styles.sidenavItem}>install Sleevy</a>
+        <a href="#mcp-tools" className={styles.sidenavItem}>available tools</a>
+      </div>
       {[...groups.entries()].map(([tag, endpoints]) => (
         <div key={tag} className={styles.sidenavGroup}>
           <a href={`#${tag}`} className={styles.sidenavHeading}>{tag}</a>
@@ -264,6 +276,28 @@ const response = await fetch("https://api.sleevy.app/v1/captures", {
 
 if (!response.ok) throw new Error(\`Sleevy returned \${response.status}\`)`}</code></pre>
             <p>Keep the API key in an environment variable rather than committing it to the script. The endpoint reference below documents the response and possible errors.</p>
+          </section>
+          <section className={styles.mcp} id="mcp">
+            <h2>Connect an AI agent</h2>
+            <p>Use Sleevy through the Model Context Protocol (MCP) to save links, find saved items, and organize your reading queue from an AI agent.</p>
+            <div className={styles.mcpSubsection} id="mcp-install">
+              <h3>Install Sleevy</h3>
+              <p>Run this command from the project where you use your agent. It detects supported MCP clients and lets you choose where to add Sleevy:</p>
+              <pre><code>{`npx add-mcp https://api.sleevy.app/mcp --name sleevy`}</code></pre>
+              <p>When your agent connects for the first time, sign in to Sleevy and approve the requested permissions. The connection uses OAuth; you do not need to copy an API key into an MCP configuration.</p>
+            </div>
+            <div className={styles.mcpSubsection} id="mcp-tools">
+              <h3>Available tools</h3>
+              <div className={styles.mcpToolTable} role="table" aria-label="Sleevy MCP tools">
+                {mcpTools.map(([capability, tools]) => (
+                  <div className={styles.mcpToolRow} role="row" key={capability}>
+                    <span role="cell">{capability}</span>
+                    <code role="cell">{tools}</code>
+                  </div>
+                ))}
+              </div>
+              <p>Permissions determine which tools an agent can use. Read, save, organize, and delete access are granted separately. Deleting a saved item or folder is destructive, so keep your agent's tool-confirmation prompts enabled.</p>
+            </div>
           </section>
           {[...groups.entries()].map(([tag, endpoints]) => (
             <div key={tag} className={styles.group} id={tag}>
