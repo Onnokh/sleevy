@@ -10,10 +10,21 @@ struct ReadingListView: View {
     @State private var captureErrorMessage: String?
     @State private var isReadingListScrolled = false
     @State private var capturePlacement: CapturePlacement = .inlineRow
+#if DEBUG
+    @State private var isBookmarkRowPrototypeVisible = true
+#endif
 
     var body: some View {
-        GeometryReader { geometry in
-            readingList(emptyStateHeight: geometry.size.height)
+        Group {
+#if DEBUG
+            if isBookmarkRowPrototypeVisible {
+                BookmarkRowPrototypeView(sourceItems: store.savedItems())
+            } else {
+                liveReadingList
+            }
+#else
+            liveReadingList
+#endif
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
@@ -26,6 +37,16 @@ struct ReadingListView: View {
         .navigationBarTitleDisplayMode(.large)
         .modifier(NavigationSubtitleIfAvailable(subtitle: navigationSubtitleText))
         .toolbar {
+#if DEBUG
+            ToolbarItem(placement: .topBarLeading) {
+                Button {
+                    isBookmarkRowPrototypeVisible.toggle()
+                } label: {
+                    Image(systemName: isBookmarkRowPrototypeVisible ? "wand.and.stars" : "list.bullet")
+                }
+                .accessibilityLabel(isBookmarkRowPrototypeVisible ? "Show live Inbox" : "Show bookmark row prototypes")
+            }
+#endif
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
                     toggleCaptureCapsule()
@@ -39,6 +60,12 @@ struct ReadingListView: View {
         }
         .task {
             await store.loadIfNeeded()
+        }
+    }
+
+    private var liveReadingList: some View {
+        GeometryReader { geometry in
+            readingList(emptyStateHeight: geometry.size.height)
         }
     }
 
