@@ -53,11 +53,14 @@ export const staticSitemapUrls: ReadonlyArray<SitemapUrl> = [
   { loc: `${SITE_ORIGIN}/ios-app`, lastmod: "2026-07-16", changefreq: "monthly", priority: "0.8" },
   { loc: `${SITE_ORIGIN}/web-companion`, lastmod: "2026-07-16", changefreq: "monthly", priority: "0.8" },
   { loc: `${SITE_ORIGIN}/pocket-alternative`, lastmod: "2026-07-17", changefreq: "monthly", priority: "0.8" },
+  { loc: `${SITE_ORIGIN}/safari-bookmark-manager`, lastmod: "2026-09-09", changefreq: "monthly", priority: "0.8" },
   { loc: `${SITE_ORIGIN}/articles`, lastmod: "2026-07-17", changefreq: "weekly", priority: "0.8" },
   { loc: `${SITE_ORIGIN}/articles/save-links-with-raycast`, lastmod: "2026-07-17", changefreq: "monthly", priority: "0.8" },
   { loc: `${SITE_ORIGIN}/articles/read-later-app-chrome-iphone`, lastmod: "2026-07-17", changefreq: "monthly", priority: "0.8" },
   { loc: `${SITE_ORIGIN}/articles/bookmark-manager-for-developers`, lastmod: "2026-07-17", changefreq: "monthly", priority: "0.8" },
   { loc: `${SITE_ORIGIN}/articles/how-to-organize-too-many-open-tabs`, lastmod: "2026-08-11", changefreq: "monthly", priority: "0.8" },
+  { loc: `${SITE_ORIGIN}/articles/best-read-it-later-apps`, lastmod: "2026-09-09", changefreq: "monthly", priority: "0.8" },
+  { loc: `${SITE_ORIGIN}/articles/best-bookmark-manager-chrome`, lastmod: "2026-09-09", changefreq: "monthly", priority: "0.8" },
 ]
 
 // A Handle is 3 to 30 characters of a-z, 0-9, `-`, and `_`, so no Public Profile

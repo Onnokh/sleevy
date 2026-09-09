@@ -29,7 +29,7 @@ export const Route = createFileRoute("/_marketing/raycast")({
         trailingIcon: { src: "/raycast-symbol.svg", alt: "Raycast icon", width: 228, height: 228 },
         openInNewTab: false,
       }}
-      relatedLink={{ href: "/articles/save-links-with-raycast", label: "Read the Raycast link-saving guide" }}
+      relatedLinks={[{ href: "/articles/save-links-with-raycast", label: "Read the Raycast link-saving guide" }]}
       proof={{
         title: "Your saved work stays close.",
         body: "One shortcut opens your library whenever a reference comes back into play.",
