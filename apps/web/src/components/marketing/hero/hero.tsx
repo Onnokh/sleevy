@@ -150,7 +150,7 @@ export function Hero({ children }: { children: ReactNode }) {
               <span>every device in sync.</span>
             </h1>
             <p className={styles.sub}>
-              A scriptable read-later app and bookmark manager you can <strong>automate</strong> and extend.
+              A scriptable read-it-later app and bookmark manager you can <strong>automate</strong> and extend.
             </p>
             <div className={styles.ctaRow}>
               <m.a
@@ -162,22 +162,6 @@ export function Hero({ children }: { children: ReactNode }) {
                 transition={{ type: "spring", stiffness: 400, damping: 17 }}
               >
                 <img src="/app-store-352.webp" alt="Download on the App Store" width={352} height={118} />
-              </m.a>
-              <m.a
-                className={styles.productHunt}
-                href="https://www.producthunt.com/products/sleevy?embed=true&utm_source=badge-featured&utm_medium=badge&utm_campaign=badge-sleevy"
-                target="_blank"
-                rel="noopener noreferrer"
-                whileHover={reduceMotion ? undefined : { scale: 1.05, y: -2 }}
-                whileTap={reduceMotion ? undefined : { scale: 0.97 }}
-                transition={{ type: "spring", stiffness: 400, damping: 17 }}
-              >
-                <img
-                  src="https://api.producthunt.com/widgets/embed-image/v1/featured.svg?post_id=1234791&theme=dark&t=1787911361188"
-                  alt="Sleevy - One tap to save. Read anywhere. Built to automate. | Product Hunt"
-                  width={250}
-                  height={54}
-                />
               </m.a>
             </div>
           </m.div>

@@ -282,18 +282,6 @@
   }
 }
 
-/* Product Hunt launch badge, temporary. Height matches the App Store badge
-   (cta width · 118/352 image aspect) so the pair reads as one control row. */
-.productHunt {
-  display: block;
-
-  img {
-    display: block;
-    width: auto;
-    height: calc(var(--cta-w) * 118 / 352);
-  }
-}
-
 .glow {
   position: absolute;
   top: 0;
