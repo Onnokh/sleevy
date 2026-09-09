@@ -26,6 +26,7 @@ import { Route as MarketingIosAppRouteImport } from './routes/_marketing/ios-app
 import { Route as MarketingPocketAlternativeRouteImport } from './routes/_marketing/pocket-alternative'
 import { Route as MarketingPrivacyRouteImport } from './routes/_marketing/privacy'
 import { Route as MarketingRaycastRouteImport } from './routes/_marketing/raycast'
+import { Route as MarketingSafariBookmarkManagerRouteImport } from './routes/_marketing/safari-bookmark-manager'
 import { Route as MarketingSupportRouteImport } from './routes/_marketing/support'
 import { Route as MarketingWebCompanionRouteImport } from './routes/_marketing/web-companion'
 import { Route as ApiSearchRouteImport } from './routes/api.search'
@@ -33,6 +34,8 @@ import { Route as DocsSplatRouteImport } from './routes/docs/$'
 import { Route as DocsChar123Char125DotmdRouteImport } from './routes/docs/{$}[.]md'
 import { Route as OauthConsentRouteImport } from './routes/oauth/consent'
 import { Route as OauthLoginRouteImport } from './routes/oauth/login'
+import { Route as MarketingArticlesBestBookmarkManagerChromeRouteImport } from './routes/_marketing/articles_.best-bookmark-manager-chrome'
+import { Route as MarketingArticlesBestReadItLaterAppsRouteImport } from './routes/_marketing/articles_.best-read-it-later-apps'
 import { Route as MarketingArticlesBookmarkManagerForDevelopersRouteImport } from './routes/_marketing/articles_.bookmark-manager-for-developers'
 import { Route as MarketingArticlesHowToOrganizeTooManyOpenTabsRouteImport } from './routes/_marketing/articles_.how-to-organize-too-many-open-tabs'
 import { Route as MarketingArticlesReadLaterAppChromeIphoneRouteImport } from './routes/_marketing/articles_.read-later-app-chrome-iphone'
@@ -125,6 +128,12 @@ const MarketingRaycastRoute = MarketingRaycastRouteImport.update({
   path: '/raycast',
   getParentRoute: () => MarketingRoute,
 } as any)
+const MarketingSafariBookmarkManagerRoute =
+  MarketingSafariBookmarkManagerRouteImport.update({
+    id: '/safari-bookmark-manager',
+    path: '/safari-bookmark-manager',
+    getParentRoute: () => MarketingRoute,
+  } as any)
 const MarketingSupportRoute = MarketingSupportRouteImport.update({
   id: '/support',
   path: '/support',
@@ -160,6 +169,18 @@ const OauthLoginRoute = OauthLoginRouteImport.update({
   path: '/oauth/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MarketingArticlesBestBookmarkManagerChromeRoute =
+  MarketingArticlesBestBookmarkManagerChromeRouteImport.update({
+    id: '/articles_/best-bookmark-manager-chrome',
+    path: '/articles/best-bookmark-manager-chrome',
+    getParentRoute: () => MarketingRoute,
+  } as any)
+const MarketingArticlesBestReadItLaterAppsRoute =
+  MarketingArticlesBestReadItLaterAppsRouteImport.update({
+    id: '/articles_/best-read-it-later-apps',
+    path: '/articles/best-read-it-later-apps',
+    getParentRoute: () => MarketingRoute,
+  } as any)
 const MarketingArticlesBookmarkManagerForDevelopersRoute =
   MarketingArticlesBookmarkManagerForDevelopersRouteImport.update({
     id: '/articles_/bookmark-manager-for-developers',
@@ -212,6 +233,7 @@ export interface FileRoutesByFullPath {
   '/pocket-alternative': typeof MarketingPocketAlternativeRoute
   '/privacy': typeof MarketingPrivacyRoute
   '/raycast': typeof MarketingRaycastRoute
+  '/safari-bookmark-manager': typeof MarketingSafariBookmarkManagerRoute
   '/support': typeof MarketingSupportRoute
   '/web-companion': typeof MarketingWebCompanionRoute
   '/api/search': typeof ApiSearchRoute
@@ -219,6 +241,8 @@ export interface FileRoutesByFullPath {
   '/docs/{$}.md': typeof DocsChar123Char125DotmdRoute
   '/oauth/consent': typeof OauthConsentRoute
   '/oauth/login': typeof OauthLoginRoute
+  '/articles/best-bookmark-manager-chrome': typeof MarketingArticlesBestBookmarkManagerChromeRoute
+  '/articles/best-read-it-later-apps': typeof MarketingArticlesBestReadItLaterAppsRoute
   '/articles/bookmark-manager-for-developers': typeof MarketingArticlesBookmarkManagerForDevelopersRoute
   '/articles/how-to-organize-too-many-open-tabs': typeof MarketingArticlesHowToOrganizeTooManyOpenTabsRoute
   '/articles/read-later-app-chrome-iphone': typeof MarketingArticlesReadLaterAppChromeIphoneRoute
@@ -242,6 +266,7 @@ export interface FileRoutesByTo {
   '/pocket-alternative': typeof MarketingPocketAlternativeRoute
   '/privacy': typeof MarketingPrivacyRoute
   '/raycast': typeof MarketingRaycastRoute
+  '/safari-bookmark-manager': typeof MarketingSafariBookmarkManagerRoute
   '/support': typeof MarketingSupportRoute
   '/web-companion': typeof MarketingWebCompanionRoute
   '/api/search': typeof ApiSearchRoute
@@ -249,6 +274,8 @@ export interface FileRoutesByTo {
   '/docs/{$}.md': typeof DocsChar123Char125DotmdRoute
   '/oauth/consent': typeof OauthConsentRoute
   '/oauth/login': typeof OauthLoginRoute
+  '/articles/best-bookmark-manager-chrome': typeof MarketingArticlesBestBookmarkManagerChromeRoute
+  '/articles/best-read-it-later-apps': typeof MarketingArticlesBestReadItLaterAppsRoute
   '/articles/bookmark-manager-for-developers': typeof MarketingArticlesBookmarkManagerForDevelopersRoute
   '/articles/how-to-organize-too-many-open-tabs': typeof MarketingArticlesHowToOrganizeTooManyOpenTabsRoute
   '/articles/read-later-app-chrome-iphone': typeof MarketingArticlesReadLaterAppChromeIphoneRoute
@@ -274,6 +301,7 @@ export interface FileRoutesById {
   '/_marketing/pocket-alternative': typeof MarketingPocketAlternativeRoute
   '/_marketing/privacy': typeof MarketingPrivacyRoute
   '/_marketing/raycast': typeof MarketingRaycastRoute
+  '/_marketing/safari-bookmark-manager': typeof MarketingSafariBookmarkManagerRoute
   '/_marketing/support': typeof MarketingSupportRoute
   '/_marketing/web-companion': typeof MarketingWebCompanionRoute
   '/api/search': typeof ApiSearchRoute
@@ -282,6 +310,8 @@ export interface FileRoutesById {
   '/oauth/consent': typeof OauthConsentRoute
   '/oauth/login': typeof OauthLoginRoute
   '/_marketing/': typeof MarketingIndexRoute
+  '/_marketing/articles_/best-bookmark-manager-chrome': typeof MarketingArticlesBestBookmarkManagerChromeRoute
+  '/_marketing/articles_/best-read-it-later-apps': typeof MarketingArticlesBestReadItLaterAppsRoute
   '/_marketing/articles_/bookmark-manager-for-developers': typeof MarketingArticlesBookmarkManagerForDevelopersRoute
   '/_marketing/articles_/how-to-organize-too-many-open-tabs': typeof MarketingArticlesHowToOrganizeTooManyOpenTabsRoute
   '/_marketing/articles_/read-later-app-chrome-iphone': typeof MarketingArticlesReadLaterAppChromeIphoneRoute
@@ -307,6 +337,7 @@ export interface FileRouteTypes {
     | '/pocket-alternative'
     | '/privacy'
     | '/raycast'
+    | '/safari-bookmark-manager'
     | '/support'
     | '/web-companion'
     | '/api/search'
@@ -314,6 +345,8 @@ export interface FileRouteTypes {
     | '/docs/{$}.md'
     | '/oauth/consent'
     | '/oauth/login'
+    | '/articles/best-bookmark-manager-chrome'
+    | '/articles/best-read-it-later-apps'
     | '/articles/bookmark-manager-for-developers'
     | '/articles/how-to-organize-too-many-open-tabs'
     | '/articles/read-later-app-chrome-iphone'
@@ -337,6 +370,7 @@ export interface FileRouteTypes {
     | '/pocket-alternative'
     | '/privacy'
     | '/raycast'
+    | '/safari-bookmark-manager'
     | '/support'
     | '/web-companion'
     | '/api/search'
@@ -344,6 +378,8 @@ export interface FileRouteTypes {
     | '/docs/{$}.md'
     | '/oauth/consent'
     | '/oauth/login'
+    | '/articles/best-bookmark-manager-chrome'
+    | '/articles/best-read-it-later-apps'
     | '/articles/bookmark-manager-for-developers'
     | '/articles/how-to-organize-too-many-open-tabs'
     | '/articles/read-later-app-chrome-iphone'
@@ -368,6 +404,7 @@ export interface FileRouteTypes {
     | '/_marketing/pocket-alternative'
     | '/_marketing/privacy'
     | '/_marketing/raycast'
+    | '/_marketing/safari-bookmark-manager'
     | '/_marketing/support'
     | '/_marketing/web-companion'
     | '/api/search'
@@ -376,6 +413,8 @@ export interface FileRouteTypes {
     | '/oauth/consent'
     | '/oauth/login'
     | '/_marketing/'
+    | '/_marketing/articles_/best-bookmark-manager-chrome'
+    | '/_marketing/articles_/best-read-it-later-apps'
     | '/_marketing/articles_/bookmark-manager-for-developers'
     | '/_marketing/articles_/how-to-organize-too-many-open-tabs'
     | '/_marketing/articles_/read-later-app-chrome-iphone'
@@ -517,6 +556,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MarketingRaycastRouteImport
       parentRoute: typeof MarketingRoute
     }
+    '/_marketing/safari-bookmark-manager': {
+      id: '/_marketing/safari-bookmark-manager'
+      path: '/safari-bookmark-manager'
+      fullPath: '/safari-bookmark-manager'
+      preLoaderRoute: typeof MarketingSafariBookmarkManagerRouteImport
+      parentRoute: typeof MarketingRoute
+    }
     '/_marketing/support': {
       id: '/_marketing/support'
       path: '/support'
@@ -565,6 +611,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/oauth/login'
       preLoaderRoute: typeof OauthLoginRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_marketing/articles_/best-bookmark-manager-chrome': {
+      id: '/_marketing/articles_/best-bookmark-manager-chrome'
+      path: '/articles/best-bookmark-manager-chrome'
+      fullPath: '/articles/best-bookmark-manager-chrome'
+      preLoaderRoute: typeof MarketingArticlesBestBookmarkManagerChromeRouteImport
+      parentRoute: typeof MarketingRoute
+    }
+    '/_marketing/articles_/best-read-it-later-apps': {
+      id: '/_marketing/articles_/best-read-it-later-apps'
+      path: '/articles/best-read-it-later-apps'
+      fullPath: '/articles/best-read-it-later-apps'
+      preLoaderRoute: typeof MarketingArticlesBestReadItLaterAppsRouteImport
+      parentRoute: typeof MarketingRoute
     }
     '/_marketing/articles_/bookmark-manager-for-developers': {
       id: '/_marketing/articles_/bookmark-manager-for-developers'
@@ -638,9 +698,12 @@ interface MarketingRouteChildren {
   MarketingPocketAlternativeRoute: typeof MarketingPocketAlternativeRoute
   MarketingPrivacyRoute: typeof MarketingPrivacyRoute
   MarketingRaycastRoute: typeof MarketingRaycastRoute
+  MarketingSafariBookmarkManagerRoute: typeof MarketingSafariBookmarkManagerRoute
   MarketingSupportRoute: typeof MarketingSupportRoute
   MarketingWebCompanionRoute: typeof MarketingWebCompanionRoute
   MarketingIndexRoute: typeof MarketingIndexRoute
+  MarketingArticlesBestBookmarkManagerChromeRoute: typeof MarketingArticlesBestBookmarkManagerChromeRoute
+  MarketingArticlesBestReadItLaterAppsRoute: typeof MarketingArticlesBestReadItLaterAppsRoute
   MarketingArticlesBookmarkManagerForDevelopersRoute: typeof MarketingArticlesBookmarkManagerForDevelopersRoute
   MarketingArticlesHowToOrganizeTooManyOpenTabsRoute: typeof MarketingArticlesHowToOrganizeTooManyOpenTabsRoute
   MarketingArticlesReadLaterAppChromeIphoneRoute: typeof MarketingArticlesReadLaterAppChromeIphoneRoute
@@ -657,9 +720,14 @@ const MarketingRouteChildren: MarketingRouteChildren = {
   MarketingPocketAlternativeRoute: MarketingPocketAlternativeRoute,
   MarketingPrivacyRoute: MarketingPrivacyRoute,
   MarketingRaycastRoute: MarketingRaycastRoute,
+  MarketingSafariBookmarkManagerRoute: MarketingSafariBookmarkManagerRoute,
   MarketingSupportRoute: MarketingSupportRoute,
   MarketingWebCompanionRoute: MarketingWebCompanionRoute,
   MarketingIndexRoute: MarketingIndexRoute,
+  MarketingArticlesBestBookmarkManagerChromeRoute:
+    MarketingArticlesBestBookmarkManagerChromeRoute,
+  MarketingArticlesBestReadItLaterAppsRoute:
+    MarketingArticlesBestReadItLaterAppsRoute,
   MarketingArticlesBookmarkManagerForDevelopersRoute:
     MarketingArticlesBookmarkManagerForDevelopersRoute,
   MarketingArticlesHowToOrganizeTooManyOpenTabsRoute:

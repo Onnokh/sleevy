@@ -20,7 +20,7 @@ type IntegrationPageProps = {
   readonly icon: { readonly src: string; readonly alt: string; readonly width: number; readonly height: number }
   readonly primaryAction: Action
   readonly secondaryAction?: Action
-  readonly relatedLink?: { readonly href: string; readonly label: string }
+  readonly relatedLinks?: readonly { readonly href: string; readonly label: string }[]
   readonly proof?: {
     readonly title: string
     readonly body: string
@@ -29,7 +29,7 @@ type IntegrationPageProps = {
   }
 }
 
-export function IntegrationPage({ eyebrow, title, description, intro = "Sleevy keeps one reading queue across the places where you find useful things. Save it now; decide what to do with it later.", benefits, icon, primaryAction, secondaryAction, relatedLink, proof }: IntegrationPageProps) {
+export function IntegrationPage({ eyebrow, title, description, intro = "Sleevy keeps one reading queue across the places where you find useful things. Save it now; decide what to do with it later.", benefits, icon, primaryAction, secondaryAction, relatedLinks, proof }: IntegrationPageProps) {
   const [isIOS, setIsIOS] = useState(false)
   const visibleSecondaryAction = secondaryAction && (!secondaryAction.iosOnly || isIOS) ? secondaryAction : undefined
 
@@ -85,10 +85,14 @@ export function IntegrationPage({ eyebrow, title, description, intro = "Sleevy k
             <p>{benefit.body}</p>
           </article>
         ))}
-        {relatedLink && (
-          <Link className={styles.relatedLink} to={relatedLink.href}>
-            {relatedLink.label} <span aria-hidden="true">→</span>
-          </Link>
+        {relatedLinks && relatedLinks.length > 0 && (
+          <nav className={styles.relatedLinks} aria-label="Related pages">
+            {relatedLinks.map((link) => (
+              <Link key={link.href} className={styles.relatedLink} to={link.href}>
+                {link.label} <span aria-hidden="true">→</span>
+              </Link>
+            ))}
+          </nav>
         )}
       </section>
 

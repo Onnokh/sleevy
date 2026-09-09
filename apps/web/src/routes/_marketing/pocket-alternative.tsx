@@ -74,8 +74,14 @@ export const Route = createFileRoute("/_marketing/pocket-alternative")({
           paragraphs: [
             "Sleevy makes sense when your saved links need to move with you: from a phone to a browser, from a browser to the keyboard, or from a quick automation back to a single queue. It is a useful fit for people who want their reading list to feel like a lightweight memory rather than another project to maintain.",
             "If your workflow depends on a dedicated offline article reader or extensive annotation tools, choose a service that treats those as first-class concerns. A calm link queue is valuable, but it should not pretend to be every kind of reading tool.",
+            "Pocket is also not the only read-it-later app people are replacing: Omnivore closed in 2024, and anyone weighing the remaining alternatives is choosing between a reader, an organizer, and a capture-first queue. That comparison is worth reading before you move a whole collection.",
           ],
         },
+      ]}
+      relatedLinks={[
+        { href: "/articles/best-read-it-later-apps", label: "Compare the read-it-later apps still standing", openInNewTab: false },
+        { href: "/safari-bookmark-manager", label: "Saving from Safari on iPhone and iPad", openInNewTab: false },
+        { href: "/articles/read-later-app-chrome-iphone", label: "One reading queue across Chrome and iPhone", openInNewTab: false },
       ]}
     />
   ),

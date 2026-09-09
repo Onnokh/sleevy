@@ -6,6 +6,30 @@ import styles from "./articles-page.module.scss"
 
 const articles = [
   {
+    href: "/articles/best-read-it-later-apps",
+    title: "The best read-it-later apps.",
+    description: "What separates the read-it-later apps still standing, and how to choose one in five minutes without moving your links twice.",
+    dateTime: "2026-09-09",
+    date: "September 9, 2026",
+    topic: "Read-it-later apps",
+  },
+  {
+    href: "/articles/best-bookmark-manager-chrome",
+    title: "A better bookmark manager for Chrome.",
+    description: "Chrome ships a bookmark manager and most people outgrow it. What goes wrong, and what a better one does differently.",
+    dateTime: "2026-09-09",
+    date: "September 9, 2026",
+    topic: "Bookmark managers",
+  },
+  {
+    href: "/safari-bookmark-manager",
+    title: "A bookmark manager for Safari.",
+    description: "Safari Bookmarks and Reading List are hard to search. Save from Safari in one share and keep one queue across your devices.",
+    dateTime: "2026-09-09",
+    date: "September 9, 2026",
+    topic: "Safari capture",
+  },
+  {
     href: "/articles/how-to-organize-too-many-open-tabs",
     title: "How to organize too many open tabs.",
     description: "Turn a crowded browser window into a short list of clear next steps without treating every tab as an urgent task.",

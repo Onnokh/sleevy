@@ -13,11 +13,17 @@
   @include container;
 }
 
+.relatedLinks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 2rem;
+  margin-top: 1.5rem;
+}
+
 .relatedLink {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  margin-top: 1.5rem;
   color: #d8d8d8;
   font-size: 0.9rem;
   text-decoration-color: rgb(255 255 255 / 30%);

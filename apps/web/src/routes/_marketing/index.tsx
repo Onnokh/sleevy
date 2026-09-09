@@ -4,14 +4,14 @@ import { HomePage } from "../../pages/home-page"
 export const Route = createFileRoute("/_marketing/")({
   head: () => ({
     meta: [
-      { title: "Sleevy | Bookmark Manager API & MCP Server for AI Agents" },
-      { name: "description", content: "Sleevy is a personal bookmark manager with a read-later API and MCP server — save links from scripts, AI agents, iOS, Chrome, and Raycast into one synced queue." },
-      { property: "og:title", content: "Sleevy | Bookmark Manager API & MCP Server for AI Agents" },
-      { property: "og:description", content: "A personal bookmark manager with a read-later API and MCP server. Save links from scripts, AI agents, iOS, Chrome, and Raycast into one synced queue." },
+      { title: "Sleevy | Read-It-Later App & Bookmark Manager API" },
+      { name: "description", content: "A read-it-later app and personal bookmark manager with a REST API and MCP server. Save links from iPhone, Chrome, Raycast, scripts, or an AI agent into one queue." },
+      { property: "og:title", content: "Sleevy | Read-It-Later App & Bookmark Manager API" },
+      { property: "og:description", content: "A read-it-later app and bookmark manager with a REST API and MCP server. Save links from iPhone, Chrome, Raycast, scripts, or an AI agent into one queue." },
       { property: "og:type", content: "website" },
       { property: "og:url", content: "https://sleevy.app/" },
-      { name: "twitter:title", content: "Sleevy | Bookmark Manager API & MCP Server for AI Agents" },
-      { name: "twitter:description", content: "A personal bookmark manager with a read-later API and MCP server. Save links from scripts, AI agents, iOS, Chrome, and Raycast into one synced queue." },
+      { name: "twitter:title", content: "Sleevy | Read-It-Later App & Bookmark Manager API" },
+      { name: "twitter:description", content: "A read-it-later app and bookmark manager with a REST API and MCP server. Save links from iPhone, Chrome, Raycast, scripts, or an AI agent into one queue." },
     ],
     links: [
       { rel: "canonical", href: "https://sleevy.app/" },
