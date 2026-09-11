@@ -6,6 +6,46 @@ import styles from "./articles-page.module.scss"
 
 const articles = [
   {
+    href: "/articles/export-import-bookmarks",
+    title: "How to export and import bookmarks.",
+    description: "The exact steps to move bookmarks between Chrome, Safari, Firefox, and Edge, and how to stop repeating the move.",
+    dateTime: "2026-09-11",
+    date: "September 11, 2026",
+    topic: "Bookmark migration",
+  },
+  {
+    href: "/articles/where-are-my-bookmarks",
+    title: "Where are my bookmarks?",
+    description: "How to find your saved links on iPhone, in Chrome, on Android, and in your Google Account, and why the question keeps coming back.",
+    dateTime: "2026-09-11",
+    date: "September 11, 2026",
+    topic: "Finding saved links",
+  },
+  {
+    href: "/articles/how-to-organize-bookmarks-chrome",
+    title: "How to organize bookmarks in Chrome.",
+    description: "A method for a bookmark list that has grown past being useful, built around what you will do next rather than what a link is about.",
+    dateTime: "2026-09-11",
+    date: "September 11, 2026",
+    topic: "Bookmark organization",
+  },
+  {
+    href: "/articles/chrome-bookmarks-bar",
+    title: "The Chrome bookmarks bar: show, hide, and fix it.",
+    description: "One shortcut shows the bar and hides it again, and a bar that has vanished is almost never lost data.",
+    dateTime: "2026-09-11",
+    date: "September 11, 2026",
+    topic: "Chrome bookmarks bar",
+  },
+  {
+    href: "/articles/safari-reading-list",
+    title: "Safari Reading List: find it, use it, clear it.",
+    description: "Where the Reading List lives on iPhone and Mac, how to save pages to it, how to empty it, and where one browser stops being enough.",
+    dateTime: "2026-09-11",
+    date: "September 11, 2026",
+    topic: "Safari Reading List",
+  },
+  {
     href: "/articles/best-read-it-later-apps",
     title: "The best read-it-later apps.",
     description: "What separates the read-it-later apps still standing, and how to choose one in five minutes without moving your links twice.",

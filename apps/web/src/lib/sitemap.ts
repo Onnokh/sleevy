@@ -61,6 +61,11 @@ export const staticSitemapUrls: ReadonlyArray<SitemapUrl> = [
   { loc: `${SITE_ORIGIN}/articles/how-to-organize-too-many-open-tabs`, lastmod: "2026-08-11", changefreq: "monthly", priority: "0.8" },
   { loc: `${SITE_ORIGIN}/articles/best-read-it-later-apps`, lastmod: "2026-09-09", changefreq: "monthly", priority: "0.8" },
   { loc: `${SITE_ORIGIN}/articles/best-bookmark-manager-chrome`, lastmod: "2026-09-09", changefreq: "monthly", priority: "0.8" },
+  { loc: `${SITE_ORIGIN}/articles/safari-reading-list`, lastmod: "2026-09-11", changefreq: "monthly", priority: "0.8" },
+  { loc: `${SITE_ORIGIN}/articles/where-are-my-bookmarks`, lastmod: "2026-09-11", changefreq: "monthly", priority: "0.8" },
+  { loc: `${SITE_ORIGIN}/articles/export-import-bookmarks`, lastmod: "2026-09-11", changefreq: "monthly", priority: "0.8" },
+  { loc: `${SITE_ORIGIN}/articles/how-to-organize-bookmarks-chrome`, lastmod: "2026-09-11", changefreq: "monthly", priority: "0.8" },
+  { loc: `${SITE_ORIGIN}/articles/chrome-bookmarks-bar`, lastmod: "2026-09-11", changefreq: "monthly", priority: "0.8" },
 ]
 
 // A Handle is 3 to 30 characters of a-z, 0-9, `-`, and `_`, so no Public Profile

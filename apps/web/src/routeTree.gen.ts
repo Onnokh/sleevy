@@ -37,9 +37,14 @@ import { Route as OauthLoginRouteImport } from './routes/oauth/login'
 import { Route as MarketingArticlesBestBookmarkManagerChromeRouteImport } from './routes/_marketing/articles_.best-bookmark-manager-chrome'
 import { Route as MarketingArticlesBestReadItLaterAppsRouteImport } from './routes/_marketing/articles_.best-read-it-later-apps'
 import { Route as MarketingArticlesBookmarkManagerForDevelopersRouteImport } from './routes/_marketing/articles_.bookmark-manager-for-developers'
+import { Route as MarketingArticlesChromeBookmarksBarRouteImport } from './routes/_marketing/articles_.chrome-bookmarks-bar'
+import { Route as MarketingArticlesExportImportBookmarksRouteImport } from './routes/_marketing/articles_.export-import-bookmarks'
+import { Route as MarketingArticlesHowToOrganizeBookmarksChromeRouteImport } from './routes/_marketing/articles_.how-to-organize-bookmarks-chrome'
 import { Route as MarketingArticlesHowToOrganizeTooManyOpenTabsRouteImport } from './routes/_marketing/articles_.how-to-organize-too-many-open-tabs'
 import { Route as MarketingArticlesReadLaterAppChromeIphoneRouteImport } from './routes/_marketing/articles_.read-later-app-chrome-iphone'
+import { Route as MarketingArticlesSafariReadingListRouteImport } from './routes/_marketing/articles_.safari-reading-list'
 import { Route as MarketingArticlesSaveLinksWithRaycastRouteImport } from './routes/_marketing/articles_.save-links-with-raycast'
+import { Route as MarketingArticlesWhereAreMyBookmarksRouteImport } from './routes/_marketing/articles_.where-are-my-bookmarks'
 import { Route as MarketingUHandleRouteImport } from './routes/_marketing/u.$handle'
 import { Route as AppLibraryFoldersFolderIdRouteImport } from './routes/_app/library_.folders.$folderId'
 
@@ -187,6 +192,24 @@ const MarketingArticlesBookmarkManagerForDevelopersRoute =
     path: '/articles/bookmark-manager-for-developers',
     getParentRoute: () => MarketingRoute,
   } as any)
+const MarketingArticlesChromeBookmarksBarRoute =
+  MarketingArticlesChromeBookmarksBarRouteImport.update({
+    id: '/articles_/chrome-bookmarks-bar',
+    path: '/articles/chrome-bookmarks-bar',
+    getParentRoute: () => MarketingRoute,
+  } as any)
+const MarketingArticlesExportImportBookmarksRoute =
+  MarketingArticlesExportImportBookmarksRouteImport.update({
+    id: '/articles_/export-import-bookmarks',
+    path: '/articles/export-import-bookmarks',
+    getParentRoute: () => MarketingRoute,
+  } as any)
+const MarketingArticlesHowToOrganizeBookmarksChromeRoute =
+  MarketingArticlesHowToOrganizeBookmarksChromeRouteImport.update({
+    id: '/articles_/how-to-organize-bookmarks-chrome',
+    path: '/articles/how-to-organize-bookmarks-chrome',
+    getParentRoute: () => MarketingRoute,
+  } as any)
 const MarketingArticlesHowToOrganizeTooManyOpenTabsRoute =
   MarketingArticlesHowToOrganizeTooManyOpenTabsRouteImport.update({
     id: '/articles_/how-to-organize-too-many-open-tabs',
@@ -199,10 +222,22 @@ const MarketingArticlesReadLaterAppChromeIphoneRoute =
     path: '/articles/read-later-app-chrome-iphone',
     getParentRoute: () => MarketingRoute,
   } as any)
+const MarketingArticlesSafariReadingListRoute =
+  MarketingArticlesSafariReadingListRouteImport.update({
+    id: '/articles_/safari-reading-list',
+    path: '/articles/safari-reading-list',
+    getParentRoute: () => MarketingRoute,
+  } as any)
 const MarketingArticlesSaveLinksWithRaycastRoute =
   MarketingArticlesSaveLinksWithRaycastRouteImport.update({
     id: '/articles_/save-links-with-raycast',
     path: '/articles/save-links-with-raycast',
+    getParentRoute: () => MarketingRoute,
+  } as any)
+const MarketingArticlesWhereAreMyBookmarksRoute =
+  MarketingArticlesWhereAreMyBookmarksRouteImport.update({
+    id: '/articles_/where-are-my-bookmarks',
+    path: '/articles/where-are-my-bookmarks',
     getParentRoute: () => MarketingRoute,
   } as any)
 const MarketingUHandleRoute = MarketingUHandleRouteImport.update({
@@ -244,9 +279,14 @@ export interface FileRoutesByFullPath {
   '/articles/best-bookmark-manager-chrome': typeof MarketingArticlesBestBookmarkManagerChromeRoute
   '/articles/best-read-it-later-apps': typeof MarketingArticlesBestReadItLaterAppsRoute
   '/articles/bookmark-manager-for-developers': typeof MarketingArticlesBookmarkManagerForDevelopersRoute
+  '/articles/chrome-bookmarks-bar': typeof MarketingArticlesChromeBookmarksBarRoute
+  '/articles/export-import-bookmarks': typeof MarketingArticlesExportImportBookmarksRoute
+  '/articles/how-to-organize-bookmarks-chrome': typeof MarketingArticlesHowToOrganizeBookmarksChromeRoute
   '/articles/how-to-organize-too-many-open-tabs': typeof MarketingArticlesHowToOrganizeTooManyOpenTabsRoute
   '/articles/read-later-app-chrome-iphone': typeof MarketingArticlesReadLaterAppChromeIphoneRoute
+  '/articles/safari-reading-list': typeof MarketingArticlesSafariReadingListRoute
   '/articles/save-links-with-raycast': typeof MarketingArticlesSaveLinksWithRaycastRoute
+  '/articles/where-are-my-bookmarks': typeof MarketingArticlesWhereAreMyBookmarksRoute
   '/u/$handle': typeof MarketingUHandleRoute
   '/library/folders/$folderId': typeof AppLibraryFoldersFolderIdRoute
 }
@@ -277,9 +317,14 @@ export interface FileRoutesByTo {
   '/articles/best-bookmark-manager-chrome': typeof MarketingArticlesBestBookmarkManagerChromeRoute
   '/articles/best-read-it-later-apps': typeof MarketingArticlesBestReadItLaterAppsRoute
   '/articles/bookmark-manager-for-developers': typeof MarketingArticlesBookmarkManagerForDevelopersRoute
+  '/articles/chrome-bookmarks-bar': typeof MarketingArticlesChromeBookmarksBarRoute
+  '/articles/export-import-bookmarks': typeof MarketingArticlesExportImportBookmarksRoute
+  '/articles/how-to-organize-bookmarks-chrome': typeof MarketingArticlesHowToOrganizeBookmarksChromeRoute
   '/articles/how-to-organize-too-many-open-tabs': typeof MarketingArticlesHowToOrganizeTooManyOpenTabsRoute
   '/articles/read-later-app-chrome-iphone': typeof MarketingArticlesReadLaterAppChromeIphoneRoute
+  '/articles/safari-reading-list': typeof MarketingArticlesSafariReadingListRoute
   '/articles/save-links-with-raycast': typeof MarketingArticlesSaveLinksWithRaycastRoute
+  '/articles/where-are-my-bookmarks': typeof MarketingArticlesWhereAreMyBookmarksRoute
   '/u/$handle': typeof MarketingUHandleRoute
   '/library/folders/$folderId': typeof AppLibraryFoldersFolderIdRoute
 }
@@ -313,9 +358,14 @@ export interface FileRoutesById {
   '/_marketing/articles_/best-bookmark-manager-chrome': typeof MarketingArticlesBestBookmarkManagerChromeRoute
   '/_marketing/articles_/best-read-it-later-apps': typeof MarketingArticlesBestReadItLaterAppsRoute
   '/_marketing/articles_/bookmark-manager-for-developers': typeof MarketingArticlesBookmarkManagerForDevelopersRoute
+  '/_marketing/articles_/chrome-bookmarks-bar': typeof MarketingArticlesChromeBookmarksBarRoute
+  '/_marketing/articles_/export-import-bookmarks': typeof MarketingArticlesExportImportBookmarksRoute
+  '/_marketing/articles_/how-to-organize-bookmarks-chrome': typeof MarketingArticlesHowToOrganizeBookmarksChromeRoute
   '/_marketing/articles_/how-to-organize-too-many-open-tabs': typeof MarketingArticlesHowToOrganizeTooManyOpenTabsRoute
   '/_marketing/articles_/read-later-app-chrome-iphone': typeof MarketingArticlesReadLaterAppChromeIphoneRoute
+  '/_marketing/articles_/safari-reading-list': typeof MarketingArticlesSafariReadingListRoute
   '/_marketing/articles_/save-links-with-raycast': typeof MarketingArticlesSaveLinksWithRaycastRoute
+  '/_marketing/articles_/where-are-my-bookmarks': typeof MarketingArticlesWhereAreMyBookmarksRoute
   '/_marketing/u/$handle': typeof MarketingUHandleRoute
   '/_app/library_/folders/$folderId': typeof AppLibraryFoldersFolderIdRoute
 }
@@ -348,9 +398,14 @@ export interface FileRouteTypes {
     | '/articles/best-bookmark-manager-chrome'
     | '/articles/best-read-it-later-apps'
     | '/articles/bookmark-manager-for-developers'
+    | '/articles/chrome-bookmarks-bar'
+    | '/articles/export-import-bookmarks'
+    | '/articles/how-to-organize-bookmarks-chrome'
     | '/articles/how-to-organize-too-many-open-tabs'
     | '/articles/read-later-app-chrome-iphone'
+    | '/articles/safari-reading-list'
     | '/articles/save-links-with-raycast'
+    | '/articles/where-are-my-bookmarks'
     | '/u/$handle'
     | '/library/folders/$folderId'
   fileRoutesByTo: FileRoutesByTo
@@ -381,9 +436,14 @@ export interface FileRouteTypes {
     | '/articles/best-bookmark-manager-chrome'
     | '/articles/best-read-it-later-apps'
     | '/articles/bookmark-manager-for-developers'
+    | '/articles/chrome-bookmarks-bar'
+    | '/articles/export-import-bookmarks'
+    | '/articles/how-to-organize-bookmarks-chrome'
     | '/articles/how-to-organize-too-many-open-tabs'
     | '/articles/read-later-app-chrome-iphone'
+    | '/articles/safari-reading-list'
     | '/articles/save-links-with-raycast'
+    | '/articles/where-are-my-bookmarks'
     | '/u/$handle'
     | '/library/folders/$folderId'
   id:
@@ -416,9 +476,14 @@ export interface FileRouteTypes {
     | '/_marketing/articles_/best-bookmark-manager-chrome'
     | '/_marketing/articles_/best-read-it-later-apps'
     | '/_marketing/articles_/bookmark-manager-for-developers'
+    | '/_marketing/articles_/chrome-bookmarks-bar'
+    | '/_marketing/articles_/export-import-bookmarks'
+    | '/_marketing/articles_/how-to-organize-bookmarks-chrome'
     | '/_marketing/articles_/how-to-organize-too-many-open-tabs'
     | '/_marketing/articles_/read-later-app-chrome-iphone'
+    | '/_marketing/articles_/safari-reading-list'
     | '/_marketing/articles_/save-links-with-raycast'
+    | '/_marketing/articles_/where-are-my-bookmarks'
     | '/_marketing/u/$handle'
     | '/_app/library_/folders/$folderId'
   fileRoutesById: FileRoutesById
@@ -633,6 +698,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MarketingArticlesBookmarkManagerForDevelopersRouteImport
       parentRoute: typeof MarketingRoute
     }
+    '/_marketing/articles_/chrome-bookmarks-bar': {
+      id: '/_marketing/articles_/chrome-bookmarks-bar'
+      path: '/articles/chrome-bookmarks-bar'
+      fullPath: '/articles/chrome-bookmarks-bar'
+      preLoaderRoute: typeof MarketingArticlesChromeBookmarksBarRouteImport
+      parentRoute: typeof MarketingRoute
+    }
+    '/_marketing/articles_/export-import-bookmarks': {
+      id: '/_marketing/articles_/export-import-bookmarks'
+      path: '/articles/export-import-bookmarks'
+      fullPath: '/articles/export-import-bookmarks'
+      preLoaderRoute: typeof MarketingArticlesExportImportBookmarksRouteImport
+      parentRoute: typeof MarketingRoute
+    }
+    '/_marketing/articles_/how-to-organize-bookmarks-chrome': {
+      id: '/_marketing/articles_/how-to-organize-bookmarks-chrome'
+      path: '/articles/how-to-organize-bookmarks-chrome'
+      fullPath: '/articles/how-to-organize-bookmarks-chrome'
+      preLoaderRoute: typeof MarketingArticlesHowToOrganizeBookmarksChromeRouteImport
+      parentRoute: typeof MarketingRoute
+    }
     '/_marketing/articles_/how-to-organize-too-many-open-tabs': {
       id: '/_marketing/articles_/how-to-organize-too-many-open-tabs'
       path: '/articles/how-to-organize-too-many-open-tabs'
@@ -647,11 +733,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof MarketingArticlesReadLaterAppChromeIphoneRouteImport
       parentRoute: typeof MarketingRoute
     }
+    '/_marketing/articles_/safari-reading-list': {
+      id: '/_marketing/articles_/safari-reading-list'
+      path: '/articles/safari-reading-list'
+      fullPath: '/articles/safari-reading-list'
+      preLoaderRoute: typeof MarketingArticlesSafariReadingListRouteImport
+      parentRoute: typeof MarketingRoute
+    }
     '/_marketing/articles_/save-links-with-raycast': {
       id: '/_marketing/articles_/save-links-with-raycast'
       path: '/articles/save-links-with-raycast'
       fullPath: '/articles/save-links-with-raycast'
       preLoaderRoute: typeof MarketingArticlesSaveLinksWithRaycastRouteImport
+      parentRoute: typeof MarketingRoute
+    }
+    '/_marketing/articles_/where-are-my-bookmarks': {
+      id: '/_marketing/articles_/where-are-my-bookmarks'
+      path: '/articles/where-are-my-bookmarks'
+      fullPath: '/articles/where-are-my-bookmarks'
+      preLoaderRoute: typeof MarketingArticlesWhereAreMyBookmarksRouteImport
       parentRoute: typeof MarketingRoute
     }
     '/_marketing/u/$handle': {
@@ -705,9 +805,14 @@ interface MarketingRouteChildren {
   MarketingArticlesBestBookmarkManagerChromeRoute: typeof MarketingArticlesBestBookmarkManagerChromeRoute
   MarketingArticlesBestReadItLaterAppsRoute: typeof MarketingArticlesBestReadItLaterAppsRoute
   MarketingArticlesBookmarkManagerForDevelopersRoute: typeof MarketingArticlesBookmarkManagerForDevelopersRoute
+  MarketingArticlesChromeBookmarksBarRoute: typeof MarketingArticlesChromeBookmarksBarRoute
+  MarketingArticlesExportImportBookmarksRoute: typeof MarketingArticlesExportImportBookmarksRoute
+  MarketingArticlesHowToOrganizeBookmarksChromeRoute: typeof MarketingArticlesHowToOrganizeBookmarksChromeRoute
   MarketingArticlesHowToOrganizeTooManyOpenTabsRoute: typeof MarketingArticlesHowToOrganizeTooManyOpenTabsRoute
   MarketingArticlesReadLaterAppChromeIphoneRoute: typeof MarketingArticlesReadLaterAppChromeIphoneRoute
+  MarketingArticlesSafariReadingListRoute: typeof MarketingArticlesSafariReadingListRoute
   MarketingArticlesSaveLinksWithRaycastRoute: typeof MarketingArticlesSaveLinksWithRaycastRoute
+  MarketingArticlesWhereAreMyBookmarksRoute: typeof MarketingArticlesWhereAreMyBookmarksRoute
   MarketingUHandleRoute: typeof MarketingUHandleRoute
 }
 
@@ -730,12 +835,22 @@ const MarketingRouteChildren: MarketingRouteChildren = {
     MarketingArticlesBestReadItLaterAppsRoute,
   MarketingArticlesBookmarkManagerForDevelopersRoute:
     MarketingArticlesBookmarkManagerForDevelopersRoute,
+  MarketingArticlesChromeBookmarksBarRoute:
+    MarketingArticlesChromeBookmarksBarRoute,
+  MarketingArticlesExportImportBookmarksRoute:
+    MarketingArticlesExportImportBookmarksRoute,
+  MarketingArticlesHowToOrganizeBookmarksChromeRoute:
+    MarketingArticlesHowToOrganizeBookmarksChromeRoute,
   MarketingArticlesHowToOrganizeTooManyOpenTabsRoute:
     MarketingArticlesHowToOrganizeTooManyOpenTabsRoute,
   MarketingArticlesReadLaterAppChromeIphoneRoute:
     MarketingArticlesReadLaterAppChromeIphoneRoute,
+  MarketingArticlesSafariReadingListRoute:
+    MarketingArticlesSafariReadingListRoute,
   MarketingArticlesSaveLinksWithRaycastRoute:
     MarketingArticlesSaveLinksWithRaycastRoute,
+  MarketingArticlesWhereAreMyBookmarksRoute:
+    MarketingArticlesWhereAreMyBookmarksRoute,
   MarketingUHandleRoute: MarketingUHandleRoute,
 }
 
