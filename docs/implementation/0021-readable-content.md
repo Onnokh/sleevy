@@ -30,6 +30,7 @@ No user-visible surface. Delivered behind the existing enrichment pipeline.
 
 - **Size caps**: 1,000,000 characters of article HTML, 250,000 of Markdown. A page over either ceiling stores nothing, because truncating the HTML would cut it mid-tag and break the re-conversion the column exists for.
 - **Node-count cap**: 20,000 elements, checked by the gate before the parse. `linkedom`'s `getElementsByTagName` does not take the `*` wildcard — it answers zero, which would disable the cap silently — so the count comes from `querySelectorAll("*")`.
+- **Indexed expression**: `to_tsvector('english', …)` over the Markdown with link targets and bare URLs removed. The replacements use POSIX bracket expressions rather than backslash escapes, because a backslash does not survive drizzle's template literal and the regex it decays into strips every word following a stray `]`.
 - **Character floor**: 500 characters of article text, enforced by the extractor. Readability's own `charThreshold` only decides whether to retry with looser flags; when the retries run out it returns the best attempt whatever its length, so passing it alone does not make the floor a rule.
 - **`source` is an enum**, `readable_content_source`, matching the `link_type` and `enrichment_status` precedent.
 - **Base URL injection**: `linkedom` gives a parsed string no `baseURI`, so Readability leaves every image and link relative. The extractor defines `baseURI` and `documentURI` on the document before the parse.
@@ -71,8 +72,7 @@ The same routing, under the keyboard-first model of [ADR 0010](../adr/0010-keybo
 
 ## Open follow-ups
 
-- **Search over Readable Content.** The index exists from Slice 1. Turning it on is a product decision about whether an article's body ranks beside its title, for the **Search Tab** and the **Command Palette** alike.
-  Before it is turned on, the indexed expression needs revisiting: Markdown link targets become lexemes, so an MDN page indexes terms like `'/en-us/docs/web/css/reference'`. Indexing Markdown instead of HTML avoided tag names becoming terms, and this is the same leak by another route. The fix belongs in the generated column's expression, which means a migration, so it is worth deciding before any query depends on the current shape.
+- **Search over Readable Content.** The index exists from Slice 1, and the indexed expression strips link targets and bare URLs so a search for "reference" is not answered by every page that links to one. Turning the search on is a product decision about whether an article's body ranks beside its title, for the **Search Tab** and the **Command Palette** alike.
 - **Backfill.** Extracting for Links saved before this shipped is an operational job, and some of those pages will already be gone. Measure the extraction rate from the production host first, not from a laptop: 76 of 129 links extracted from a residential address, and the Hetzner origin is refused by more sites, so that figure is optimistic by an unknown margin.
 - **Serving the HTML form.** Requires an HTML sanitizer on both clients. The stored column exists so this stays possible; nothing depends on it.
 - **Re-conversion.** The reason the HTML is kept. A better Markdown converter can be run against every stored Link without a network call.

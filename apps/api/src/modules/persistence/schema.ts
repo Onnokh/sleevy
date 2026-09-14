@@ -176,8 +176,19 @@ export const linkContentTable = pgTable(
     // Indexed from the start and read by nothing in v1: the column cannot be
     // added later without rewriting the table, while the query can change at
     // any time. The HTML form is never indexed.
+    //
+    // Markup is stripped before indexing. A Markdown link target is a term to
+    // Postgres, so an unfiltered index answers a search for "reference" with
+    // every page that happens to link to one — which is the same reason the
+    // HTML form is not indexed, arriving by a different route. Both
+    // replacements are IMMUTABLE, which a generated column requires.
+    //
+    // The bracket expressions are deliberate: a backslash escape does not
+    // survive this template literal, and the regex it decays into strips every
+    // word after a stray "]" rather than only a link target.
     search: tsvector("search").generatedAlwaysAs(
-      (): SQL => sql`to_tsvector('english', ${linkContentTable.markdown})`,
+      (): SQL =>
+        sql`to_tsvector('english', regexp_replace(regexp_replace(${linkContentTable.markdown}, '[]][(][^)]*[)]', ']', 'g'), 'https?://[^[:space:]]+', ' ', 'g'))`,
     ),
     source: readableContentSourceEnum("source").notNull(),
     extractedAt: timestamp("extracted_at", { withTimezone: true })

@@ -1,7 +1,7 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "1c2a13da-0312-4696-bcec-cba8351ef73c",
+  "id": "c44d63d1-99d3-4ce4-8a9e-e804c92e1f6e",
   "prevIds": [
     "230d5b10-da7c-4b50-96d1-e3bab6b7036a"
   ],
@@ -1108,7 +1108,7 @@
       "dimensions": 0,
       "default": null,
       "generated": {
-        "as": "to_tsvector('english', \"link_content\".\"markdown\")",
+        "as": "to_tsvector('english', regexp_replace(regexp_replace(\"link_content\".\"markdown\", '[]][(][^)]*[)]', ']', 'g'), 'https?://[^[:space:]]+', ' ', 'g'))",
         "type": "stored"
       },
       "identity": null,
