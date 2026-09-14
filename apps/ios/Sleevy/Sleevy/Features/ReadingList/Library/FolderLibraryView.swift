@@ -87,7 +87,9 @@ struct FolderLibraryView: View {
             if filter.isActive {
                 ActiveLibraryFilters(filter: $filter)
                     .listRowInsets(EdgeInsets(top: 8, leading: 18, bottom: 8, trailing: 18))
-                    .listRowBackground(Color.clear)
+                    // Each row that can be the folder's first carries the
+                    // header card's anchor, ranked in list order.
+                    .stretchyHeaderAnchor(rank: 1)
                     .listRowSeparator(.hidden)
             }
 
@@ -95,7 +97,7 @@ struct FolderLibraryView: View {
                 Text(errorMessage)
                     .font(.footnote)
                     .foregroundStyle(.red)
-                    .listRowBackground(Color.clear)
+                    .stretchyHeaderAnchor(rank: 2)
             }
 
             if projection.items.isEmpty {
@@ -104,7 +106,7 @@ struct FolderLibraryView: View {
                     systemImage: filter.isActive ? "line.3.horizontal.decrease.circle" : "folder",
                     description: Text(filter.isActive ? "Try changing or clearing your filters." : "Move saved items here from your Library.")
                 )
-                .listRowBackground(Color.clear)
+                .stretchyHeaderAnchor(rank: 3)
                 .listRowSeparator(.hidden)
             }
 
@@ -406,9 +408,9 @@ struct MoveToFolderSheet: View {
 
 /// The card behind a folder's large title — the Inbox header card's sibling,
 /// with the folder's own corona field instead of the aurora (neutral for a
-/// folder without one). The counts render inside the card:
-/// `navigationSubtitle` on a pushed screen collapses the large title to
-/// inline, so the system subtitle is not an option here.
+/// folder without one). The counts are a list row under it, never part of
+/// the card: `navigationSubtitle` on a pushed screen collapses the large
+/// title to inline, so the system subtitle is not an option here.
 private struct FolderHeaderCard: View {
     let folder: Folder
     let height: CGFloat

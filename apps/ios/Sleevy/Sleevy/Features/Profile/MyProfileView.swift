@@ -283,7 +283,8 @@ struct MyProfileView: View {
                 }
                 .frame(maxWidth: .infinity)
                 .listRowInsets(EdgeInsets(top: 0, leading: 18, bottom: 14, trailing: 18))
-                .listRowBackground(Color.clear)
+                // The first row under the hero card; the card hangs from it.
+                .stretchyHeaderAnchor(rank: 0)
                 .listRowSeparator(.hidden)
 
                 Button(action: handleVisibilityTap) {

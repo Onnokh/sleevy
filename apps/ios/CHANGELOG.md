@@ -1,5 +1,9 @@
 # Sleevy iOS Changelog
 
+## Unreleased
+
+- Fixed the header card on the Inbox, folder, and profile screens drifting away from the list after a pull-to-refresh or a scroll, which could leave the "saves · unread" line and the card's edge over the first row. The card now follows the first row directly.
+
 ## 1.0.4 - 2026-05-30
 
 - Redesigned the Library folders area as a distinct, grouped section of rows with a "Show all" shortcut when you have more folders than fit.
