@@ -13,8 +13,7 @@ const decodeReadableContent = Schema.decodeUnknownSync(ReadableContent)
 
 export type StoredArticle = {
   readonly markdown: string
-  /** Absent when the Markdown did not come from a local parse. */
-  readonly html?: string
+  readonly html: string
   readonly source: ReadableContentSource
 }
 
@@ -42,7 +41,7 @@ export class LinkContentRepository extends Context.Service<LinkContentRepository
                 .insert(linkContentTable)
                 .values({
                   linkId,
-                  html: article.html ?? null,
+                  html: article.html,
                   markdown: article.markdown,
                   source: article.source,
                   extractedAt,
@@ -50,7 +49,7 @@ export class LinkContentRepository extends Context.Service<LinkContentRepository
                 .onConflictDoUpdate({
                   target: linkContentTable.linkId,
                   set: {
-                    html: article.html ?? null,
+                    html: article.html,
                     markdown: article.markdown,
                     source: article.source,
                     extractedAt,

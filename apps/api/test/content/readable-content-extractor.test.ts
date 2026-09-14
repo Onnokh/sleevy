@@ -116,8 +116,6 @@ describe("ReadableContentExtractor", () => {
       // The gate decides, and it decides alone: a rejected page never reaches
       // the parser.
       expect(yield* extractor.isReadable(html, url)).toBe(false)
-      // Nor is it worth Cloudflare's metered browser time.
-      expect(yield* extractor.isWorthEscalating(html, url)).toBe(false)
     }),
   )
 
@@ -143,25 +141,6 @@ describe("ReadableContentExtractor", () => {
       )
 
       expect(yield* extractor.isReadable(html, url)).toBe(false)
-    }),
-  )
-
-  it.effect("escalates a text-heavy page the parser could not structure", () =>
-    Effect.gen(function* () {
-      const extractor = yield* ReadableContentExtractor
-      // Prose split across many small blocks: too much text to discard, too
-      // little structure for Readability to find an article in.
-      const html = [
-        "<!doctype html><html><head><title>Thread</title></head><body><main>",
-        Array.from(
-          { length: 40 },
-          (_, i) => `<div>Short reply number ${i} on the thread.</div>`,
-        ).join(""),
-        "</main></body></html>",
-      ].join("")
-
-      expect(yield* extractor.isReadable(html, url)).toBe(false)
-      expect(yield* extractor.isWorthEscalating(html, url)).toBe(true)
     }),
   )
 })

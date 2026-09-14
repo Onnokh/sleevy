@@ -71,7 +71,6 @@ export const profileVisibilityEnum = pgEnum("profile_visibility", profileVisibil
 
 export const readableContentSourceEnum = pgEnum("readable_content_source", [
   "readability",
-  "cloudflare-markdown",
 ])
 
 export const enrichmentJobStatusEnum = pgEnum("enrichment_job_status", [
@@ -171,12 +170,7 @@ export const linkContentTable = pgTable(
     // The extractor's own article HTML. Stored and never served, so no client
     // sanitizes third-party markup in v1. It is kept so a better Markdown
     // conversion can be run later without fetching the page again.
-    //
-    // Null when the Markdown did not come from a local parse: Cloudflare
-    // returns Markdown and no article HTML, so there is nothing local to
-    // re-convert. This is not a disagreement about whether the Link has
-    // Readable Content — a row exists only when the Markdown does.
-    html: text("html"),
+    html: text("html").notNull(),
     // What the Reader View renders and what the search index reads.
     markdown: text("markdown").notNull(),
     // Indexed from the start and read by nothing in v1: the column cannot be

@@ -1,7 +1,7 @@
-CREATE TYPE "readable_content_source" AS ENUM('readability', 'cloudflare-markdown');--> statement-breakpoint
+CREATE TYPE "readable_content_source" AS ENUM('readability');--> statement-breakpoint
 CREATE TABLE "link_content" (
 	"link_id" text PRIMARY KEY,
-	"html" text,
+	"html" text NOT NULL,
 	"markdown" text NOT NULL,
 	"search" tsvector GENERATED ALWAYS AS (to_tsvector('english', "link_content"."markdown")) STORED,
 	"source" "readable_content_source" NOT NULL,

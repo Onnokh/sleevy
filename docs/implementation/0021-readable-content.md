@@ -8,7 +8,7 @@ This document turns [ADR 0021](../adr/0021-readable-content-and-reader-view.md) 
 - **Two stored forms, one served.** `link_content` keeps the extractor's article HTML and the Markdown converted from it. The Reader View renders and search indexes the Markdown. Nothing serves the HTML, so no client sanitizes third-party markup in v1.
 - **The flag is not in the body table.** `link_enrichment.has_readable_content` answers "is there a Reader View" for a list read, so retrieval never joins `link_content`.
 - **Extraction is best effort.** It is an **Enrichment Job** stage that skips rather than fails, so a Link that yields no prose stays exactly as usable as one saved before this existed.
-- **Cheap path first.** Readability runs against the `linkedom` document the fetch path already builds. Cloudflare is the escalation for pages the existing low-confidence signal already flagged, and it is called with the page markup rather than the URL.
+- **Cloudflare supplies markup, not articles.** Readability runs against the `linkedom` document the fetch path already builds, whether that markup came from a direct fetch or from `PageFetcher`'s Cloudflare tier. Nothing outside the local extractor decides what an article is.
 
 ## Slice 1 — extraction and storage — delivered
 
@@ -21,7 +21,7 @@ No user-visible surface. Delivered behind the existing enrichment pipeline.
 | Schema | `has_readable_content` boolean on `linkEnrichmentTable`, default false. |
 | Migration | `bun run db:generate`, then review the generated SQL — the generated column and GIN index are the parts drizzle-kit is least likely to get right unaided. |
 | Extractor | New `apps/api/src/modules/content/ReadableContentExtractor.ts`. Runs the readability check against a parsed document, then extracts from a **second, fresh** document because Readability mutates the tree it is given. Sets a node-count cap. |
-| Cloudflare | A sibling service to `CloudflareBrowserFetcher`, reusing its `AppConfig` values, calling `/browser-rendering/markdown` with `html` when the markup is in hand and `url` only when it is not. It returns Markdown, not a `PageDocument`, so it is not a `PageFetcher` tier. |
+| Cloudflare | Nothing new. `PageFetcher`'s existing Cloudflare tier already renders pages the origin host cannot fetch, and extraction runs against whatever document it returns. The `/browser-rendering/markdown` endpoint was built and removed — it converts a whole page rather than extracting an article. |
 | Repository | `LinkContentRepository` with an upsert and a Markdown-only read. The read names its columns explicitly and never selects `html`. |
 | Workflow | A `readable-content` stage in [EnrichmentWorkflow](../../apps/api/src/modules/enrichment/EnrichmentWorkflow.ts), before the AI call. Add the stage name to `EnrichmentStageResult["stage"]` in `domain/EnrichmentJob.ts`. |
 | AI input | `MetadataFetcher.extractContent` takes the head of the stored Markdown when there is any, and falls back to the existing `extractPageContent` heuristic when there is not. `PAGE_CONTENT_LIMIT` stays 2000. |
@@ -36,14 +36,14 @@ No user-visible surface. Delivered behind the existing enrichment pipeline.
 
 ### Corrections to the ADR, recorded there and in CONTEXT.md
 
-- The HTML column is nullable. Cloudflare returns Markdown and no article HTML, so a row from that source has no local form to re-convert.
-- The escalation condition narrowed, from "the low-confidence signal already flagged the page" to "local extraction rejected a page that still carries the character floor of visible prose". The low-confidence signal fires on a bot wall, and `PageFetcher` has already escalated those before enrichment sees them.
+- The HTML column is `NOT NULL`. Both stored forms come from one extraction, so neither exists without the other.
+- The extraction-time Cloudflare escalation is withdrawn. `/browser-rendering/markdown` is a page converter, and re-rendering a page Readability rejected recovered nothing measurable. Cloudflare still matters — it is how a blocklisted host gets markup at all — but that happens in `PageFetcher`, above extraction.
 
 ### Testing seams
 
 - The extractor takes HTML and returns an optional pair, so its whole surface is table-testable from fixture pages without a network or a database.
 - The check and the extraction are separate calls, so "check rejects, nothing stored" is a direct assertion rather than an inference from a flag.
-- The Cloudflare service is already the shape `CloudflareBrowserFetcher` uses — unconfigured returns `Option.none`, so the disabled path needs no mock.
+- Extraction takes markup and knows nothing about where it came from, so the Cloudflare-rendered case needs no separate test.
 - `EnrichmentWorkflow` already records stage results, so "skipped, and the job still succeeds" is asserted the way the existing tagging and preview-summary skips are.
 
 ### Known limitations, accepted
@@ -73,6 +73,6 @@ The same routing, under the keyboard-first model of [ADR 0010](../adr/0010-keybo
 
 - **Search over Readable Content.** The index exists from Slice 1. Turning it on is a product decision about whether an article's body ranks beside its title, for the **Search Tab** and the **Command Palette** alike.
   Before it is turned on, the indexed expression needs revisiting: Markdown link targets become lexemes, so an MDN page indexes terms like `'/en-us/docs/web/css/reference'`. Indexing Markdown instead of HTML avoided tag names becoming terms, and this is the same leak by another route. The fix belongs in the generated column's expression, which means a migration, so it is worth deciding before any query depends on the current shape.
-- **Backfill.** Extracting for Links saved before this shipped is an operational job, and some of those pages will already be gone.
+- **Backfill.** Extracting for Links saved before this shipped is an operational job, and some of those pages will already be gone. Measure the extraction rate from the production host first, not from a laptop: 76 of 129 links extracted from a residential address, and the Hetzner origin is refused by more sites, so that figure is optimistic by an unknown margin.
 - **Serving the HTML form.** Requires an HTML sanitizer on both clients. The stored column exists so this stays possible; nothing depends on it.
 - **Re-conversion.** The reason the HTML is kept. A better Markdown converter can be run against every stored Link without a network call.

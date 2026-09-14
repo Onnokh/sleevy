@@ -1,7 +1,7 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "924782f7-cccf-498c-adb4-432f51b0ea54",
+  "id": "1c2a13da-0312-4696-bcec-cba8351ef73c",
   "prevIds": [
     "230d5b10-da7c-4b50-96d1-e3bab6b7036a"
   ],
@@ -65,8 +65,7 @@
     },
     {
       "values": [
-        "readability",
-        "cloudflare-markdown"
+        "readability"
       ],
       "name": "readable_content_source",
       "entityType": "enums",
@@ -1079,7 +1078,7 @@
     {
       "type": "text",
       "typeSchema": null,
-      "notNull": false,
+      "notNull": true,
       "dimensions": 0,
       "default": null,
       "generated": null,

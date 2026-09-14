@@ -2,7 +2,7 @@ import { Readability, isProbablyReaderable } from "@mozilla/readability"
 import { Context, Data, Effect, Layer, Option } from "effect"
 import TurndownService from "turndown"
 
-import { extractPageContent, parseHtml, type HtmlDocument } from "../../lib/html.js"
+import { parseHtml, type HtmlDocument } from "../../lib/html.js"
 
 /**
  * The article prose of one page, in the two forms Readable Content is stored
@@ -130,37 +130,6 @@ export class ReadableContentExtractor extends Context.Service<ReadableContentExt
               }),
           })
         }),
-
-        /**
-         * Whether a page the gate rejected is still worth Cloudflare's metered,
-         * rate-limited browser time.
-         *
-         * The gate rejects two different pages: one that is not an article at
-         * all, and one that is an article the parser could not structure.
-         * Escalating both would spend the quota on every video, post, and
-         * product page anyone saves. A page that carries at least the
-         * character floor of visible prose is the second kind.
-         */
-        isWorthEscalating: Effect.fn("ReadableContentExtractor.isWorthEscalating")(
-          function* (html: string, url: string) {
-            yield* Effect.annotateCurrentSpan("url", url)
-            return yield* Effect.try({
-              try: () => {
-                const text = extractPageContent(
-                  parseHtml(html),
-                  READABLE_MARKDOWN_MAX_CHARS,
-                )
-                return (text?.length ?? 0) >= CHAR_THRESHOLD
-              },
-              catch: (cause) =>
-                new ReadableContentExtractorError({
-                  operation: "isWorthEscalating",
-                  url,
-                  cause,
-                }),
-            })
-          },
-        ),
 
         /**
          * The parse. Takes its own fresh document, because Readability mutates

@@ -3,14 +3,11 @@ import { Schema } from "effect"
 import { LinkId } from "./SavedItem.js"
 
 /**
- * Where a Link's Readable Content came from. Local extraction is the default;
- * Cloudflare is the escalation for a page the fetch path already judged
- * low-confidence (see ADR 0021).
+ * Which extractor produced a Link's Readable Content. One value today: the
+ * column records provenance so a second extractor, or a re-conversion, can be
+ * told apart from what Readability produced (see ADR 0021).
  */
-export const ReadableContentSource = Schema.Literals([
-  "readability",
-  "cloudflare-markdown",
-])
+export const ReadableContentSource = Schema.Literals(["readability"])
 export type ReadableContentSource = typeof ReadableContentSource.Type
 
 /**

@@ -17,7 +17,6 @@ import {
   AiEnricherError,
   type AiEnrichmentInput,
 } from "../../src/modules/ai/AiEnricher.js"
-import { CloudflareMarkdownExtractor } from "../../src/modules/content/CloudflareMarkdownExtractor.js"
 import {
   LinkContentRepository,
   type StoredArticle,
@@ -97,17 +96,6 @@ const makePage = (url: string, html?: string) =>
     ].join(""),
   })
 
-// Prose split across many small blocks: too much text to discard, too little
-// structure for Readability to find an article in.
-const threadPage = [
-  "<!doctype html><html><head><title>Thread - Example</title></head><body><main>",
-  Array.from(
-    { length: 40 },
-    (_, i) => `<div>Short reply number ${i} on the thread.</div>`,
-  ).join(""),
-  "</main></body></html>",
-].join("")
-
 const articlePage = (() => {
   const paragraph =
     "<p>Readability scores a block by its punctuation and its length, so a " +
@@ -133,7 +121,6 @@ const workflowLayer = (input: {
   readonly onAiInput?: ((input: AiEnrichmentInput) => void) | undefined
   readonly onStart?: (() => void) | undefined
   readonly readableHtml?: string | undefined
-  readonly cloudflareMarkdown?: string | undefined
   readonly onContentStored?: ((article: StoredArticle) => void) | undefined
   readonly onFinish?: ((result: FinishedEnrichment) => void) | undefined
 }) =>
@@ -176,19 +163,6 @@ const workflowLayer = (input: {
     // The extractor is pure, so the real one runs: "the gate rejects, nothing
     // is stored" is then an assertion rather than a mock returning none.
     Layer.provideMerge(ReadableContentExtractor.layer),
-    Layer.provideMerge(
-      Layer.succeed(
-        CloudflareMarkdownExtractor,
-        CloudflareMarkdownExtractor.of({
-          extract: () =>
-            Effect.succeed(
-              input.cloudflareMarkdown
-                ? Option.some(input.cloudflareMarkdown)
-                : Option.none(),
-            ),
-        }),
-      ),
-    ),
     Layer.provideMerge(
       Layer.succeed(
         LinkContentRepository,
@@ -476,36 +450,6 @@ describe("EnrichmentWorkflow", () => {
       Effect.provide(workflowLayer({
         aiTags: ["typescript"],
         aiPreview: "A summary from metadata alone.",
-        onContentStored: (article) => {
-          stored.push(article)
-        },
-        onFinish: (result) => {
-          finished = result
-        },
-      })),
-    )
-  })
-  it.effect("escalates to Cloudflare, and stores Markdown with no HTML form", () => {
-    const stored: StoredArticle[] = []
-    let finished: FinishedEnrichment | undefined
-
-    return Effect.gen(function* () {
-      const workflow = yield* EnrichmentWorkflow
-      yield* workflow.enrich(linkId)
-
-      expect(stored.length).toBe(1)
-      expect(stored[0]?.source).toBe("cloudflare-markdown")
-      expect(stored[0]?.markdown).toContain("What Cloudflare read")
-      // Cloudflare returns Markdown and no article HTML, so this row has no
-      // local form to re-convert later.
-      expect(stored[0]?.html).toBeUndefined()
-      expect(finished?.enrichment.hasReadableContent).toBe(true)
-    }).pipe(
-      Effect.provide(workflowLayer({
-        readableHtml: threadPage,
-        cloudflareMarkdown: "# Thread\n\nWhat Cloudflare read from the page.",
-        aiTags: ["typescript"],
-        aiPreview: "A thread.",
         onContentStored: (article) => {
           stored.push(article)
         },
