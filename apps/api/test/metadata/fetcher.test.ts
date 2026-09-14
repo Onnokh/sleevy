@@ -89,4 +89,35 @@ describe("MetadataFetcher", () => {
       expect(result.value.faviconUrl).toBe("https://example.com/favicon.ico")
     }),
   )
+  it.effect("prefers the Readable Content Markdown, flattened to prose", () =>
+    Effect.gen(function* () {
+      const fetcher = yield* MetadataFetcher
+      const result = yield* fetcher.extractContent(
+        page("<body><article><p>The page heuristic would find this.</p></article></body>"),
+        [
+          "# Monomorphic call sites",
+          "",
+          "Keeping one object shape per call site lets the engine **inline** the",
+          "property lookup, as [the V8 notes](https://v8.dev/blog/ic) explain.",
+          "",
+          "![Diagram](https://example.com/ic.png)",
+          "",
+          "```js",
+          "const shape = { x: 1 }",
+          "```",
+        ].join("\n"),
+      )
+
+      expect(Option.isSome(result)).toBe(true)
+      if (Option.isNone(result)) return
+
+      // The stored Markdown wins over the heuristic.
+      expect(result.value).not.toContain("The page heuristic would find this.")
+      // What the page says, without how it was marked up.
+      expect(result.value).toBe(
+        "Monomorphic call sites Keeping one object shape per call site lets the " +
+        "engine inline the property lookup, as the V8 notes explain.",
+      )
+    }),
+  )
 })

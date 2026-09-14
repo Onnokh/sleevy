@@ -17,6 +17,12 @@ import {
   AiEnricherError,
   type AiEnrichmentInput,
 } from "../../src/modules/ai/AiEnricher.js"
+import { CloudflareMarkdownExtractor } from "../../src/modules/content/CloudflareMarkdownExtractor.js"
+import {
+  LinkContentRepository,
+  type StoredArticle,
+} from "../../src/modules/content/LinkContentRepository.js"
+import { ReadableContentExtractor } from "../../src/modules/content/ReadableContentExtractor.js"
 import { EnrichmentWorkflow } from "../../src/modules/enrichment/EnrichmentWorkflow.js"
 import { PageDocument } from "../../src/modules/fetch/PageDocument.js"
 import { PageFetcher } from "../../src/modules/fetch/PageFetcher.js"
@@ -59,6 +65,7 @@ const makeEnrichment = (type: LinkEnrichment["type"] = "article") =>
     type,
     tags: [],
     status: "pending",
+    hasReadableContent: false,
     updatedAt: now,
   })
 
@@ -73,13 +80,13 @@ const makeJob = () =>
     startedAt: now,
   })
 
-const makePage = (url: string) =>
+const makePage = (url: string, html?: string) =>
   new PageDocument({
     requestedUrl: url,
     finalUrl: url,
     contentType: "text/html",
     fetchedAt: now,
-    html: [
+    html: html ?? [
       "<!doctype html>",
       "<title>Effect API Testing - Example</title>",
       '<meta name="description" content="A practical guide to testing an Effect API.">',
@@ -90,6 +97,33 @@ const makePage = (url: string) =>
     ].join(""),
   })
 
+// Prose split across many small blocks: too much text to discard, too little
+// structure for Readability to find an article in.
+const threadPage = [
+  "<!doctype html><html><head><title>Thread - Example</title></head><body><main>",
+  Array.from(
+    { length: 40 },
+    (_, i) => `<div>Short reply number ${i} on the thread.</div>`,
+  ).join(""),
+  "</main></body></html>",
+].join("")
+
+const articlePage = (() => {
+  const paragraph =
+    "<p>Readability scores a block by its punctuation and its length, so a " +
+    "paragraph has to carry real sentences before it counts toward the " +
+    "article. This page repeats it until it clears the character floor.</p>"
+
+  return [
+    "<!doctype html><html><head><title>Extraction - Example</title></head><body>",
+    '<meta property="og:site_name" content="Example Docs">',
+    "<nav>Docs Pricing</nav>",
+    "<article><h1>Extraction</h1>",
+    paragraph.repeat(6),
+    "</article><footer>Cookie notice</footer></body></html>",
+  ].join("")
+})()
+
 const workflowLayer = (input: {
   readonly status?: LinkEnrichment["status"] | undefined
   readonly type?: LinkEnrichment["type"] | undefined
@@ -98,6 +132,9 @@ const workflowLayer = (input: {
   readonly aiFails?: boolean | undefined
   readonly onAiInput?: ((input: AiEnrichmentInput) => void) | undefined
   readonly onStart?: (() => void) | undefined
+  readonly readableHtml?: string | undefined
+  readonly cloudflareMarkdown?: string | undefined
+  readonly onContentStored?: ((article: StoredArticle) => void) | undefined
   readonly onFinish?: ((result: FinishedEnrichment) => void) | undefined
 }) =>
   EnrichmentWorkflow.layer.pipe(
@@ -131,7 +168,37 @@ const workflowLayer = (input: {
       Layer.succeed(
         PageFetcher,
         PageFetcher.of({
-          fetch: (url) => Effect.succeed(Option.some(makePage(url))),
+          fetch: (url) =>
+            Effect.succeed(Option.some(makePage(url, input.readableHtml))),
+        }),
+      ),
+    ),
+    // The extractor is pure, so the real one runs: "the gate rejects, nothing
+    // is stored" is then an assertion rather than a mock returning none.
+    Layer.provideMerge(ReadableContentExtractor.layer),
+    Layer.provideMerge(
+      Layer.succeed(
+        CloudflareMarkdownExtractor,
+        CloudflareMarkdownExtractor.of({
+          extract: () =>
+            Effect.succeed(
+              input.cloudflareMarkdown
+                ? Option.some(input.cloudflareMarkdown)
+                : Option.none(),
+            ),
+        }),
+      ),
+    ),
+    Layer.provideMerge(
+      Layer.succeed(
+        LinkContentRepository,
+        LinkContentRepository.of({
+          upsert: (_linkId, article) =>
+            Effect.sync(() => {
+              input.onContentStored?.(article)
+              return now
+            }),
+          findByLinkId: () => Effect.succeed(Option.none()),
         }),
       ),
     ),
@@ -181,6 +248,7 @@ describe("EnrichmentWorkflow", () => {
         expect(finished?.job.status).toBe("succeeded")
         expect(finished?.job.stages.map((stage) => `${stage.stage}:${stage.status}`)).toEqual([
           "metadata:succeeded",
+          "readable-content:skipped",
           "tagging:succeeded",
           "preview-summary:succeeded",
         ])
@@ -208,6 +276,7 @@ describe("EnrichmentWorkflow", () => {
       expect(aiInputs.length).toBe(1)
       expect(finished?.job.stages.map((stage) => `${stage.stage}:${stage.status}`)).toEqual([
         "metadata:succeeded",
+        "readable-content:skipped",
         "tagging:succeeded",
         "preview-summary:succeeded",
       ])
@@ -244,6 +313,7 @@ describe("EnrichmentWorkflow", () => {
       expect(finished?.job.status).toBe("partial")
       expect(finished?.job.stages.map((stage) => `${stage.stage}:${stage.status}`)).toEqual([
         "metadata:succeeded",
+        "readable-content:skipped",
         "tagging:failed",
         "preview-summary:failed",
       ])
@@ -285,6 +355,7 @@ describe("EnrichmentWorkflow", () => {
       expect(finished?.job.status).toBe("succeeded")
       expect(finished?.job.stages.map((stage) => `${stage.stage}:${stage.status}`)).toEqual([
         "metadata:succeeded",
+        "readable-content:skipped",
         "tagging:skipped",
         "preview-summary:skipped",
       ])
@@ -317,6 +388,7 @@ describe("EnrichmentWorkflow", () => {
       expect(finished?.job.status).toBe("succeeded")
       expect(finished?.job.stages.map((stage) => `${stage.stage}:${stage.status}`)).toEqual([
         "metadata:succeeded",
+        "readable-content:skipped",
         "tagging:succeeded",
         "preview-summary:skipped",
       ])
@@ -327,6 +399,115 @@ describe("EnrichmentWorkflow", () => {
         aiPreview: "A summary nobody asked for.",
         onAiInput: () => {
           asked = true
+        },
+        onFinish: (result) => {
+          finished = result
+        },
+      })),
+    )
+  })
+  it.effect("stores Readable Content in both forms and reads the AI input from it", () => {
+    const stored: StoredArticle[] = []
+    const aiInputs: AiEnrichmentInput[] = []
+    let finished: FinishedEnrichment | undefined
+
+    return Effect.gen(function* () {
+      const workflow = yield* EnrichmentWorkflow
+      yield* workflow.enrich(linkId)
+
+      expect(finished?.job.stages.map((stage) => `${stage.stage}:${stage.status}`)).toEqual([
+        "metadata:succeeded",
+        "readable-content:succeeded",
+        "tagging:succeeded",
+        "preview-summary:succeeded",
+      ])
+
+      // Two stored forms, written together.
+      expect(stored.length).toBe(1)
+      expect(stored[0]?.source).toBe("readability")
+      expect(stored[0]?.html).toContain("<p>")
+      expect(stored[0]?.markdown).toContain("Readability scores a block")
+
+      // The flag says a Reader View exists.
+      expect(finished?.enrichment.hasReadableContent).toBe(true)
+
+      // Extracted Page Content now comes from the head of that Markdown, as
+      // prose rather than as markup.
+      const content = aiInputs[0]?.content
+      expect(content && Option.isSome(content)).toBe(true)
+      if (!content || Option.isNone(content)) return
+      expect(content.value).toContain("Readability scores a block")
+      expect(content.value).not.toContain("#")
+      expect(content.value).not.toContain("Cookie notice")
+    }).pipe(
+      Effect.provide(workflowLayer({
+        readableHtml: articlePage,
+        aiTags: ["typescript"],
+        aiPreview: "How Readability scores a page.",
+        onContentStored: (article) => {
+          stored.push(article)
+        },
+        onAiInput: (value) => {
+          aiInputs.push(value)
+        },
+        onFinish: (result) => {
+          finished = result
+        },
+      })),
+    )
+  })
+
+  it.effect("stores nothing and raises no flag when the gate rejects the page", () => {
+    const stored: StoredArticle[] = []
+    let finished: FinishedEnrichment | undefined
+
+    return Effect.gen(function* () {
+      const workflow = yield* EnrichmentWorkflow
+      yield* workflow.enrich(linkId)
+
+      // A rejected page stores nothing at all, rather than a body marked
+      // absent, so the flag and the row can never disagree.
+      expect(stored).toEqual([])
+      expect(finished?.enrichment.hasReadableContent).toBe(false)
+      // Best effort: the stage skips, and the job still succeeds.
+      expect(finished?.job.status).toBe("succeeded")
+      expect(finished?.enrichment.status).toBe("enriched")
+    }).pipe(
+      Effect.provide(workflowLayer({
+        aiTags: ["typescript"],
+        aiPreview: "A summary from metadata alone.",
+        onContentStored: (article) => {
+          stored.push(article)
+        },
+        onFinish: (result) => {
+          finished = result
+        },
+      })),
+    )
+  })
+  it.effect("escalates to Cloudflare, and stores Markdown with no HTML form", () => {
+    const stored: StoredArticle[] = []
+    let finished: FinishedEnrichment | undefined
+
+    return Effect.gen(function* () {
+      const workflow = yield* EnrichmentWorkflow
+      yield* workflow.enrich(linkId)
+
+      expect(stored.length).toBe(1)
+      expect(stored[0]?.source).toBe("cloudflare-markdown")
+      expect(stored[0]?.markdown).toContain("What Cloudflare read")
+      // Cloudflare returns Markdown and no article HTML, so this row has no
+      // local form to re-convert later.
+      expect(stored[0]?.html).toBeUndefined()
+      expect(finished?.enrichment.hasReadableContent).toBe(true)
+    }).pipe(
+      Effect.provide(workflowLayer({
+        readableHtml: threadPage,
+        cloudflareMarkdown: "# Thread\n\nWhat Cloudflare read from the page.",
+        aiTags: ["typescript"],
+        aiPreview: "A thread.",
+        onContentStored: (article) => {
+          stored.push(article)
         },
         onFinish: (result) => {
           finished = result

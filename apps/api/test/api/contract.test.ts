@@ -52,6 +52,7 @@ const makeSavedItem = (
     type: "website",
     tags: enrichmentTags,
     status: "pending",
+    hasReadableContent: false,
     updatedAt: now,
   },
 })

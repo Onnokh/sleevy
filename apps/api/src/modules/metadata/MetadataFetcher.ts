@@ -8,6 +8,7 @@ import {
   getTitle,
   parseHtml,
 } from "../../lib/html.js"
+import { markdownToPlainText } from "../../lib/markdown.js"
 import { toAbsoluteUrl } from "../../lib/url.js"
 import { PageDocument } from "../fetch/PageFetcher.js"
 import { chooseFavicon, findFaviconCandidates } from "./Favicon.js"
@@ -60,14 +61,24 @@ export class MetadataFetcher extends Context.Service<MetadataFetcher>()(
         })
       }),
 
-      /** Extracted Page Content, for AI Enrichment to summarize. */
+      /**
+       * Extracted Page Content, for AI Enrichment to summarize.
+       *
+       * It is derived per Enrichment Job and never stored. When the Link has
+       * Readable Content, the head of its Markdown is the better input: the
+       * extractor has already decided what the article is, while the fallback
+       * heuristic only guesses at the densest region of the page.
+       */
       extractContent: Effect.fn("MetadataFetcher.extractContent")(function* (
         page: PageDocument,
+        readableMarkdown?: string,
       ) {
         yield* Effect.annotateCurrentSpan("url", page.finalUrl)
         return yield* Effect.try({
           try: () => {
-            const text = extractPageContent(parseHtml(page.html), PAGE_CONTENT_LIMIT)
+            const text = readableMarkdown
+              ? truncate(markdownToPlainText(readableMarkdown), PAGE_CONTENT_LIMIT)
+              : extractPageContent(parseHtml(page.html), PAGE_CONTENT_LIMIT)
             return text ? Option.some(text) : Option.none<string>()
           },
           catch: (cause) =>
@@ -82,6 +93,11 @@ export class MetadataFetcher extends Context.Service<MetadataFetcher>()(
   },
 ) {
   static readonly layer = Layer.effect(MetadataFetcher, MetadataFetcher.make)
+}
+
+const truncate = (text: string, maxChars: number) => {
+  if (text.length === 0) return undefined
+  return text.length > maxChars ? `${text.slice(0, maxChars).trimEnd()}\u2026` : text
 }
 
 const buildMetadata = (page: PageDocument) => {

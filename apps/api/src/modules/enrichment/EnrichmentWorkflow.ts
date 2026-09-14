@@ -10,9 +10,16 @@ import {
   EnrichmentJob,
   EnrichmentStageResult,
 } from "../../domain/EnrichmentJob.js"
+import type { ReadableContentSource } from "../../domain/ReadableContent.js"
 import { AiEnricher, type AiEnrichmentResult } from "../ai/AiEnricher.js"
+import { CloudflareMarkdownExtractor } from "../content/CloudflareMarkdownExtractor.js"
+import {
+  LinkContentRepository,
+  type StoredArticle,
+} from "../content/LinkContentRepository.js"
+import { ReadableContentExtractor } from "../content/ReadableContentExtractor.js"
 import { SavedItemIntake } from "../saved-items/SavedItemIntake.js"
-import { PageFetcher } from "../fetch/PageFetcher.js"
+import { PageDocument, PageFetcher } from "../fetch/PageFetcher.js"
 import { Metadata, MetadataFetcher } from "../metadata/MetadataFetcher.js"
 import { OEmbedFetcher } from "../metadata/OEmbedFetcher.js"
 
@@ -42,6 +49,58 @@ export class EnrichmentWorkflow extends Context.Service<EnrichmentWorkflow>()(
       const aiEnricher = yield* AiEnricher
       const pageFetcher = yield* PageFetcher
       const intake = yield* SavedItemIntake
+      const contentExtractor = yield* ReadableContentExtractor
+      const cloudflareMarkdown = yield* CloudflareMarkdownExtractor
+      const contentRepository = yield* LinkContentRepository
+
+      // Local extraction first, because it costs CPU rather than metered,
+      // rate-limited browser time. Cloudflare is called with the markup already
+      // in hand, so it never pays for a second browser navigation.
+      const extractReadable = (
+        page: PageDocument,
+      ): Effect.Effect<StageResult<StoredArticle>, unknown> =>
+        Effect.gen(function* () {
+          const url = page.finalUrl
+
+          if (yield* contentExtractor.isReadable(page.html, url)) {
+            const article = yield* contentExtractor.extract(page.html, url)
+            if (Option.isSome(article)) {
+              return {
+                _tag: "success",
+                value: {
+                  html: article.value.html,
+                  markdown: article.value.markdown,
+                  source: "readability" as ReadableContentSource,
+                },
+              }
+            }
+          }
+
+          if (!(yield* contentExtractor.isWorthEscalating(page.html, url))) {
+            return {
+              _tag: "skip",
+              message: "The page holds no article prose to extract.",
+            }
+          }
+
+          const markdown = yield* cloudflareMarkdown.extract({ url, html: page.html })
+          if (Option.isSome(markdown)) {
+            // Cloudflare returns Markdown and no article HTML, so this row has
+            // no local form to re-convert later.
+            return {
+              _tag: "success",
+              value: {
+                markdown: markdown.value,
+                source: "cloudflare-markdown" as ReadableContentSource,
+              },
+            }
+          }
+
+          return {
+            _tag: "skip",
+            message: "Readability found no article and Cloudflare returned none.",
+          }
+        })
 
       return {
         enrich: Effect.fn("EnrichmentWorkflow.enrich")(function* (linkId: Link["id"]) {
@@ -112,13 +171,54 @@ export class EnrichmentWorkflow extends Context.Service<EnrichmentWorkflow>()(
             }
           }
 
+          // Readable Content is best effort: it skips rather than fails, so a
+          // Link that yields no prose stays exactly as usable as one saved
+          // before the Reader View existed. A page the gate rejects stores
+          // nothing at all, rather than a body marked absent.
+          let readableMarkdown: string | undefined
+          {
+            const result = yield* runStage<StoredArticle>(
+              "readable-content",
+              Result.isSuccess(pageResult)
+                ? Option.match(pageResult.success, {
+                  onNone: () =>
+                    Effect.succeed<StageResult<StoredArticle>>({
+                      _tag: "skip",
+                      message: "Fetched page was not HTML.",
+                    }),
+                  onSome: extractReadable,
+                })
+                : Effect.succeed<StageResult<StoredArticle>>({
+                  _tag: "skip",
+                  message: "The page could not be fetched.",
+                }),
+              stages,
+            )
+
+            if (Option.isSome(result)) {
+              // The repository raises the flag on Link Enrichment in the same
+              // transaction, so the two can never disagree. finishEnrichment
+              // does not write that column: adding it to the set list there
+              // would clear it on every job that extracts nothing.
+              yield* contentRepository.upsert(link.id, result.value)
+              readableMarkdown = result.value.markdown
+              linkEnrichment = new LinkEnrichment({
+                ...linkEnrichment,
+                hasReadableContent: true,
+                updatedAt: new Date(),
+              })
+            }
+          }
+
           // Extracted Page Content is best effort: AI Enrichment still runs on
-          // metadata alone when the page was not fetched or held no prose.
+          // metadata alone when the page was not fetched or held no prose. It
+          // is taken from the head of the Readable Content when there is any,
+          // because the extractor has already decided what the article is.
           const content = Result.isSuccess(pageResult)
             ? yield* Option.match(pageResult.success, {
               onNone: () => Effect.succeed(Option.none<string>()),
               onSome: (page) =>
-                Effect.all([metadataFetcher.extractContent(page)], {
+                Effect.all([metadataFetcher.extractContent(page, readableMarkdown)], {
                   mode: "result",
                 }).pipe(
                   Effect.map(([result]) =>
@@ -235,6 +335,9 @@ export class EnrichmentWorkflow extends Context.Service<EnrichmentWorkflow>()(
     Layer.provide(AiEnricher.defaultLayer),
     Layer.provide(PageFetcher.defaultLayer),
     Layer.provide(SavedItemIntake.defaultLayer),
+    Layer.provide(ReadableContentExtractor.layer),
+    Layer.provide(CloudflareMarkdownExtractor.defaultLayer),
+    Layer.provide(LinkContentRepository.defaultLayer),
   )
 }
 

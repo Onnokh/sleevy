@@ -49,6 +49,7 @@ const savedItem: SavedItemWithLink = {
     type: "website",
     tags: [],
     status: "pending",
+    hasReadableContent: false,
     updatedAt: now,
   },
 }

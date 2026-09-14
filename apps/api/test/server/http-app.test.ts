@@ -611,6 +611,7 @@ const makeSavedItem = (
     type: "article",
     tags: ["backend"],
     status: "pending",
+    hasReadableContent: false,
     updatedAt: now,
   },
 })

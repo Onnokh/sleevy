@@ -10,7 +10,7 @@ This document turns [ADR 0021](../adr/0021-readable-content-and-reader-view.md) 
 - **Extraction is best effort.** It is an **Enrichment Job** stage that skips rather than fails, so a Link that yields no prose stays exactly as usable as one saved before this existed.
 - **Cheap path first.** Readability runs against the `linkedom` document the fetch path already builds. Cloudflare is the escalation for pages the existing low-confidence signal already flagged, and it is called with the page markup rather than the URL.
 
-## Slice 1 — extraction and storage
+## Slice 1 — extraction and storage — delivered
 
 No user-visible surface. Delivered behind the existing enrichment pipeline.
 
@@ -28,9 +28,16 @@ No user-visible surface. Delivered behind the existing enrichment pipeline.
 
 ### Values decided during implementation
 
-- The per-form size cap. Article HTML routinely runs several times the size of its Markdown, so the two ceilings are not the same number.
-- The node-count cap for the parser. Both Readability ports default to uncapped; enrichment runs against URLs anyone can submit.
-- Whether `source` is an enum column or free text. An enum matches `link_type` and `enrichment_status` precedent.
+- **Size caps**: 1,000,000 characters of article HTML, 250,000 of Markdown. A page over either ceiling stores nothing, because truncating the HTML would cut it mid-tag and break the re-conversion the column exists for.
+- **Node-count cap**: 20,000 elements, checked by the gate before the parse. `linkedom`'s `getElementsByTagName` does not take the `*` wildcard — it answers zero, which would disable the cap silently — so the count comes from `querySelectorAll("*")`.
+- **Character floor**: 500 characters of article text, enforced by the extractor. Readability's own `charThreshold` only decides whether to retry with looser flags; when the retries run out it returns the best attempt whatever its length, so passing it alone does not make the floor a rule.
+- **`source` is an enum**, `readable_content_source`, matching the `link_type` and `enrichment_status` precedent.
+- **Base URL injection**: `linkedom` gives a parsed string no `baseURI`, so Readability leaves every image and link relative. The extractor defines `baseURI` and `documentURI` on the document before the parse.
+
+### Corrections to the ADR, recorded there and in CONTEXT.md
+
+- The HTML column is nullable. Cloudflare returns Markdown and no article HTML, so a row from that source has no local form to re-convert.
+- The escalation condition narrowed, from "the low-confidence signal already flagged the page" to "local extraction rejected a page that still carries the character floor of visible prose". The low-confidence signal fires on a bot wall, and `PageFetcher` has already escalated those before enrichment sees them.
 
 ### Testing seams
 
