@@ -5,6 +5,7 @@ import { AuthHandler } from "../modules/auth/AuthHandler.js";
 import { BetterAuth } from "../modules/auth/BetterAuth.js";
 import { CaptureService } from "../modules/capture/CaptureService.js";
 import { ConnectCodeRepository } from "../modules/connect/ConnectCodeRepository.js";
+import { LinkContentRepository } from "../modules/content/LinkContentRepository.js";
 import { EnrichmentWorkflow } from "../modules/enrichment/EnrichmentWorkflow.js";
 import { FolderRepository } from "../modules/folders/FolderRepository.js";
 import { IdempotencyStore } from "../modules/idempotency/IdempotencyStore.js";
@@ -44,6 +45,7 @@ export const appLayer = Layer.mergeAll(
   ConnectCodeRepository.defaultLayer,
   ConnectExchangeRateLimiter.defaultLayer,
   EnrichmentWorkflow.defaultLayer,
+  LinkContentRepository.defaultLayer,
   FolderRepository.defaultLayer,
   IdempotencyStore.defaultLayer,
   McpTools.defaultLayer,

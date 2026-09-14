@@ -94,6 +94,9 @@ const withheldSavedItemProperties = [
   "captureChannel",
   "folder",
   "isRead",
+  // Readable Content never appears on a Public Profile, and neither does the
+  // fact that it exists.
+  "hasReadableContent",
   "lastSavedAt",
   "createdAt",
   "updatedAt",

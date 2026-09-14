@@ -94,12 +94,36 @@ export class SavedItemDto extends Schema.Class<SavedItemDto>("SavedItemDto")({
   captureChannel: Schema.optional(CaptureChannel),
   folder: Schema.NullOr(Schema.suspend(() => FolderDto)),
   isRead: Schema.Boolean,
+  // Whether this Saved Item has a Reader View. The Readable Content itself is
+  // never in a list response: it is read through its own request, so a list
+  // costs the same whether or not an article was extracted.
+  hasReadableContent: Schema.Boolean,
   lastSavedAt: Schema.DateFromString,
   createdAt: Schema.DateFromString,
   updatedAt: Schema.DateFromString,
 }) {}
 export namespace SavedItemDto {
   export type Encoded = Schema.Codec.Encoded<typeof SavedItemDto>
+}
+
+// One Saved Item's Readable Content, for the Reader View.
+//
+// The Markdown form only. The article HTML is stored so a better conversion can
+// be run later without fetching the page again, and serving it would put an
+// HTML sanitizer on both clients; leaving it out of this class is what keeps
+// that a deliberate future change rather than an accident.
+//
+// The Original URL travels with it because the Reader View always offers it:
+// extraction loses tables, embeds, and figure captions.
+export class ReadableContentDto extends Schema.Class<ReadableContentDto>("ReadableContentDto")({
+  savedItemId: Schema.String,
+  originalUrl: Schema.String,
+  title: Schema.optional(Schema.String),
+  markdown: Schema.String,
+  extractedAt: Schema.DateFromString,
+}) {}
+export namespace ReadableContentDto {
+  export type Encoded = Schema.Codec.Encoded<typeof ReadableContentDto>
 }
 
 export class SavedItemsResponse extends Schema.Class<SavedItemsResponse>("SavedItemsResponse")({
