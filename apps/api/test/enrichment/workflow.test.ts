@@ -431,14 +431,14 @@ describe("EnrichmentWorkflow", () => {
       // The flag says a Reader View exists.
       expect(finished?.enrichment.hasReadableContent).toBe(true)
 
-      // Extracted Page Content now comes from the head of that Markdown, as
-      // prose rather than as markup.
+      // Extracted Page Content now comes from the head of that Markdown, and
+      // carries the article rather than the chrome around it.
       const content = aiInputs[0]?.content
       expect(content && Option.isSome(content)).toBe(true)
       if (!content || Option.isNone(content)) return
       expect(content.value).toContain("Readability scores a block")
-      expect(content.value).not.toContain("#")
       expect(content.value).not.toContain("Cookie notice")
+      expect(content.value).not.toContain("Pricing")
     }).pipe(
       Effect.provide(workflowLayer({
         readableHtml: articlePage,

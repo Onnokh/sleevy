@@ -8,7 +8,7 @@ import {
   getTitle,
   parseHtml,
 } from "../../lib/html.js"
-import { markdownToPlainText } from "../../lib/markdown.js"
+import { markdownForSummary } from "../../lib/markdown.js"
 import { toAbsoluteUrl } from "../../lib/url.js"
 import { PageDocument } from "../fetch/PageFetcher.js"
 import { chooseFavicon, findFaviconCandidates } from "./Favicon.js"
@@ -77,7 +77,7 @@ export class MetadataFetcher extends Context.Service<MetadataFetcher>()(
         return yield* Effect.try({
           try: () => {
             const text = readableMarkdown
-              ? truncate(markdownToPlainText(readableMarkdown), PAGE_CONTENT_LIMIT)
+              ? truncate(markdownForSummary(readableMarkdown), PAGE_CONTENT_LIMIT)
               : extractPageContent(parseHtml(page.html), PAGE_CONTENT_LIMIT)
             return text ? Option.some(text) : Option.none<string>()
           },
