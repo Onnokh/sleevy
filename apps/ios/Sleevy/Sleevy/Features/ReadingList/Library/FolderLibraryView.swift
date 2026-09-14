@@ -79,6 +79,8 @@ struct FolderLibraryView: View {
         headerTopInset: CGFloat
     ) -> some View {
         List {
+            StretchyHeaderAnchorRow()
+
             ListSubtitleRow(subtitle: navigationSubtitleText(
                 total: projection.destinationCount,
                 unread: projection.unreadDestinationCount
@@ -406,9 +408,9 @@ struct MoveToFolderSheet: View {
 
 /// The card behind a folder's large title — the Inbox header card's sibling,
 /// with the folder's own corona field instead of the aurora (neutral for a
-/// folder without one). The counts render inside the card:
-/// `navigationSubtitle` on a pushed screen collapses the large title to
-/// inline, so the system subtitle is not an option here.
+/// folder without one). The counts are a list row under it, never part of
+/// the card: `navigationSubtitle` on a pushed screen collapses the large
+/// title to inline, so the system subtitle is not an option here.
 private struct FolderHeaderCard: View {
     let folder: Folder
     let height: CGFloat

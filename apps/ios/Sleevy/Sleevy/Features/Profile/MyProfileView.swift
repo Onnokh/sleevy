@@ -269,6 +269,8 @@ struct MyProfileView: View {
 
         return List {
             Section {
+                StretchyHeaderAnchorRow()
+
                 VStack(spacing: 4) {
                     if let handle = profileStore.profile?.handle {
                         Text("@\(handle)")

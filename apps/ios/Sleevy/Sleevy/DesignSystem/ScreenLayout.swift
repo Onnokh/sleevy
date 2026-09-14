@@ -50,7 +50,12 @@ struct ListSubtitleRow: View {
             Text(subtitle)
                 .font(.system(size: 15, weight: .medium))
                 .foregroundStyle(.secondary)
-                .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 10, trailing: 20))
+                // The minimum row height is off under a header card (see
+                // `stretchyHeaderCard`), so the row states the height the
+                // List used to pad it to: the text and the first row sit
+                // exactly where they did.
+                .padding(.vertical, 2)
+                .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 0, trailing: 20))
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
         }

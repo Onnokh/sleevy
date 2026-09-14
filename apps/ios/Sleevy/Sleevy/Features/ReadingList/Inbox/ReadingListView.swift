@@ -66,6 +66,8 @@ struct ReadingListView: View {
         headerTopInset: CGFloat
     ) -> some View {
         List {
+            StretchyHeaderAnchorRow()
+
             ListSubtitleRow(subtitle: subtitle)
 
             if store.isLoading,
