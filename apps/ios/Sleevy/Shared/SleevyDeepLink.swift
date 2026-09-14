@@ -1,10 +1,11 @@
 import Foundation
 
-/// A `sleevy://` URL a widget hands to the app. Three destinations: the
-/// Inbox, one Folder View, and one Saved Item, which the app opens through
-/// the Open Action exactly as if its Inbox row had been tapped.
+/// A `sleevy://` URL a widget hands to the app. Four destinations: the
+/// Inbox, the Library, one Folder View, and one Saved Item, which the app
+/// opens through the Open Action exactly as if its Inbox row had been tapped.
 nonisolated enum SleevyDeepLink: Hashable, Sendable {
     case inbox
+    case library
     case folder(id: String)
     case savedItem(id: String)
 
@@ -17,6 +18,8 @@ nonisolated enum SleevyDeepLink: Hashable, Sendable {
         switch self {
         case .inbox:
             components.host = "inbox"
+        case .library:
+            components.host = "library"
         case .folder(let id):
             components.host = "folders"
             components.path = "/\(id)"
@@ -36,6 +39,8 @@ nonisolated enum SleevyDeepLink: Hashable, Sendable {
         switch (url.host()?.lowercased(), segments.count) {
         case ("inbox", 0):
             self = .inbox
+        case ("library", 0):
+            self = .library
         case ("folders", 1):
             self = .folder(id: segments[0])
         case ("saved-items", 1):

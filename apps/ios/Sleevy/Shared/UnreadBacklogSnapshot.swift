@@ -2,8 +2,9 @@ import Foundation
 
 /// The Unread Backlog as the Unread Widget sees it, published by the app
 /// into the app group each time the Inbox or the Folder list changes: the
-/// whole backlog, each Folder's share of it, and the Folder list the widget
-/// configuration sheet offers.
+/// whole backlog, each Folder's share of it, the Library's newest Saved
+/// Items read or unread, and the Folder list the widget configuration sheet
+/// offers.
 ///
 /// The widget holds no credentials and calls no endpoint. It renders the last
 /// state the app published, and the app asks WidgetKit to reload it right
@@ -18,6 +19,13 @@ nonisolated struct UnreadBacklogSnapshot: Codable, Equatable, Sendable {
         /// The Original URL a row tap opens.
         let url: URL
         let lastSavedAt: Date
+        /// Always false in an unread scope; the Library scope carries both
+        /// states and draws the Unread Dot from it.
+        let isRead: Bool
+
+        func read() -> Item {
+            Item(id: id, title: title, host: host, faviconURL: faviconURL, url: url, lastSavedAt: lastSavedAt, isRead: true)
+        }
     }
 
     struct Folder: Codable, Equatable, Identifiable, Sendable {
@@ -27,13 +35,14 @@ nonisolated struct UnreadBacklogSnapshot: Codable, Equatable, Sendable {
         let color: String?
     }
 
-    /// One unread scope: how many Saved Items are unread in it, and the
-    /// newest of them, most recently saved first.
+    /// One scope: how many Saved Items it holds, and the newest of them,
+    /// most recently saved first. The Inbox and a Folder count and list
+    /// unread items only; the Library counts and lists every Saved Item.
     struct Scope: Codable, Equatable, Sendable {
-        let unreadCount: Int
+        let count: Int
         let items: [Item]
 
-        static let empty = Scope(unreadCount: 0, items: [])
+        static let empty = Scope(count: 0, items: [])
     }
 
     /// The widget kind the app reloads after a publish.
@@ -46,6 +55,8 @@ nonisolated struct UnreadBacklogSnapshot: Codable, Equatable, Sendable {
     /// tap writes into.
     let accountID: String
     let inbox: Scope
+    /// The whole collection, newest first, read and unread alike.
+    let library: Scope
     let folders: [Folder]
     /// Each Folder's share of the backlog, keyed by Folder identifier.
     let folderScopes: [String: Scope]
@@ -84,20 +95,23 @@ nonisolated struct UnreadBacklogSnapshot: Codable, Equatable, Sendable {
         guard let other else { return false }
         return accountID == other.accountID
             && inbox == other.inbox
+            && library == other.library
             && folders == other.folders
             && folderScopes == other.folderScopes
     }
 
-    /// The snapshot after one Saved Item was read from a widget: the row
-    /// leaves every scope that listed it and those counts drop by one. The
-    /// Inbox count always drops, because every unread item is in the Inbox;
-    /// a Folder count only drops when the item was among its listed rows,
-    /// which is the only way it could have been tapped there. The app's next
-    /// publish replaces this estimate with the real counts.
-    func removing(itemID: String) -> UnreadBacklogSnapshot {
+    /// The snapshot after one Saved Item was read from a widget. The row
+    /// leaves every unread scope that listed it and those counts drop by
+    /// one; in the Library, which shows read items too, it stays and turns
+    /// read. The Inbox count always drops, because every unread item is in
+    /// the Inbox; a Folder count only drops when the item was among its
+    /// listed rows, which is the only way it could have been tapped there.
+    /// The app's next publish replaces this estimate with the real state.
+    func markingRead(itemID: String) -> UnreadBacklogSnapshot {
         UnreadBacklogSnapshot(
             accountID: accountID,
             inbox: inbox.removing(itemID: itemID, alwaysCounted: true),
+            library: library.markingRead(itemID: itemID),
             folders: folders,
             folderScopes: folderScopes.mapValues { $0.removing(itemID: itemID, alwaysCounted: false) },
             publishedAt: Date()
@@ -110,8 +124,12 @@ nonisolated extension UnreadBacklogSnapshot.Scope {
         let wasListed = items.contains { $0.id == itemID }
         guard wasListed || alwaysCounted else { return self }
         return Self(
-            unreadCount: max(0, unreadCount - 1),
+            count: max(0, count - 1),
             items: items.filter { $0.id != itemID }
         )
+    }
+
+    func markingRead(itemID: String) -> Self {
+        Self(count: count, items: items.map { $0.id == itemID ? $0.read() : $0 })
     }
 }

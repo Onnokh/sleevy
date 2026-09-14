@@ -927,6 +927,10 @@ final class ReadingListStore {
             setSnapshot(RetrievalProjector.snapshot(for: .folder(id), in: updatedIndex), at: .folder(id))
         }
 
+        // After every snapshot has moved, so the widget sees the Inbox and
+        // the Library from the same index state.
+        publishUnreadBacklog()
+
         if itemsChanged {
             updateSearchSnapshot()
         } else if searchSnapshot.coverage != updatedIndex.globalCoverage {
@@ -941,10 +945,7 @@ final class ReadingListStore {
     private func setSnapshot(_ snapshot: RetrievalSnapshot, at request: RetrievalRequest) {
         switch request {
         case .inbox:
-            if snapshot != inboxSnapshot {
-                inboxSnapshot = snapshot
-                publishUnreadBacklog()
-            }
+            if snapshot != inboxSnapshot { inboxSnapshot = snapshot }
         case .completeLibrary:
             if snapshot != completeLibrarySnapshot { completeLibrarySnapshot = snapshot }
         case .libraryRoot:
@@ -954,11 +955,12 @@ final class ReadingListStore {
         }
     }
 
-    /// Mirrors the Inbox into the app group for the Unread Widget: the whole
-    /// backlog and each Folder's share of it, so a widget can follow one
-    /// Folder. Only a snapshot that knows the backlog is published: a loading
-    /// or failed scope says nothing about what is unread, and publishing its
-    /// empty item list would blank the widget on every launch.
+    /// Mirrors the index into the app group for the Unread Widget: the whole
+    /// backlog, each Folder's share of it, and the Library's newest items,
+    /// so a widget can follow any one of them. Only a snapshot that knows
+    /// the backlog is published: a loading or failed scope says nothing
+    /// about what is unread, and publishing its empty item list would blank
+    /// the widget on every launch.
     private func publishUnreadBacklog() {
         switch inboxSnapshot.coverage {
         case .cached, .complete, .stale:
@@ -983,12 +985,13 @@ final class ReadingListStore {
         publishedFolders.sort { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
 
         let folderScopes = Dictionary(uniqueKeysWithValues: publishedFolders.map { folder in
-            (folder.id, Self.unreadScope(unreadByFolder[folder.id] ?? []))
+            (folder.id, Self.scope(unreadByFolder[folder.id] ?? []))
         })
 
         let snapshot = UnreadBacklogSnapshot(
             accountID: userId,
-            inbox: Self.unreadScope(unread),
+            inbox: Self.scope(unread),
+            library: Self.scope(completeLibrarySnapshot.items),
             folders: publishedFolders,
             folderScopes: folderScopes,
             publishedAt: Date()
@@ -1000,9 +1003,9 @@ final class ReadingListStore {
         WidgetCenter.shared.reloadTimelines(ofKind: UnreadBacklogSnapshot.widgetKind)
     }
 
-    private static func unreadScope(_ items: [SavedItem]) -> UnreadBacklogSnapshot.Scope {
+    private static func scope(_ items: [SavedItem]) -> UnreadBacklogSnapshot.Scope {
         UnreadBacklogSnapshot.Scope(
-            unreadCount: items.count,
+            count: items.count,
             // A row needs a link to open; an item whose Original URL does not
             // parse is counted but not listed.
             items: items.prefix(UnreadBacklogSnapshot.maximumItems).compactMap { item in
@@ -1014,7 +1017,8 @@ final class ReadingListStore {
                     host: item.displayDomain,
                     faviconURL: item.preferredFaviconURL(colorScheme: .light),
                     url: url,
-                    lastSavedAt: item.lastSavedAt
+                    lastSavedAt: item.lastSavedAt,
+                    isRead: item.isRead
                 )
             }
         )

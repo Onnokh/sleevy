@@ -396,15 +396,15 @@ A small dot that indicates a Saved Item has not been opened yet.
 _Avoid_: Badge, bold unread row
 
 **Unread Widget**:
-The Home Screen and Lock Screen widget of the Native iOS App that shows the size of the Unread Backlog, or one Folder's share of it, with its newest Saved Items, and opens one on tap. Which Folder it follows is a widget setting; the default is the whole Inbox.
-_Avoid_: Inbox widget, folder widget, badge count, reading activity widget
+The Home Screen and Lock Screen widget of the Native iOS App that shows the size of the Unread Backlog, or one Folder's share of it, with its newest Saved Items, and opens one on tap. It can also follow the Library, where it shows the newest Saved Items read or unread with the Unread Dot and the total number of saves. Which scope it follows is a widget setting; the default is the whole Inbox.
+_Avoid_: Inbox widget, folder widget, library widget, badge count, reading activity widget
 
 **Unread Backlog Snapshot**:
-The copy of the Unread Backlog the app publishes into the app group for the Unread Widget: the count and newest items for the whole Inbox and for each Folder, the Folder list, and when it was published. The widget reads it and never calls the REST API itself.
+The copy of the Unread Backlog the app publishes into the app group for the Unread Widget: the count and newest items for the whole Inbox, for each Folder, and for the Library, the Folder list, and when it was published. The widget reads it and never calls the REST API itself.
 _Avoid_: Widget cache, widget API, shared session
 
 **Deep Link**:
-A `sleevy://` URL that a widget hands to the Native iOS App to select the Home Tab, open a Folder View, or open one Saved Item through the Open Action.
+A `sleevy://` URL that a widget hands to the Native iOS App to select the Home Tab or the Library Tab, open a Folder View, or open one Saved Item through the Open Action.
 _Avoid_: Universal link, URL scheme handler, share URL
 
 **Widget Row Tap**:
