@@ -7,6 +7,7 @@ import {
   getMetaContent,
   getTitle,
   parseHtml,
+  truncateText,
 } from "../../lib/html.js"
 import { markdownForSummary } from "../../lib/markdown.js"
 import { toAbsoluteUrl } from "../../lib/url.js"
@@ -77,7 +78,7 @@ export class MetadataFetcher extends Context.Service<MetadataFetcher>()(
         return yield* Effect.try({
           try: () => {
             const text = readableMarkdown
-              ? truncate(markdownForSummary(readableMarkdown), PAGE_CONTENT_LIMIT)
+              ? truncateText(markdownForSummary(readableMarkdown), PAGE_CONTENT_LIMIT)
               : extractPageContent(parseHtml(page.html), PAGE_CONTENT_LIMIT)
             return text ? Option.some(text) : Option.none<string>()
           },
@@ -93,11 +94,6 @@ export class MetadataFetcher extends Context.Service<MetadataFetcher>()(
   },
 ) {
   static readonly layer = Layer.effect(MetadataFetcher, MetadataFetcher.make)
-}
-
-const truncate = (text: string, maxChars: number) => {
-  if (text.length === 0) return undefined
-  return text.length > maxChars ? `${text.slice(0, maxChars).trimEnd()}\u2026` : text
 }
 
 const buildMetadata = (page: PageDocument) => {

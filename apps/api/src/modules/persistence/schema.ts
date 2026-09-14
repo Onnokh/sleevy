@@ -69,10 +69,6 @@ export const captureChannelEnum = pgEnum("capture_channel", captureChannels)
 
 export const profileVisibilityEnum = pgEnum("profile_visibility", profileVisibilities)
 
-export const readableContentSourceEnum = pgEnum("readable_content_source", [
-  "readability",
-])
-
 export const enrichmentJobStatusEnum = pgEnum("enrichment_job_status", [
   "queued",
   "running",
@@ -190,7 +186,6 @@ export const linkContentTable = pgTable(
       (): SQL =>
         sql`to_tsvector('english', regexp_replace(regexp_replace(${linkContentTable.markdown}, '[]][(][^)]*[)]', ']', 'g'), 'https?://[^[:space:]]+', ' ', 'g'))`,
     ),
-    source: readableContentSourceEnum("source").notNull(),
     extractedAt: timestamp("extracted_at", { withTimezone: true })
       .notNull()
       .defaultNow(),

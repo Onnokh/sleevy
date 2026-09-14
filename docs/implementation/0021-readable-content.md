@@ -32,7 +32,7 @@ No user-visible surface. Delivered behind the existing enrichment pipeline.
 - **Node-count cap**: 20,000 elements, checked by the gate before the parse. `linkedom`'s `getElementsByTagName` does not take the `*` wildcard — it answers zero, which would disable the cap silently — so the count comes from `querySelectorAll("*")`.
 - **Indexed expression**: `to_tsvector('english', …)` over the Markdown with link targets and bare URLs removed. The replacements use POSIX bracket expressions rather than backslash escapes, because a backslash does not survive drizzle's template literal and the regex it decays into strips every word following a stray `]`.
 - **Character floor**: 500 characters of article text, enforced by the extractor. Readability's own `charThreshold` only decides whether to retry with looser flags; when the retries run out it returns the best attempt whatever its length, so passing it alone does not make the floor a rule.
-- **`source` is an enum**, `readable_content_source`, matching the `link_type` and `enrichment_status` precedent.
+- **No `source` column.** It was decided when Cloudflare was to be a second producer; with one extractor it records nothing. Provenance returns as a column if a second extractor ever exists, which is a migration against a table nothing reads.
 - **Base URL injection**: `linkedom` gives a parsed string no `baseURI`, so Readability leaves every image and link relative. The extractor defines `baseURI` and `documentURI` on the document before the parse.
 
 ### Corrections to the ADR, recorded there and in CONTEXT.md

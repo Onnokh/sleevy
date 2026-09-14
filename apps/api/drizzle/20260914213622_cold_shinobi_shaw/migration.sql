@@ -1,10 +1,8 @@
-CREATE TYPE "readable_content_source" AS ENUM('readability');--> statement-breakpoint
 CREATE TABLE "link_content" (
 	"link_id" text PRIMARY KEY,
 	"html" text NOT NULL,
 	"markdown" text NOT NULL,
 	"search" tsvector GENERATED ALWAYS AS (to_tsvector('english', regexp_replace(regexp_replace("link_content"."markdown", '[]][(][^)]*[)]', ']', 'g'), 'https?://[^[:space:]]+', ' ', 'g'))) STORED,
-	"source" "readable_content_source" NOT NULL,
 	"extracted_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint

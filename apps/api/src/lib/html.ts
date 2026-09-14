@@ -58,6 +58,16 @@ export const getTitle = (document: HtmlDocument): string | undefined => {
   return collapsed.length > 0 ? collapsed : undefined
 }
 
+/**
+ * Cut a string to `maxChars`, marking the cut with an ellipsis. Returns
+ * undefined for an empty string, so a caller can treat "nothing to say" and
+ * "nothing found" the same way.
+ */
+export const truncateText = (text: string, maxChars: number): string | undefined => {
+  if (text.length === 0) return undefined
+  return text.length > maxChars ? `${text.slice(0, maxChars).trimEnd()}…` : text
+}
+
 const CHROME_SELECTOR =
   "script, style, noscript, template, svg, iframe, form, nav, header, footer, aside, " +
   "[role=navigation], [role=banner], [role=contentinfo], [aria-hidden=true]"
@@ -90,8 +100,7 @@ export const extractPageContent = (
     if (best.length > 600) break
   }
 
-  if (best.length === 0) return undefined
-  return best.length > maxChars ? `${best.slice(0, maxChars).trimEnd()}…` : best
+  return truncateText(best, maxChars)
 }
 
 /**

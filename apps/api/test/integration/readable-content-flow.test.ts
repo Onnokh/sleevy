@@ -96,7 +96,6 @@ describe("readable content integration flow", () => {
         yield* content.upsert(linkId, {
           html: "<div><h2>Monomorphic call sites</h2><p>…</p></div>",
           markdown,
-          source: "readability",
         })
 
         // The row and the flag are written together, so a list read can answer
@@ -113,14 +112,12 @@ describe("readable content integration flow", () => {
         expect(Option.isSome(stored)).toBe(true)
         if (Option.isNone(stored)) return
         expect(stored.value.markdown).toContain("Monomorphic call sites")
-        expect(stored.value.source).toBe("readability")
         expect(Object.keys(stored.value)).not.toContain("html")
 
         // Re-extraction replaces the row rather than adding one.
         yield* content.upsert(linkId, {
           html: "<div><p>second pass</p></div>",
           markdown: "Second pass.",
-          source: "readability",
         })
         const rows = yield* Effect.promise(() =>
           query<{ count: string }>(
@@ -151,7 +148,6 @@ describe("readable content integration flow", () => {
         yield* content.upsert(created.savedItem.link.id, {
           html: "<div><p>…</p></div>",
           markdown,
-          source: "readability",
         })
 
         const lexemes = yield* Effect.promise(() =>
@@ -192,7 +188,6 @@ describe("readable content integration flow", () => {
         yield* content.upsert(linkId, {
           html: "<div><p>…</p></div>",
           markdown,
-          source: "readability",
         })
 
         yield* Effect.promise(() => query("delete from links where id = $1", [linkId]))

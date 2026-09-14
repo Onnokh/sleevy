@@ -17,11 +17,11 @@ import {
   AiEnricherError,
   type AiEnrichmentInput,
 } from "../../src/modules/ai/AiEnricher.js"
+import { LinkContentRepository } from "../../src/modules/content/LinkContentRepository.js"
 import {
-  LinkContentRepository,
-  type StoredArticle,
-} from "../../src/modules/content/LinkContentRepository.js"
-import { ReadableContentExtractor } from "../../src/modules/content/ReadableContentExtractor.js"
+  ReadableContentExtractor,
+  type ExtractedArticle,
+} from "../../src/modules/content/ReadableContentExtractor.js"
 import { EnrichmentWorkflow } from "../../src/modules/enrichment/EnrichmentWorkflow.js"
 import { PageDocument } from "../../src/modules/fetch/PageDocument.js"
 import { PageFetcher } from "../../src/modules/fetch/PageFetcher.js"
@@ -121,7 +121,8 @@ const workflowLayer = (input: {
   readonly onAiInput?: ((input: AiEnrichmentInput) => void) | undefined
   readonly onStart?: (() => void) | undefined
   readonly readableHtml?: string | undefined
-  readonly onContentStored?: ((article: StoredArticle) => void) | undefined
+  readonly onContentStored?: ((article: ExtractedArticle) => void) | undefined
+  readonly contentStoreFails?: boolean | undefined
   readonly onFinish?: ((result: FinishedEnrichment) => void) | undefined
 }) =>
   EnrichmentWorkflow.layer.pipe(
@@ -168,9 +169,16 @@ const workflowLayer = (input: {
         LinkContentRepository,
         LinkContentRepository.of({
           upsert: (_linkId, article) =>
-            Effect.sync(() => {
+            Effect.suspend(() => {
               input.onContentStored?.(article)
-              return now
+              return input.contentStoreFails
+                // Stands in for the SqlError a real write fails with. The
+                // assertion keeps the double off @effect/sql, which the api
+                // does not depend on directly.
+                ? Effect.fail(
+                  new Error("link_content write failed") as unknown as never,
+                )
+                : Effect.succeed(now)
             }),
           findByLinkId: () => Effect.succeed(Option.none()),
         }),
@@ -381,7 +389,7 @@ describe("EnrichmentWorkflow", () => {
     )
   })
   it.effect("stores Readable Content in both forms and reads the AI input from it", () => {
-    const stored: StoredArticle[] = []
+    const stored: ExtractedArticle[] = []
     const aiInputs: AiEnrichmentInput[] = []
     let finished: FinishedEnrichment | undefined
 
@@ -398,7 +406,6 @@ describe("EnrichmentWorkflow", () => {
 
       // Two stored forms, written together.
       expect(stored.length).toBe(1)
-      expect(stored[0]?.source).toBe("readability")
       expect(stored[0]?.html).toContain("<p>")
       expect(stored[0]?.markdown).toContain("Readability scores a block")
 
@@ -432,7 +439,7 @@ describe("EnrichmentWorkflow", () => {
   })
 
   it.effect("stores nothing and raises no flag when the gate rejects the page", () => {
-    const stored: StoredArticle[] = []
+    const stored: ExtractedArticle[] = []
     let finished: FinishedEnrichment | undefined
 
     return Effect.gen(function* () {
@@ -453,6 +460,42 @@ describe("EnrichmentWorkflow", () => {
         onContentStored: (article) => {
           stored.push(article)
         },
+        onFinish: (result) => {
+          finished = result
+        },
+      })),
+    )
+  })
+  it.effect("records a failed stage, and finishes the job, when the write fails", () => {
+    let finished: FinishedEnrichment | undefined
+
+    return Effect.gen(function* () {
+      const workflow = yield* EnrichmentWorkflow
+      yield* workflow.enrich(linkId)
+
+      // The write lives inside the stage, so a database failure is a recorded
+      // stage failure rather than a job that throws away the metadata and Tags
+      // it already earned.
+      expect(finished).toBeDefined()
+      expect(finished?.job.stages.map((stage) => `${stage.stage}:${stage.status}`)).toEqual([
+        "metadata:succeeded",
+        "readable-content:failed",
+        "tagging:succeeded",
+        "preview-summary:succeeded",
+      ])
+
+      // No row was stored, so no Reader View is claimed.
+      expect(finished?.enrichment.hasReadableContent).toBe(false)
+      // The rest of the job survived.
+      expect(finished?.metadata.title).toBe("Extraction")
+      expect(finished?.enrichment.tags).toEqual(["typescript"])
+      expect(finished?.job.status).toBe("partial")
+    }).pipe(
+      Effect.provide(workflowLayer({
+        readableHtml: articlePage,
+        contentStoreFails: true,
+        aiTags: ["typescript"],
+        aiPreview: "How Readability scores a page.",
         onFinish: (result) => {
           finished = result
         },

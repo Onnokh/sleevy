@@ -1,21 +1,13 @@
 import { eq } from "drizzle-orm"
 import { Context, Effect, Layer, Option, Schema } from "effect"
 
-import {
-  ReadableContent,
-  type ReadableContentSource,
-} from "../../domain/ReadableContent.js"
+import { ReadableContent } from "../../domain/ReadableContent.js"
 import type { LinkId } from "../../domain/SavedItem.js"
+import type { ExtractedArticle } from "./ReadableContentExtractor.js"
 import { PostgresClient } from "../persistence/PostgresClient.js"
 import { linkContentTable, linkEnrichmentTable } from "../persistence/schema.js"
 
 const decodeReadableContent = Schema.decodeUnknownSync(ReadableContent)
-
-export type StoredArticle = {
-  readonly markdown: string
-  readonly html: string
-  readonly source: ReadableContentSource
-}
 
 export class LinkContentRepository extends Context.Service<LinkContentRepository>()(
   "@app/modules/content/LinkContentRepository",
@@ -31,7 +23,7 @@ export class LinkContentRepository extends Context.Service<LinkContentRepository
          */
         upsert: Effect.fn("LinkContentRepository.upsert")(function* (
           linkId: LinkId,
-          article: StoredArticle,
+          article: ExtractedArticle,
         ) {
           const extractedAt = new Date()
 
@@ -43,7 +35,6 @@ export class LinkContentRepository extends Context.Service<LinkContentRepository
                   linkId,
                   html: article.html,
                   markdown: article.markdown,
-                  source: article.source,
                   extractedAt,
                 })
                 .onConflictDoUpdate({
@@ -51,7 +42,6 @@ export class LinkContentRepository extends Context.Service<LinkContentRepository
                   set: {
                     html: article.html,
                     markdown: article.markdown,
-                    source: article.source,
                     extractedAt,
                   },
                 })
@@ -78,7 +68,6 @@ export class LinkContentRepository extends Context.Service<LinkContentRepository
             .select({
               linkId: linkContentTable.linkId,
               markdown: linkContentTable.markdown,
-              source: linkContentTable.source,
               extractedAt: linkContentTable.extractedAt,
             })
             .from(linkContentTable)

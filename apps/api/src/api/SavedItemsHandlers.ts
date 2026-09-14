@@ -107,18 +107,24 @@ export const savedItemsGroupLive = HttpApiBuilder.group(sleevyApi, "saved-items"
         const contentRepo = yield* LinkContentRepository
         const userId = yield* CurrentUser
 
-        const item = yield* repo.findByUserAndId(userId, params.id).pipe(Effect.orDie)
-        if (Option.isNone(item)) {
-          return yield* new SavedItemNotFoundError({
-            message: "Saved Item was not found.",
-            savedItemId: params.id,
-          })
-        }
+        const found = yield* repo.findByUserAndId(userId, params.id).pipe(
+          Effect.orDie,
+          Effect.flatMap(
+            Option.match({
+              onNone: () => Effect.succeedNone,
+              onSome: (item) =>
+                contentRepo.findByLinkId(item.link.id).pipe(
+                  Effect.orDie,
+                  Effect.map(Option.map((content) => ({ item, content }))),
+                ),
+            }),
+          ),
+        )
 
-        const content = yield* contentRepo
-          .findByLinkId(item.value.link.id)
-          .pipe(Effect.orDie)
-        if (Option.isNone(content)) {
+        // One failure site for both misses: a Link with no Readable Content and
+        // a Saved Item owned by somebody else are answered identically, so the
+        // response never discloses that an item exists.
+        if (Option.isNone(found)) {
           return yield* new SavedItemNotFoundError({
             message: "Saved Item was not found.",
             savedItemId: params.id,
@@ -126,13 +132,13 @@ export const savedItemsGroupLive = HttpApiBuilder.group(sleevyApi, "saved-items"
         }
 
         return new ReadableContentDto({
-          savedItemId: item.value.savedItem.id,
+          savedItemId: found.value.item.savedItem.id,
           // The Reader View always offers the Original URL, because extraction
           // loses tables, embeds, and figure captions.
-          originalUrl: item.value.link.originalUrl,
-          title: item.value.metadata.title,
-          markdown: content.value.markdown,
-          extractedAt: content.value.extractedAt,
+          originalUrl: found.value.item.link.originalUrl,
+          title: found.value.item.metadata.title,
+          markdown: found.value.content.markdown,
+          extractedAt: found.value.content.extractedAt,
         })
       })))
     .handle("markOpened", gated("saved-items:write", ({ params }) =>

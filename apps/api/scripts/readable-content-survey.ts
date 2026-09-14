@@ -17,6 +17,7 @@
 // than as a failure.
 
 import { SQL } from "bun"
+import { Effect, Option } from "effect"
 
 const DATABASE_URL = process.env.DATABASE_URL
 if (!DATABASE_URL) {
@@ -49,46 +50,28 @@ type Outcome = {
   markdownChars?: number
 }
 
-// Readability and the converter only exist in an image built from the branch
-// that added them. Without them the fetch numbers are still worth having, so
-// the extraction column is reported as unmeasured instead of failing the run.
+// The extractor only exists in an image built from the branch that added it,
+// so it is imported dynamically and its absence is reported rather than fatal.
+// It is the real extractor: re-stating its thresholds here would give the
+// survey a second copy of the gate, and the two would drift the first time one
+// of them changed. (`effect` itself is a core dependency and always present.)
 const loadExtractor = async () => {
   try {
-    const [{ Readability, isProbablyReaderable }, { parseHTML }, turndownModule] =
-      await Promise.all([
-        import("@mozilla/readability"),
-        import("linkedom"),
-        import("turndown"),
-      ])
-    const TurndownService = (turndownModule as any).default ?? turndownModule
-    const turndown = new TurndownService({
-      headingStyle: "atx",
-      codeBlockStyle: "fenced",
-      bulletListMarker: "-",
-    })
+    const { ReadableContentExtractor } = await import(
+      "../src/modules/content/ReadableContentExtractor.js"
+    )
 
-    return (html: string, url: string) => {
-      const check = parseHTML(html).document
-      if (check.querySelectorAll("*").length > 20_000) return undefined
-      if (!isProbablyReaderable(check as never, { minContentLength: 140, minScore: 20 })) {
-        return undefined
-      }
-
-      const doc = parseHTML(html).document as any
-      for (const key of ["baseURI", "documentURI"]) {
-        Object.defineProperty(doc, key, { value: url, configurable: true })
-      }
-      const article = new Readability(doc, {
-        charThreshold: 500,
-        maxElemsToParse: 20_000,
-        keepClasses: false,
-      }).parse()
-
-      if (!article?.content?.trim()) return undefined
-      if ((article.textContent?.trim().length ?? 0) < 500) return undefined
-      const markdown = turndown.turndown(article.content).trim()
-      return markdown.length > 0 ? markdown : undefined
-    }
+    return (html: string, url: string): Promise<string | undefined> =>
+      Effect.gen(function* () {
+        const extractor = yield* ReadableContentExtractor
+        if (!(yield* extractor.isReadable(html, url))) return undefined
+        const article = yield* extractor.extract(html, url)
+        return Option.isSome(article) ? article.value.markdown : undefined
+      }).pipe(
+        Effect.provide(ReadableContentExtractor.layer),
+        Effect.orElseSucceed(() => undefined),
+        Effect.runPromise,
+      )
   } catch {
     return undefined
   }
@@ -172,7 +155,7 @@ const main = async () => {
       ...(("detail" in result && result.detail) ? { directDetail: result.detail } : {}),
     }
     if (result.kind === "ok" && extract) {
-      const markdown = extract(result.html, row.original_url)
+      const markdown = await extract(result.html, row.original_url)
       outcome.extraction = markdown ? "extracted" : "no-article"
       if (markdown) outcome.markdownChars = markdown.length
     } else if (result.kind === "ok") {
@@ -195,7 +178,7 @@ const main = async () => {
       const html = await cloudflareRender(outcome.url)
       outcome.rescue = "rescued"
       if (extract) {
-        const markdown = extract(html, outcome.url)
+        const markdown = await extract(html, outcome.url)
         outcome.extraction = markdown ? "extracted" : "no-article"
         if (markdown) outcome.markdownChars = markdown.length
       } else {

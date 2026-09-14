@@ -97,9 +97,10 @@ services:
       AI_PROVIDER: ${AI_PROVIDER:-}
       AI_MODEL: ${AI_MODEL:-}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
-      # Browser Rendering, used by the page fetcher's Cloudflare tier and by
-      # Readable Content extraction. Both read the same account and token; an
-      # empty value disables each of them rather than failing a capture.
+      # Browser Rendering, used by the page fetcher's Cloudflare tier to render
+      # pages this host is refused by. An empty value disables that tier rather
+      # than failing a capture, which on a blocklisted origin quietly costs the
+      # title and the summary of every page behind a bot wall.
       CLOUDFLARE_ACCOUNT_ID: ${CLOUDFLARE_ACCOUNT_ID:-}
       CLOUDFLARE_API_TOKEN: ${CLOUDFLARE_API_TOKEN:-}
       CLOUDFLARE_ZONE_ID: ${CLOUDFLARE_ZONE_ID:-}

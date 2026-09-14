@@ -633,7 +633,7 @@ _Avoid_: Deep link, route argument, UI test step
 - A page below the extractor's character floor yields no **Readable Content**, so a thin page produces nothing rather than producing a fragment.
 - Extraction is bounded by a node-count limit, because **Enrichment** runs against URLs anyone may submit.
 - Extraction always runs locally, against whatever markup the fetch produced. Where a page needs a browser to yield markup at all, the fetch has already used one, so a page blocked from the origin host is extracted exactly like one that was not.
-- **Readable Content** is stored with a search index over its Markdown form from the start, but neither the **Search Tab** nor the **Command Palette** reads it in v1. The HTML form is never indexed.
+- **Readable Content** is stored with a search index over the prose of its Markdown form from the start — link targets and bare URLs are stripped before indexing, so a target is never a search term — but neither the **Search Tab** nor the **Command Palette** reads it in v1. The HTML form is never indexed.
 - A **Preview Summary** conveys what the page says. It never describes the page as an object, and it is absent rather than filler when the page yields nothing to say.
 - A **Link** may later receive AI-generated categorization and summarization.
 - A **Saved Item** records which **Capture Channel** created it.

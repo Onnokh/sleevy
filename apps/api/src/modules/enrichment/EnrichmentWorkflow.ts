@@ -11,11 +11,11 @@ import {
   EnrichmentStageResult,
 } from "../../domain/EnrichmentJob.js"
 import { AiEnricher, type AiEnrichmentResult } from "../ai/AiEnricher.js"
+import { LinkContentRepository } from "../content/LinkContentRepository.js"
 import {
-  LinkContentRepository,
-  type StoredArticle,
-} from "../content/LinkContentRepository.js"
-import { ReadableContentExtractor } from "../content/ReadableContentExtractor.js"
+  ReadableContentExtractor,
+  type ExtractedArticle,
+} from "../content/ReadableContentExtractor.js"
 import { SavedItemIntake } from "../saved-items/SavedItemIntake.js"
 import { PageDocument, PageFetcher } from "../fetch/PageFetcher.js"
 import { Metadata, MetadataFetcher } from "../metadata/MetadataFetcher.js"
@@ -53,9 +53,15 @@ export class EnrichmentWorkflow extends Context.Service<EnrichmentWorkflow>()(
       // Extraction is local. Where a page needs a browser to yield its markup
       // at all, PageFetcher's Cloudflare tier has already produced it, so this
       // runs against the rendered document like any other (see ADR 0021).
+      //
+      // The write belongs inside the stage, not after it: the stage is what
+      // turns a failure into a recorded skip, and a Readable Content row that
+      // could not be stored is a stage that did not succeed, not a job that
+      // throws away the metadata and Tags it already earned.
       const extractReadable = (
         page: PageDocument,
-      ): Effect.Effect<StageResult<StoredArticle>, unknown> =>
+        linkId: Link["id"],
+      ): Effect.Effect<StageResult<ExtractedArticle>, unknown> =>
         Effect.gen(function* () {
           const url = page.finalUrl
 
@@ -74,14 +80,11 @@ export class EnrichmentWorkflow extends Context.Service<EnrichmentWorkflow>()(
             }
           }
 
-          return {
-            _tag: "success",
-            value: {
-              html: article.value.html,
-              markdown: article.value.markdown,
-              source: "readability",
-            },
-          }
+          // The repository raises the flag on Link Enrichment in the same
+          // transaction, so the row and the flag can never disagree.
+          yield* contentRepository.upsert(linkId, article.value)
+
+          return { _tag: "success", value: article.value }
         })
 
       return {
@@ -159,18 +162,18 @@ export class EnrichmentWorkflow extends Context.Service<EnrichmentWorkflow>()(
           // nothing at all, rather than a body marked absent.
           let readableMarkdown: string | undefined
           {
-            const result = yield* runStage<StoredArticle>(
+            const result = yield* runStage<ExtractedArticle>(
               "readable-content",
               Result.isSuccess(pageResult)
                 ? Option.match(pageResult.success, {
                   onNone: () =>
-                    Effect.succeed<StageResult<StoredArticle>>({
+                    Effect.succeed<StageResult<ExtractedArticle>>({
                       _tag: "skip",
                       message: "Fetched page was not HTML.",
                     }),
-                  onSome: extractReadable,
+                  onSome: (page) => extractReadable(page, link.id),
                 })
-                : Effect.succeed<StageResult<StoredArticle>>({
+                : Effect.succeed<StageResult<ExtractedArticle>>({
                   _tag: "skip",
                   message: "The page could not be fetched.",
                 }),
@@ -178,11 +181,9 @@ export class EnrichmentWorkflow extends Context.Service<EnrichmentWorkflow>()(
             )
 
             if (Option.isSome(result)) {
-              // The repository raises the flag on Link Enrichment in the same
-              // transaction, so the two can never disagree. finishEnrichment
-              // does not write that column: adding it to the set list there
-              // would clear it on every job that extracts nothing.
-              yield* contentRepository.upsert(link.id, result.value)
+              // finishEnrichment does not write has_readable_content: adding it
+              // to the set list there would clear it on every job that extracts
+              // nothing.
               readableMarkdown = result.value.markdown
               linkEnrichment = new LinkEnrichment({
                 ...linkEnrichment,

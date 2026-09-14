@@ -10,6 +10,8 @@ import type {
   SavedItemWithLink,
   UserId,
 } from "../../src/domain/SavedItem.js"
+import { ReadableContent } from "../../src/domain/ReadableContent.js"
+import { LinkContentRepository } from "../../src/modules/content/LinkContentRepository.js"
 import { AuthHandler } from "../../src/modules/auth/AuthHandler.js"
 import { BetterAuth } from "../../src/modules/auth/BetterAuth.js"
 import { Analytics } from "../../src/modules/analytics/Analytics.js"
@@ -123,6 +125,7 @@ const routeLayer = (input: {
   readonly idempotencyUnavailable?: boolean | undefined
   readonly apiKeyPermissions?: Record<string, string[]> | undefined
   readonly savedItemsPage?: boolean | undefined
+  readonly readableMarkdown?: string | undefined
   readonly onListPage?: ((input: {
     readonly limit: number
     readonly cursorId?: string | undefined
@@ -453,6 +456,21 @@ const routeLayer = (input: {
           }
         }),
     })),
+    Layer.succeed(LinkContentRepository, LinkContentRepository.of({
+      upsert: () => Effect.succeed(now),
+      findByLinkId: (linkId) =>
+        Effect.succeed(
+          input.readableMarkdown
+            ? Option.some(
+              new ReadableContent({
+                linkId,
+                markdown: input.readableMarkdown,
+                extractedAt: now,
+              }),
+            )
+            : Option.none(),
+        ),
+    })),
     Layer.succeed(SavedItemRepository, SavedItemRepository.of({
       findByUserAndId: (requestedUserId: UserId, id: SavedItemId) =>
         Effect.succeed(
@@ -760,6 +778,7 @@ describe("HttpApp", () => {
       expect(body.paths?.["/v1/saved-items/{id}/unread"]).toBeDefined()
       expect(body.paths?.["/v1/saved-items/{id}/read-state"]).toBeDefined()
       expect(body.paths?.["/v1/saved-items/{id}/folder"]).toBeDefined()
+      expect(body.paths?.["/v1/saved-items/{id}/content"]).toBeDefined()
       // Publishing is a Folder decision, so no Saved Item route offers an
       // audience flag. The removed per-item route must stay removed.
       expect(body.paths?.["/v1/saved-items/{id}/private"]).toBeUndefined()
@@ -827,6 +846,10 @@ describe("HttpApp", () => {
       expect(body.paths["/v1/saved-items"]?.get?.security).toContainEqual({
         oauth2: ["saved-items:read"],
       })
+      // Readable Content is a read of a Saved Item, not a separate permission.
+      expect(body.paths["/v1/saved-items/{id}/content"]?.get?.security).toContainEqual({
+        oauth2: ["saved-items:read"],
+      })
       expect(body.paths["/v1/saved-items/{id}"]?.delete?.security).toEqual(
         expect.arrayContaining([
           { oauth2: ["saved-items:write"] },
@@ -839,6 +862,52 @@ describe("HttpApp", () => {
       expect(body.paths["/v1/profile"]?.get?.security).not.toContainEqual({
         oauth2: expect.anything(),
       })
+    }),
+  )
+
+  it.effect("serves the Readable Content of a saved item as Markdown", () =>
+    Effect.gen(function* () {
+      const response = yield* request(`/v1/saved-items/${savedItemId}/content`, {
+        headers: { authorization: `Bearer ${apiKey}` },
+      }).pipe(Effect.provide(routeLayer({
+        savedItemsPage: true,
+        readableMarkdown: "## Monomorphic call sites\n\nOne shape per call site.",
+      })))
+
+      expect(response.status).toBe(200)
+      const body = yield* json<{
+        readonly savedItemId: string
+        readonly markdown: string
+        readonly originalUrl: string
+        readonly extractedAt: string
+      }>(response)
+
+      expect(body.savedItemId).toBe(savedItemId)
+      expect(body.markdown).toContain("Monomorphic call sites")
+      // The Reader View always offers the Original URL.
+      expect(body.originalUrl).toBeTruthy()
+      expect(body.extractedAt).toBeTruthy()
+      // The article HTML is stored and never served.
+      expect(Object.keys(body)).not.toContain("html")
+    }),
+  )
+
+  // The whole point of answering 404 rather than 204: a caller must not be able
+  // to tell "this item has no article" from "this item is not yours". Comparing
+  // the full response rather than the status is what makes that a real test.
+  it.effect("answers a missing article exactly as it answers someone else's item", () =>
+    Effect.gen(function* () {
+      const noArticle = yield* request(`/v1/saved-items/${savedItemId}/content`, {
+        headers: { authorization: `Bearer ${apiKey}` },
+      }).pipe(Effect.provide(routeLayer({ savedItemsPage: true })))
+
+      const notOurs = yield* request(`/v1/saved-items/${savedItemId}/content`, {
+        headers: { authorization: `Bearer ${apiKey}` },
+      }).pipe(Effect.provide(routeLayer({ savedItemsPage: false })))
+
+      expect(noArticle.status).toBe(404)
+      expect(notOurs.status).toBe(404)
+      expect(yield* snapshot(noArticle)).toEqual(yield* snapshot(notOurs))
     }),
   )
 

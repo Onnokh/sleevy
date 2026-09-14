@@ -1,7 +1,7 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "c44d63d1-99d3-4ce4-8a9e-e804c92e1f6e",
+  "id": "83bd34e6-6f59-4f9d-bc15-3ac75e46c1d9",
   "prevIds": [
     "230d5b10-da7c-4b50-96d1-e3bab6b7036a"
   ],
@@ -60,14 +60,6 @@
         "public"
       ],
       "name": "profile_visibility",
-      "entityType": "enums",
-      "schema": "public"
-    },
-    {
-      "values": [
-        "readability"
-      ],
-      "name": "readable_content_source",
       "entityType": "enums",
       "schema": "public"
     },
@@ -1113,19 +1105,6 @@
       },
       "identity": null,
       "name": "search",
-      "entityType": "columns",
-      "schema": "public",
-      "table": "link_content"
-    },
-    {
-      "type": "readable_content_source",
-      "typeSchema": "public",
-      "notNull": true,
-      "dimensions": 0,
-      "default": null,
-      "generated": null,
-      "identity": null,
-      "name": "source",
       "entityType": "columns",
       "schema": "public",
       "table": "link_content"
