@@ -479,16 +479,23 @@ struct MeshPalette: Equatable {
         ])
     }
 
-    /// The same sky for a wide, short tile such as the large header. Two
-    /// corrections for the squeezed height: the foot's corners sink back
-    /// toward the sky so the light gathers at the centre, the way a
-    /// curtain's edge does; and the top row lifts toward the row below it,
-    /// because a sky this short reads as a black band, not as night.
+    /// The same sky with its top row lifted toward the row below it. On a
+    /// square tile the dark top is night above the glow; on anything
+    /// squeezed — the short large header, the narrow medium panel — that
+    /// row spreads into a black band, so it starts in navy instead.
+    var lifted: MeshPalette {
+        var lifted = colors
+        lifted[0] = colors[0].mixed(with: colors[3], by: 0.7)
+        lifted[1] = colors[1].mixed(with: colors[4], by: 0.45)
+        lifted[2] = colors[2].mixed(with: colors[5], by: 0.5)
+        return MeshPalette(colors: lifted)
+    }
+
+    /// The lifted sky for a wide, short tile such as the large header, with
+    /// one more correction: the foot's corners sink back toward the sky so
+    /// the light gathers at the centre, the way a curtain's edge does.
     var wide: MeshPalette {
-        var wide = colors
-        wide[0] = colors[0].mixed(with: colors[3], by: 0.7)
-        wide[1] = colors[1].mixed(with: colors[4], by: 0.45)
-        wide[2] = colors[2].mixed(with: colors[5], by: 0.5)
+        var wide = lifted.colors
         wide[6] = colors[6].mixed(with: colors[3], by: 0.55)
         wide[8] = colors[8].mixed(with: colors[5], by: 0.55)
         return MeshPalette(colors: wide)
@@ -528,7 +535,10 @@ private struct AuroraTile: View {
 
     var body: some View {
         GeometryReader { geometry in
-            let isWide = geometry.size.width > geometry.size.height * 1.6
+            let size = geometry.size
+            let isWide = size.width > size.height * 1.6
+            let isTall = size.height > size.width * 1.15
+            let colors = isWide ? palette.wide : (isTall ? palette.lifted : palette)
 
             MeshGradient(
                 width: 3,
@@ -538,7 +548,7 @@ private struct AuroraTile: View {
                     [0.0, 0.55], [0.45, 0.5], [1.0, 0.6],
                     [0.0, 1.0], [0.5, 1.0], [1.0, 1.0],
                 ],
-                colors: (isWide ? palette.wide : palette).colors
+                colors: colors.colors
             )
         }
     }
