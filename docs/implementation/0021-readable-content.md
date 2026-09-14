@@ -25,6 +25,7 @@ No user-visible surface. Delivered behind the existing enrichment pipeline.
 | Repository | `LinkContentRepository` with an upsert and a Markdown-only read. The read names its columns explicitly and never selects `html`. |
 | Workflow | A `readable-content` stage in [EnrichmentWorkflow](../../apps/api/src/modules/enrichment/EnrichmentWorkflow.ts), before the AI call. Add the stage name to `EnrichmentStageResult["stage"]` in `domain/EnrichmentJob.ts`. |
 | AI input | `MetadataFetcher.extractContent` takes the head of the stored Markdown when there is any, and falls back to the existing `extractPageContent` heuristic when there is not. `PAGE_CONTENT_LIMIT` stays 2000. |
+| Backfill | `scripts/backfill-readable-content.ts`, dry run by default and `--apply` to write. `enrich` returns early for a Link already marked `enriched`, which is every Link saved before this existed, so without the backfill the Reader View would be empty for an entire existing Library and stay that way. It fetches through the real `PageFetcher`, so a Link the origin host is refused by still reaches the Cloudflare tier. It writes only `link_content` and the flag, runs no AI, and skips Links that already have a row, so a re-run resumes rather than repeats. |
 
 ### Values decided during implementation
 
@@ -49,7 +50,6 @@ No user-visible surface. Delivered behind the existing enrichment pipeline.
 
 ### Known limitations, accepted
 
-- Existing Links are not backfilled. Readable Content is written once, on the next enrichment a Link receives.
 - The search index is created and never read in this slice.
 
 ## Slice 2 — the read endpoint and the contract
@@ -73,6 +73,5 @@ The same routing, under the keyboard-first model of [ADR 0010](../adr/0010-keybo
 ## Open follow-ups
 
 - **Search over Readable Content.** The index exists from Slice 1, and the indexed expression strips link targets and bare URLs so a search for "reference" is not answered by every page that links to one. Turning the search on is a product decision about whether an article's body ranks beside its title, for the **Search Tab** and the **Command Palette** alike.
-- **Backfill.** Extracting for Links saved before this shipped is an operational job, and some of those pages will already be gone. Measure the extraction rate from the production host first, not from a laptop: 76 of 129 links extracted from a residential address, and the Hetzner origin is refused by more sites, so that figure is optimistic by an unknown margin.
 - **Serving the HTML form.** Requires an HTML sanitizer on both clients. The stored column exists so this stays possible; nothing depends on it.
 - **Re-conversion.** The reason the HTML is kept. A better Markdown converter can be run against every stored Link without a network call.
