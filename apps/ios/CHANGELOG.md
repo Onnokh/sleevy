@@ -1,6 +1,6 @@
 # Sleevy iOS Changelog
 
-## Unreleased
+## 1.0.6 - 2026-09-14
 
 - Fixed the header card on the Inbox, folder, and profile screens drifting away from the list after a pull-to-refresh or a scroll, which could leave the "saves · unread" line and the card's edge over the first row. The card now follows the first row directly.
 
