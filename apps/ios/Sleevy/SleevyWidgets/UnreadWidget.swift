@@ -38,7 +38,9 @@ struct WidgetScope: AppEntity {
     static var defaultQuery: WidgetScopeQuery { WidgetScopeQuery() }
 
     static let inboxID = "inbox"
+    static let libraryID = "library"
     static let inbox = WidgetScope(id: inboxID, name: "Inbox", color: nil)
+    static let library = WidgetScope(id: libraryID, name: "Library", color: nil)
 
     let id: String
     let name: String
@@ -46,12 +48,17 @@ struct WidgetScope: AppEntity {
     let color: String?
 
     var isInbox: Bool { id == Self.inboxID }
+    var isLibrary: Bool { id == Self.libraryID }
 
-    /// The picker row: the Inbox wears the system tray; a Folder wears a
-    /// folder glyph in the mid tone of the palette its card wears.
+    /// The picker row: the Inbox wears the system tray, the Library the
+    /// stack its tab wears; a Folder wears a folder glyph in the mid tone of
+    /// the palette its card wears.
     var displayRepresentation: DisplayRepresentation {
         if isInbox {
             return DisplayRepresentation(title: "\(name)", image: .init(systemName: "tray"))
+        }
+        if isLibrary {
+            return DisplayRepresentation(title: "\(name)", image: .init(systemName: "rectangle.stack.fill"))
         }
         if let data = Self.folderIconData(palette: FolderCardPalette.named(color)) {
             return DisplayRepresentation(title: "\(name)", image: .init(data: data))
@@ -99,9 +106,9 @@ struct WidgetScopeQuery: EntityQuery {
         .inbox
     }
 
-    /// The Inbox first, then the Folders as the app published them.
+    /// The Inbox, then the Library, then the Folders as the app published them.
     private func publishedScopes() -> [WidgetScope] {
-        [.inbox] + (UnreadBacklogSnapshot.load()?.folders ?? []).map(WidgetScope.init)
+        [.inbox, .library] + (UnreadBacklogSnapshot.load()?.folders ?? []).map(WidgetScope.init)
     }
 }
 
@@ -125,25 +132,32 @@ struct OpenSavedItemIntent: AppIntent {
     @Parameter(title: "Link")
     var url: URL
 
+    /// Whether the row was already read when tapped, as a Library row can
+    /// be; then there is nothing to queue and the link simply opens.
+    @Parameter(title: "Already Read")
+    var isRead: Bool
+
     init() {
         itemID = ""
         url = URL(string: "https://sleevy.app")!
+        isRead = false
     }
 
-    init(itemID: String, url: URL) {
+    init(itemID: String, url: URL, isRead: Bool) {
         self.itemID = itemID
         self.url = url
+        self.isRead = isRead
     }
 
     func perform() async throws -> some IntentResult & OpensIntent {
-        if let snapshot = UnreadBacklogSnapshot.load() {
+        if !isRead, let snapshot = UnreadBacklogSnapshot.load() {
             let container = FileManager.default.containerURL(
                 forSecurityApplicationGroupIdentifier: SleevyUserPreferences.appGroupIdentifier
             )
             ReadStateQueue(userId: snapshot.accountID, containerURL: container)
                 .enqueue(itemId: itemID, isRead: true)
 
-            snapshot.removing(itemID: itemID).save()
+            snapshot.markingRead(itemID: itemID).save()
             WidgetCenter.shared.reloadTimelines(ofKind: UnreadBacklogSnapshot.widgetKind)
         }
 
@@ -167,15 +181,33 @@ struct UnreadEntry: TimelineEntry {
     let state: State
 }
 
-/// One unread scope as the widget draws it: the whole Inbox or one Folder.
+/// One scope as the widget draws it: the Inbox, the Library, or one Folder.
 struct UnreadScope {
+    enum Kind {
+        case inbox
+        case library
+        case folder
+    }
+
     let title: String
-    let isInbox: Bool
+    let kind: Kind
     let palette: MeshPalette
     let count: Int
     let rows: [UnreadRow]
     /// Where a tap outside the rows goes.
     let link: URL
+
+    var isInbox: Bool { kind == .inbox }
+    /// The Library lists read items too, so its rows carry the Unread Dot.
+    var showsReadState: Bool { kind == .library }
+    /// What the count counts: unread items, or every save in the Library.
+    var countNoun: String { kind == .library ? "saves" : "unread" }
+    var emptyTitle: String { kind == .library ? "No saves yet" : "All caught up" }
+    var emptyDetail: String { kind == .library ? "Saves will appear here." : "Unread saves will appear here." }
+    var emptySymbol: String { kind == .library ? "rectangle.stack" : "checkmark.circle" }
+    /// The glyph the Lock Screen families show for the scope; the Inbox
+    /// draws the brandmark instead.
+    var symbol: String { kind == .library ? "rectangle.stack.fill" : "folder.fill" }
 }
 
 /// One unread Saved Item as the widget draws it. The favicon is resolved
@@ -188,6 +220,7 @@ struct UnreadRow: Identifiable {
     /// The Original URL the row opens.
     let url: URL
     let lastSavedAt: Date
+    let isRead: Bool
 
     var monogram: String { String(host.prefix(1)).uppercased() }
 }
@@ -230,25 +263,34 @@ struct UnreadProvider: AppIntentTimelineProvider {
         }
 
         let scope: UnreadBacklogSnapshot.Scope
+        let kind: UnreadScope.Kind
         let title: String
         let palette: MeshPalette
         let link: URL
 
         let configured = configuration.resolvedScope
-        if !configured.isInbox {
+        if configured.isInbox {
+            scope = snapshot.inbox
+            kind = .inbox
+            title = "Inbox"
+            palette = .inbox
+            link = SleevyDeepLink.inbox.url
+        } else if configured.isLibrary {
+            scope = snapshot.library
+            kind = .library
+            title = "Library"
+            palette = .library
+            link = SleevyDeepLink.library.url
+        } else {
             guard let folder = snapshot.folders.first(where: { $0.id == configured.id }) else {
                 return UnreadEntry(date: date, state: .missingFolder)
             }
 
             scope = snapshot.folderScopes[folder.id] ?? .empty
+            kind = .folder
             title = folder.name
             palette = .folder(FolderCardPalette.named(folder.color))
             link = SleevyDeepLink.folder(id: folder.id).url
-        } else {
-            scope = snapshot.inbox
-            title = "Inbox"
-            palette = .inbox
-            link = SleevyDeepLink.inbox.url
         }
 
         let favicons = await UnreadWidgetFavicons.load(for: scope.items)
@@ -259,15 +301,16 @@ struct UnreadProvider: AppIntentTimelineProvider {
                 host: item.host,
                 favicon: favicons[item.id],
                 url: item.url,
-                lastSavedAt: item.lastSavedAt
+                lastSavedAt: item.lastSavedAt,
+                isRead: item.isRead
             )
         }
 
         return UnreadEntry(date: date, state: .backlog(UnreadScope(
             title: title,
-            isInbox: configured.isInbox,
+            kind: kind,
             palette: palette,
-            count: scope.unreadCount,
+            count: scope.count,
             rows: rows,
             link: link
         )))
@@ -293,13 +336,14 @@ struct UnreadProvider: AppIntentTimelineProvider {
                 host: sample.1,
                 favicon: nil,
                 url: URL(string: "https://\(sample.1)")!,
-                lastSavedAt: now.addingTimeInterval(-sample.2)
+                lastSavedAt: now.addingTimeInterval(-sample.2),
+                isRead: false
             )
         }
 
         return UnreadScope(
             title: "Inbox",
-            isInbox: true,
+            kind: .inbox,
             palette: .inbox,
             count: 12,
             rows: rows,
@@ -412,6 +456,11 @@ struct MeshPalette: Equatable {
         Color(red: 128 / 255, green: 57 / 255, blue: 127 / 255),
     ])
 
+    /// The Library has no card of its own in the app, so its tile wears the
+    /// same aurora as the Inbox: both are the whole collection, one filtered
+    /// to unread, and the caption tells them apart.
+    static let library = inbox
+
     /// A Folder's tile wears the palette its card wears in the Library, laid
     /// out like the Inbox mesh: the deep tone as the sky, a darkened mid in
     /// the middle so nothing glows there, and the saturated mid along the
@@ -430,16 +479,23 @@ struct MeshPalette: Equatable {
         ])
     }
 
-    /// The same sky for a wide, short tile such as the large header. Two
-    /// corrections for the squeezed height: the foot's corners sink back
-    /// toward the sky so the light gathers at the centre, the way a
-    /// curtain's edge does; and the top row lifts toward the row below it,
-    /// because a sky this short reads as a black band, not as night.
+    /// The same sky with its top row lifted toward the row below it. On a
+    /// square tile the dark top is night above the glow; on anything
+    /// squeezed — the short large header, the narrow medium panel — that
+    /// row spreads into a black band, so it starts in navy instead.
+    var lifted: MeshPalette {
+        var lifted = colors
+        lifted[0] = colors[0].mixed(with: colors[3], by: 0.7)
+        lifted[1] = colors[1].mixed(with: colors[4], by: 0.45)
+        lifted[2] = colors[2].mixed(with: colors[5], by: 0.5)
+        return MeshPalette(colors: lifted)
+    }
+
+    /// The lifted sky for a wide, short tile such as the large header, with
+    /// one more correction: the foot's corners sink back toward the sky so
+    /// the light gathers at the centre, the way a curtain's edge does.
     var wide: MeshPalette {
-        var wide = colors
-        wide[0] = colors[0].mixed(with: colors[3], by: 0.7)
-        wide[1] = colors[1].mixed(with: colors[4], by: 0.45)
-        wide[2] = colors[2].mixed(with: colors[5], by: 0.5)
+        var wide = lifted.colors
         wide[6] = colors[6].mixed(with: colors[3], by: 0.55)
         wide[8] = colors[8].mixed(with: colors[5], by: 0.55)
         return MeshPalette(colors: wide)
@@ -479,7 +535,10 @@ private struct AuroraTile: View {
 
     var body: some View {
         GeometryReader { geometry in
-            let isWide = geometry.size.width > geometry.size.height * 1.6
+            let size = geometry.size
+            let isWide = size.width > size.height * 1.6
+            let isTall = size.height > size.width * 1.15
+            let colors = isWide ? palette.wide : (isTall ? palette.lifted : palette)
 
             MeshGradient(
                 width: 3,
@@ -489,7 +548,7 @@ private struct AuroraTile: View {
                     [0.0, 0.55], [0.45, 0.5], [1.0, 0.6],
                     [0.0, 1.0], [0.5, 1.0], [1.0, 1.0],
                 ],
-                colors: (isWide ? palette.wide : palette).colors
+                colors: colors.colors
             )
         }
     }
@@ -588,10 +647,10 @@ private struct SmallView: View {
             Spacer(minLength: 6)
 
             if scope.count == 0 {
-                CaughtUpLabel()
+                CaughtUpLabel(scope: scope)
                 Spacer(minLength: 0)
             } else {
-                CountBlock(count: scope.count, numeralSize: 44)
+                CountBlock(count: scope.count, noun: scope.countNoun, numeralSize: 44)
 
                 Spacer(minLength: 8)
 
@@ -627,9 +686,9 @@ private struct MediumView: View {
                     Spacer(minLength: 0)
                     ScopeLabel(scope: scope)
                     if scope.count == 0 {
-                        CaughtUpLabel()
+                        CaughtUpLabel(scope: scope)
                     } else {
-                        CountBlock(count: scope.count, numeralSize: 40)
+                        CountBlock(count: scope.count, noun: scope.countNoun, numeralSize: 40)
                     }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
@@ -638,7 +697,7 @@ private struct MediumView: View {
             }
             .frame(width: 124)
 
-            RowList(rows: scope.rows, now: now, maximumRows: 3, faviconSize: 26, rowHeight: 44)
+            RowList(scope: scope, now: now, maximumRows: 3, faviconSize: 26, rowHeight: 44)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 8)
         }
@@ -680,14 +739,14 @@ private struct LargeView: View {
                 .clipShape(.rect(bottomLeadingRadius: 22, bottomTrailingRadius: 22, style: .continuous))
             }
 
-            Text(scope.count == 0 ? "All caught up" : "\(scope.count) unread")
+            Text(scope.count == 0 ? scope.emptyTitle : "\(scope.count) \(scope.countNoun)")
                 .font(.system(size: 13, weight: .medium))
                 .foregroundStyle(.secondary)
                 .padding(.horizontal, 16)
                 .padding(.top, 10)
                 .padding(.bottom, 2)
 
-            RowList(rows: scope.rows, now: now, maximumRows: 6, faviconSize: 28, rowHeight: 42)
+            RowList(scope: scope, now: now, maximumRows: 6, faviconSize: 28, rowHeight: 42)
                 .padding(.horizontal, 16)
                 .padding(.bottom, 8)
         }
@@ -709,7 +768,7 @@ private struct CircularView: View {
                         .fill(.primary)
                         .frame(width: 9, height: 11)
                 } else {
-                    Image(systemName: "folder.fill")
+                    Image(systemName: scope.symbol)
                         .font(.system(size: 10, weight: .semibold))
                 }
                 Text(scope.count, format: .number)
@@ -734,10 +793,10 @@ private struct RectangularView: View {
                         .fill(.primary)
                         .frame(width: 9, height: 11)
                 } else {
-                    Image(systemName: "folder.fill")
+                    Image(systemName: scope.symbol)
                         .font(.system(size: 11, weight: .semibold))
                 }
-                Text(scope.count == 0 ? "\(scope.title): all caught up" : "\(scope.count) unread in \(scope.title)")
+                Text(scope.count == 0 ? "\(scope.title): \(scope.emptyTitle.lowercased())" : "\(scope.count) \(scope.countNoun) in \(scope.title)")
                     .font(.headline)
                     .lineLimit(1)
                     .widgetAccentable()
@@ -759,8 +818,8 @@ private struct InlineView: View {
 
     var body: some View {
         Label(
-            scope.count == 0 ? "\(scope.title): all caught up" : "\(scope.count) unread in \(scope.title)",
-            systemImage: scope.isInbox ? "tray" : "folder"
+            scope.count == 0 ? "\(scope.title): \(scope.emptyTitle.lowercased())" : "\(scope.count) \(scope.countNoun) in \(scope.title)",
+            systemImage: scope.isInbox ? "tray" : (scope.kind == .library ? "rectangle.stack" : "folder")
         )
         .containerBackground(for: .widget) { Color.clear }
         .widgetURL(scope.link)
@@ -789,6 +848,7 @@ private struct ScopeLabel: View {
 
 private struct CountBlock: View {
     let count: Int
+    let noun: String
     let numeralSize: CGFloat
 
     var body: some View {
@@ -800,7 +860,7 @@ private struct CountBlock: View {
                 .contentTransition(.numericText())
                 .minimumScaleFactor(0.6)
                 .lineLimit(1)
-            Text("unread")
+            Text(noun)
                 .font(.system(size: 13, weight: .medium))
                 .foregroundStyle(.white.opacity(0.72))
         }
@@ -808,12 +868,14 @@ private struct CountBlock: View {
 }
 
 private struct CaughtUpLabel: View {
+    let scope: UnreadScope
+
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Image(systemName: "checkmark.circle")
+            Image(systemName: scope.emptySymbol)
                 .font(.system(size: 26, weight: .medium))
                 .foregroundStyle(.white)
-            Text("All caught up")
+            Text(scope.emptyTitle)
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(.white.opacity(0.88))
         }
@@ -824,7 +886,7 @@ private struct CaughtUpLabel: View {
 /// `OpenSavedItemIntent`: the row leaves the widget, the read is queued for
 /// the app, and the link opens straight away.
 private struct RowList: View {
-    let rows: [UnreadRow]
+    let scope: UnreadScope
     let now: Date
     let maximumRows: Int
     let faviconSize: CGFloat
@@ -833,18 +895,18 @@ private struct RowList: View {
     var body: some View {
         GeometryReader { geometry in
             let fitting = max(1, Int(geometry.size.height / rowHeight))
-            let shown = Array(rows.prefix(min(maximumRows, fitting)))
+            let shown = Array(scope.rows.prefix(min(maximumRows, fitting)))
 
             if shown.isEmpty {
-                Text("Unread saves will appear here.")
+                Text(scope.emptyDetail)
                     .font(.system(size: 13, weight: .medium))
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 VStack(spacing: 0) {
                     ForEach(shown) { row in
-                        Button(intent: OpenSavedItemIntent(itemID: row.id, url: row.url)) {
-                            RowView(row: row, now: now, faviconSize: faviconSize)
+                        Button(intent: OpenSavedItemIntent(itemID: row.id, url: row.url, isRead: row.isRead)) {
+                            RowView(row: row, now: now, faviconSize: faviconSize, showsReadState: scope.showsReadState)
                                 .frame(height: rowHeight)
                         }
                         .buttonStyle(.plain)
@@ -868,6 +930,9 @@ private struct RowView: View {
     let row: UnreadRow
     let now: Date
     let faviconSize: CGFloat
+    /// The Library lists read items too, so its unread rows get the Unread
+    /// Dot the app's Library rows carry; an unread-only scope needs none.
+    let showsReadState: Bool
 
     var body: some View {
         HStack(spacing: 10) {
@@ -885,10 +950,18 @@ private struct RowView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
-            Text(row.lastSavedAt.compactRecencyLabel(relativeTo: now))
-                .font(.system(size: 12, weight: .medium))
-                .foregroundStyle(.secondary)
-                .monospacedDigit()
+            HStack(spacing: 6) {
+                if showsReadState && !row.isRead {
+                    Circle()
+                        .fill(Color.secondary.opacity(0.55))
+                        .frame(width: 6, height: 6)
+                }
+
+                Text(row.lastSavedAt.compactRecencyLabel(relativeTo: now))
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(.secondary)
+                    .monospacedDigit()
+            }
         }
         .contentShape(Rectangle())
     }

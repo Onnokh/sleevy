@@ -100,8 +100,8 @@ struct SignedInTabView: View {
 
     private static let deepLinkLogger = Logger(subsystem: "app.sleevy", category: "deep-link")
 
-    /// A widget tap. The Inbox and a Saved Item land on the Home Tab, a
-    /// Folder on its Folder View in the Library Tab. A Saved Item is then
+    /// A widget tap. The Inbox and a Saved Item land on the Home Tab, the
+    /// Library and a Folder on the Library Tab. A Saved Item is then
     /// opened through the same Open Action its Inbox row uses, so the read
     /// state and the widget follow.
     private func open(_ link: SleevyDeepLink) async {
@@ -111,6 +111,9 @@ struct SignedInTabView: View {
         case .inbox:
             selectedTab = .sleevy
             sleevyPath = []
+        case .library:
+            selectedTab = .library
+            libraryPath = []
         case .folder(let id):
             selectedTab = .library
             libraryPath = [.folder(id: id)]
