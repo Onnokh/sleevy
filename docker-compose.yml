@@ -96,6 +96,12 @@ services:
       AI_ENABLED: ${AI_ENABLED:-false}
       AI_PROVIDER: ${AI_PROVIDER:-}
       AI_MODEL: ${AI_MODEL:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      # Browser Rendering, used by the page fetcher's Cloudflare tier and by
+      # Readable Content extraction. Both read the same account and token; an
+      # empty value disables each of them rather than failing a capture.
+      CLOUDFLARE_ACCOUNT_ID: ${CLOUDFLARE_ACCOUNT_ID:-}
+      CLOUDFLARE_API_TOKEN: ${CLOUDFLARE_API_TOKEN:-}
       CLOUDFLARE_ZONE_ID: ${CLOUDFLARE_ZONE_ID:-}
       CLOUDFLARE_CACHE_PURGE_API_TOKEN: ${CLOUDFLARE_CACHE_PURGE_API_TOKEN:-}
       RYBBIT_ENABLED: ${RYBBIT_ENABLED:-false}
