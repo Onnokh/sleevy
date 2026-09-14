@@ -72,6 +72,7 @@ The same routing, under the keyboard-first model of [ADR 0010](../adr/0010-keybo
 ## Open follow-ups
 
 - **Search over Readable Content.** The index exists from Slice 1. Turning it on is a product decision about whether an article's body ranks beside its title, for the **Search Tab** and the **Command Palette** alike.
+  Before it is turned on, the indexed expression needs revisiting: Markdown link targets become lexemes, so an MDN page indexes terms like `'/en-us/docs/web/css/reference'`. Indexing Markdown instead of HTML avoided tag names becoming terms, and this is the same leak by another route. The fix belongs in the generated column's expression, which means a migration, so it is worth deciding before any query depends on the current shape.
 - **Backfill.** Extracting for Links saved before this shipped is an operational job, and some of those pages will already be gone.
 - **Serving the HTML form.** Requires an HTML sanitizer on both clients. The stored column exists so this stays possible; nothing depends on it.
 - **Re-conversion.** The reason the HTML is kept. A better Markdown converter can be run against every stored Link without a network call.
