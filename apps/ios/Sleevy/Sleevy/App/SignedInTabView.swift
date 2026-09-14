@@ -1,3 +1,4 @@
+import os
 import SwiftUI
 
 /// The signed-in shell: the tab bar, one navigation stack per stackable tab, and
@@ -5,6 +6,7 @@ import SwiftUI
 /// push destination through `AppRoute.destination`.
 struct SignedInTabView: View {
     @Environment(AuthStore.self) private var authStore
+    @Environment(DeepLinkStore.self) private var deepLinks
     @Environment(\.scenePhase) private var scenePhase
     let session: AppSession
     @State private var store: ReadingListStore
@@ -83,6 +85,44 @@ struct SignedInTabView: View {
         }
         .onChange(of: scenePhase) { _, newPhase in
             handleScenePhaseChange(newPhase)
+        }
+        // `initial` so a URL that arrived while the session was still being
+        // restored is handled the moment the shell exists.
+        .onChange(of: deepLinks.pending, initial: true) { _, link in
+            guard let link else { return }
+            deepLinks.pending = nil
+
+            Task {
+                await open(link)
+            }
+        }
+    }
+
+    private static let deepLinkLogger = Logger(subsystem: "app.sleevy", category: "deep-link")
+
+    /// A widget tap. The Inbox and a Saved Item land on the Home Tab, a
+    /// Folder on its Folder View in the Library Tab. A Saved Item is then
+    /// opened through the same Open Action its Inbox row uses, so the read
+    /// state and the widget follow.
+    private func open(_ link: SleevyDeepLink) async {
+        Self.deepLinkLogger.notice("Handling \(link.url.absoluteString, privacy: .public)")
+
+        switch link {
+        case .inbox:
+            selectedTab = .sleevy
+            sleevyPath = []
+        case .folder(let id):
+            selectedTab = .library
+            libraryPath = [.folder(id: id)]
+        case .savedItem(let id):
+            selectedTab = .sleevy
+            sleevyPath = []
+            await store.loadIfNeeded()
+            guard let item = store.savedItem(id: id) else {
+                Self.deepLinkLogger.error("No Saved Item \(id, privacy: .public) in the Retrieval Index")
+                return
+            }
+            await store.markOpened(item)
         }
     }
 

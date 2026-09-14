@@ -4,6 +4,7 @@ import WidgetKit
 @main
 struct SleevyWidgetsBundle: WidgetBundle {
     var body: some Widget {
+        UnreadWidget()
         ReadingActivityWidget()
     }
 }
