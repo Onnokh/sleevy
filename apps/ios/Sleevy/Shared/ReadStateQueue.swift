@@ -1,33 +1,23 @@
 import Foundation
 
 /// One queued read-state change awaiting sync to the server.
-struct PendingReadStateUpdate: Codable, Equatable, Hashable {
+nonisolated struct PendingReadStateUpdate: Codable, Equatable, Hashable, Sendable {
     let itemId: String
     let isRead: Bool
     let queuedAt: Date
 }
 
-/// Outcome of trying to push a read-state change while draining the queue.
-enum PendingReadStateSyncError: LocalizedError {
-    case retriable(String)
-    case unretriable(String)
-
-    var errorDescription: String? {
-        switch self {
-        case .retriable(let message), .unretriable(let message):
-            return message
-        }
-    }
-}
-
-/// File-backed queue of read-state changes made while offline (or that failed to
-/// sync), persisted in the app group so the app and share extension stay aligned.
+/// File-backed queue of read-state changes awaiting the server: made while
+/// offline, still in flight, or made by the Unread Widget, which has no
+/// credentials and leaves the round-trip to the app. Persisted in the app
+/// group so the app, the share extension, and the widget read one queue.
 ///
-/// Owns persistence and the optimistic overrides applied to freshly loaded
-/// items. Retry classification lives in one place (`HTTPReadingListAdapter` maps
-/// failures to `SyncFault`; `ReadingListStore` decides what to do), and the network
+/// Lives in `Shared/` for that reason; the overlay onto loaded Saved Items
+/// (`apply(to:)`) stays in the app, next to the `SavedItem` type. Retry
+/// classification lives in one place (`HTTPReadingListAdapter` maps failures
+/// to `SyncFault`; `ReadingListStore` decides what to do), and the network
 /// submission and applying synced results stay with `ReadingListStore`.
-struct ReadStateQueue {
+nonisolated struct ReadStateQueue: Sendable {
     let userId: String
     private let fileURL: URL?
 
@@ -58,22 +48,6 @@ struct ReadStateQueue {
 
     func override(for itemId: String) -> Bool? {
         all().first(where: { $0.itemId == itemId })?.isRead
-    }
-
-    /// Applies any queued read state on top of `items`, leaving items with no
-    /// pending change (or whose pending state already matches) untouched.
-    func apply(to items: [SavedItem]) -> [SavedItem] {
-        let pendingStates = Dictionary(
-            uniqueKeysWithValues: all().map { ($0.itemId, $0.isRead) }
-        )
-
-        return items.map { item in
-            guard let pendingIsRead = pendingStates[item.id], item.isRead != pendingIsRead else {
-                return item
-            }
-
-            return item.withReadState(pendingIsRead)
-        }
     }
 
     func enqueue(itemId: String, isRead: Bool) {

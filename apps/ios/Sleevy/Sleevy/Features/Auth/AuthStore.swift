@@ -341,6 +341,13 @@ final class AuthStore {
             SleevyUserPreferences.profileHandle = nil
             WidgetCenter.shared.reloadTimelines(ofKind: "ReadingActivityWidget")
         }
+
+        // The Unread Widget shows what the app last published; a signed-out
+        // device must not keep showing the previous account's Inbox.
+        if UnreadBacklogSnapshot.load() != nil {
+            UnreadBacklogSnapshot.clear()
+            WidgetCenter.shared.reloadTimelines(ofKind: UnreadBacklogSnapshot.widgetKind)
+        }
     }
 
     /// The activity widget keys the public activity endpoint by profile

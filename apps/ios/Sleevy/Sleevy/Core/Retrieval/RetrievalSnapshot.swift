@@ -192,6 +192,15 @@ nonisolated struct RetrievalIndex: Equatable, Sendable {
     }
 
     private mutating func store(_ item: SavedItem) {
+        // Responses can land out of order: a list fetched before a write can
+        // arrive after that write's own response. The server stamps every
+        // change, so an incoming copy older than the one held is stale and is
+        // dropped rather than rolling the newer state back — without this a
+        // widget tap, which always arrives with the activation refresh, flips
+        // its item back to unread until the next sync.
+        if let existing = itemsByID[item.id], existing.updatedAt > item.updatedAt {
+            return
+        }
         if itemsByID[item.id] != item {
             itemRevision &+= 1
         }

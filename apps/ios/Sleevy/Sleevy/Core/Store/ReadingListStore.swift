@@ -1,6 +1,8 @@
 import Foundation
 import Observation
+import SwiftUI
 import UIKit
+import WidgetKit
 
 /// A folder/move command that failed against the server, surfaced to the caller
 /// with the human-facing reason. Folder operations have no offline queue, so
@@ -410,6 +412,7 @@ final class ReadingListStore {
     private func loadFolders() async {
         do {
             folders = try await network.loadFolders()
+            publishUnreadBacklog()
             status.libraryErrorMessage = nil
         } catch {
             handleLibraryFault(asFault(error))
@@ -460,6 +463,7 @@ final class ReadingListStore {
         do {
             let folder = try await network.createFolder(name: name, emoji: emoji, color: color)
             folders.append(folder)
+            publishUnreadBacklog()
             sortFolders()
             status.libraryErrorMessage = nil
         } catch {
@@ -472,6 +476,7 @@ final class ReadingListStore {
             let renamed = try await network.renameFolder(id: folder.id, name: name, emoji: emoji, color: color)
             folders.removeAll { $0.id == folder.id }
             folders.append(renamed)
+            publishUnreadBacklog()
             sortFolders()
             applyFolderSummary(renamed)
             await persistItems()
@@ -486,6 +491,7 @@ final class ReadingListStore {
             let updated = try await network.setFolderPublished(id: folder.id, isPublished: isPublished)
             folders.removeAll { $0.id == folder.id }
             folders.append(updated)
+            publishUnreadBacklog()
             sortFolders()
             status.libraryErrorMessage = nil
         } catch {
@@ -497,6 +503,7 @@ final class ReadingListStore {
         do {
             try await network.deleteFolder(id: folder.id)
             folders.removeAll { $0.id == folder.id }
+            publishUnreadBacklog()
             // Detaching the summary returns these items to the Library root — the
             // scoped snapshot picks them up automatically, no re-fetch needed.
             mutateItems(where: { $0.folder?.id == folder.id }) { $0 = $0.withFolder(nil) }
@@ -555,8 +562,20 @@ final class ReadingListStore {
         Task { await persistItems() }
     }
 
+    /// The Saved Item with this identifier, if the Retrieval Index knows it.
+    func savedItem(id: String) -> SavedItem? {
+        retrievalIndex.item(id: id)
+    }
+
     func markOpened(_ item: SavedItem) async {
         guard let url = URL(string: item.originalURL) else { return }
+
+        // Queue the intent before anything suspends. A load already in flight
+        // — the activation refresh a widget tap arrives together with —
+        // replaces the index with server state when it lands, and
+        // `readStateQueue.apply` is what keeps this change on top of it until
+        // the server has it. The success path below removes the entry again.
+        readStateQueue.enqueue(itemId: item.id, isRead: true)
 
         if updateLocalReadState(for: item.id, isRead: true) {
             await persistItems()
@@ -565,7 +584,7 @@ final class ReadingListStore {
         await UIApplication.shared.open(url)
 
         guard status.isOnline else {
-            readStateQueue.enqueue(itemId: item.id, isRead: true)
+            // Already queued; the next sync drains it.
             status.errorMessage = nil
             return
         }
@@ -579,12 +598,12 @@ final class ReadingListStore {
             do {
                 let updated = try await self.network.markOpened(itemId: item.id)
 
+                // Unless a newer local toggle is queued, the server's copy is
+                // the truth: stamped newer than any stale list that landed in
+                // between, so storing it also repairs a rolled-back row.
                 let queuedState = self.readStateQueue.override(for: updated.id)
                 if queuedState == nil || queuedState == true {
                     self.readStateQueue.remove(itemId: updated.id)
-                }
-
-                if self.currentReadState(for: updated.id) == true {
                     self.upsert([updated])
                     await self.persistItems()
                 }
@@ -597,6 +616,7 @@ final class ReadingListStore {
                     self.readStateQueue.enqueue(itemId: item.id, isRead: true)
                     self.status.errorMessage = nil
                 case .drop, .signOut:
+                    self.readStateQueue.remove(itemId: item.id)
                     self.handleRequestFault(fault)
                 }
             }
@@ -604,12 +624,15 @@ final class ReadingListStore {
     }
 
     func setRead(_ item: SavedItem, isRead: Bool) async {
+        // Same guard as `markOpened`: queue before anything suspends so a load
+        // landing mid-flight keeps the change; success removes the entry.
+        readStateQueue.enqueue(itemId: item.id, isRead: isRead)
+
         if updateLocalReadState(for: item.id, isRead: isRead) {
             await persistItems()
         }
 
         guard status.isOnline else {
-            readStateQueue.enqueue(itemId: item.id, isRead: isRead)
             status.errorMessage = nil
             return
         }
@@ -619,9 +642,6 @@ final class ReadingListStore {
             let queuedState = readStateQueue.override(for: updated.id)
             if queuedState == nil || queuedState == isRead {
                 readStateQueue.remove(itemId: updated.id)
-            }
-
-            if currentReadState(for: updated.id) == isRead {
                 upsert([updated])
                 await persistItems()
             }
@@ -634,6 +654,7 @@ final class ReadingListStore {
                 readStateQueue.enqueue(itemId: item.id, isRead: isRead)
                 status.errorMessage = nil
             case .drop, .signOut:
+                readStateQueue.remove(itemId: item.id)
                 handleRequestFault(fault)
             }
         }
@@ -852,10 +873,6 @@ final class ReadingListStore {
         return true
     }
 
-    private func currentReadState(for itemId: String) -> Bool? {
-        retrievalIndex.item(id: itemId)?.isRead
-    }
-
     /// Reassigns the (renamed) folder's summary onto every item that belongs to it.
     private func applyFolderSummary(_ folder: Folder) {
         let summary = FolderSummary(id: folder.id, name: folder.name, emoji: folder.emoji, color: folder.color)
@@ -924,7 +941,10 @@ final class ReadingListStore {
     private func setSnapshot(_ snapshot: RetrievalSnapshot, at request: RetrievalRequest) {
         switch request {
         case .inbox:
-            if snapshot != inboxSnapshot { inboxSnapshot = snapshot }
+            if snapshot != inboxSnapshot {
+                inboxSnapshot = snapshot
+                publishUnreadBacklog()
+            }
         case .completeLibrary:
             if snapshot != completeLibrarySnapshot { completeLibrarySnapshot = snapshot }
         case .libraryRoot:
@@ -932,6 +952,72 @@ final class ReadingListStore {
         case .folder(let id):
             if snapshot != folderSnapshots[id] { folderSnapshots[id] = snapshot }
         }
+    }
+
+    /// Mirrors the Inbox into the app group for the Unread Widget: the whole
+    /// backlog and each Folder's share of it, so a widget can follow one
+    /// Folder. Only a snapshot that knows the backlog is published: a loading
+    /// or failed scope says nothing about what is unread, and publishing its
+    /// empty item list would blank the widget on every launch.
+    private func publishUnreadBacklog() {
+        switch inboxSnapshot.coverage {
+        case .cached, .complete, .stale:
+            break
+        case .notRequested, .loading, .failed:
+            return
+        }
+
+        let unread = inboxSnapshot.items
+        let unreadByFolder = Dictionary(grouping: unread) { $0.folder?.id }
+
+        // Every Folder the Account has, plus any a Saved Item still names:
+        // the Folder list loads separately and may not have arrived yet.
+        var publishedFolders = folders.map {
+            UnreadBacklogSnapshot.Folder(id: $0.id, name: $0.name, emoji: $0.emoji, color: $0.color)
+        }
+        for summary in unread.compactMap(\.folder) where !publishedFolders.contains(where: { $0.id == summary.id }) {
+            publishedFolders.append(
+                UnreadBacklogSnapshot.Folder(id: summary.id, name: summary.name, emoji: summary.emoji, color: summary.color)
+            )
+        }
+        publishedFolders.sort { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+
+        let folderScopes = Dictionary(uniqueKeysWithValues: publishedFolders.map { folder in
+            (folder.id, Self.unreadScope(unreadByFolder[folder.id] ?? []))
+        })
+
+        let snapshot = UnreadBacklogSnapshot(
+            accountID: userId,
+            inbox: Self.unreadScope(unread),
+            folders: publishedFolders,
+            folderScopes: folderScopes,
+            publishedAt: Date()
+        )
+
+        guard !snapshot.hasSameContent(as: UnreadBacklogSnapshot.load()) else { return }
+
+        snapshot.save()
+        WidgetCenter.shared.reloadTimelines(ofKind: UnreadBacklogSnapshot.widgetKind)
+    }
+
+    private static func unreadScope(_ items: [SavedItem]) -> UnreadBacklogSnapshot.Scope {
+        UnreadBacklogSnapshot.Scope(
+            unreadCount: items.count,
+            // A row needs a link to open; an item whose Original URL does not
+            // parse is counted but not listed.
+            items: items.prefix(UnreadBacklogSnapshot.maximumItems).compactMap { item in
+                guard let url = URL(string: item.originalURL) else { return nil }
+
+                return UnreadBacklogSnapshot.Item(
+                    id: item.id,
+                    title: item.displayTitle,
+                    host: item.displayDomain,
+                    faviconURL: item.preferredFaviconURL(colorScheme: .light),
+                    url: url,
+                    lastSavedAt: item.lastSavedAt
+                )
+            }
+        )
     }
 
     private func updateSearchSnapshot() {

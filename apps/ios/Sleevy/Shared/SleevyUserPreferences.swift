@@ -21,12 +21,15 @@ enum SleevyThemePreference: String, CaseIterable, Identifiable {
 }
 
 enum SleevyUserPreferences {
-    static let appGroupIdentifier = "group.app.sleevy"
+    nonisolated static let appGroupIdentifier = "group.app.sleevy"
     static let themeKey = "settings.theme"
     static let sourceNameKey = "settings.source-name"
     static let profileHandleKey = "profile.handle"
 
-    static let defaults = UserDefaults(suiteName: appGroupIdentifier) ?? .standard
+    /// `UserDefaults` is thread-safe by contract but not annotated `Sendable`,
+    /// so the widget's timeline provider and the share extension read it
+    /// from nonisolated code through this explicit opt-out.
+    nonisolated(unsafe) static let defaults = UserDefaults(suiteName: appGroupIdentifier) ?? .standard
 
     /// The signed-in account's profile handle. The app writes it after a
     /// session is established (the session payload itself has no handle) and

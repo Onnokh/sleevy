@@ -254,7 +254,7 @@ private struct SleevyServerErrorResponse: Decodable {
 }
 
 extension JSONDecoder {
-    static let sharedISO8601: JSONDecoder = {
+    nonisolated static let sharedISO8601: JSONDecoder = {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .sleevyISO8601
         return decoder
@@ -262,7 +262,7 @@ extension JSONDecoder {
 }
 
 extension JSONEncoder {
-    static let sharedISO8601: JSONEncoder = {
+    nonisolated static let sharedISO8601: JSONEncoder = {
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
         return encoder

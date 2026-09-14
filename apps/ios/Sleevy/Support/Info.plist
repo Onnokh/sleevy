@@ -28,6 +28,16 @@
 				<string>$(GOOGLE_REVERSED_CLIENT_ID_IOS)</string>
 			</array>
 		</dict>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+			<key>CFBundleURLName</key>
+			<string>app.sleevy.deep-link</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>sleevy</string>
+			</array>
+		</dict>
 	</array>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>

@@ -395,6 +395,22 @@ _Avoid_: Status, completion
 A small dot that indicates a Saved Item has not been opened yet.
 _Avoid_: Badge, bold unread row
 
+**Unread Widget**:
+The Home Screen and Lock Screen widget of the Native iOS App that shows the size of the Unread Backlog, or one Folder's share of it, with its newest Saved Items, and opens one on tap. Which Folder it follows is a widget setting; the default is the whole Inbox.
+_Avoid_: Inbox widget, folder widget, badge count, reading activity widget
+
+**Unread Backlog Snapshot**:
+The copy of the Unread Backlog the app publishes into the app group for the Unread Widget: the count and newest items for the whole Inbox and for each Folder, the Folder list, and when it was published. The widget reads it and never calls the REST API itself.
+_Avoid_: Widget cache, widget API, shared session
+
+**Deep Link**:
+A `sleevy://` URL that a widget hands to the Native iOS App to select the Home Tab, open a Folder View, or open one Saved Item through the Open Action.
+_Avoid_: Universal link, URL scheme handler, share URL
+
+**Widget Row Tap**:
+The interaction on one Saved Item in the Unread Widget: the row leaves the widget, the read is written to the shared read-state queue for the app's next sync, and the Original URL opens directly without bringing the app forward.
+_Avoid_: Widget deep link, open in app, background Open Action
+
 **Delete Action**:
 A simple destructive action that removes a Saved Item from the Account.
 _Avoid_: Archive, trash, hide
@@ -531,6 +547,8 @@ _Avoid_: Deep link, route argument, UI test step
 - The **Home Tab** shows the full **Unread Backlog**, not a capped preview.
 - The **Home Tab** surfaces the **Unread Backlog** count as lightweight navigation context.
 - The **Home Tab** shows **All Caught Up** when the **Unread Backlog** is empty.
+- The **Unread Widget** shows the **Unread Backlog** count and its newest **Saved Items**, for the whole **Inbox** or one **Folder**, from the **Unread Backlog Snapshot**, which the **Native iOS App** publishes each time the **Inbox** or the **Folder** list changes and clears on sign-out.
+- A **Widget Row Tap** marks the **Saved Item** read through the shared read-state queue and opens its **Original URL** directly; the **Native iOS App** sends the **Read State** to the REST API on its next sync. A tap on the widget's count panel is a **Deep Link** to the **Inbox** or the **Folder View**.
 - The **Home Tab** keeps **Clipboard Capture** in v1 because new captures enter the unread triage flow.
 - A **Duplicate Save** of a read **Saved Item** expresses **Renewed Intent** and returns that item to the **Home Tab** as unread.
 - The **Home Tab** supports manual **Read State** changes as secondary triage actions.
