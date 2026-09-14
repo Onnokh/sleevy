@@ -16,15 +16,16 @@ extension View {
     /// away with the content and stretches on pull-down, so the top edge
     /// never opens a seam.
     ///
-    /// The card hangs from the list's first row. Put a
-    /// `StretchyHeaderAnchorRow` first in the modified `List`: the card's
-    /// bottom edge is drawn where that row's top edge is, in every scroll
-    /// state — a pull-down, the refresh spinner, the large title collapsing,
-    /// a pushed screen popping back. Nothing is inferred from the scroll
-    /// offset or the content insets: on iOS 26 the space the large title
-    /// takes moves between the two as the title collapses, so a card that
-    /// worked its stretch out from them drifted from the rows and ended up a
-    /// large-title height below the first row.
+    /// The card hangs from the list's first row. Every row that can be the
+    /// first one carries `stretchyHeaderAnchor(rank:)`, ranked in list order;
+    /// the card's bottom edge is drawn where the lowest-ranked reporting
+    /// row's top edge is, in every scroll state — a pull-down, the refresh
+    /// spinner, the large title collapsing, a pushed screen popping back.
+    /// Nothing is inferred from the scroll offset or the content insets: on
+    /// iOS 26 the space the large title takes moves between the two as the
+    /// title collapses, so a card that worked its stretch out from them
+    /// drifted from the rows and ended up a large-title height below the
+    /// first row.
     ///
     /// The row's position changes on every scrolled pixel, so it lives in
     /// an observable box that only the header's own subview reads — a scroll
@@ -46,43 +47,53 @@ extension View {
     }
 }
 
-/// The row a stretchy header card hangs from. It is the first row of every
-/// `List` under `stretchyHeaderCard`, and draws nothing: a 0pt row whose only
-/// job is to report where the rows begin, in window coordinates, on every
-/// scrolled pixel.
-struct StretchyHeaderAnchorRow: View {
+extension View {
+    /// Marks a row a stretchy header card can hang from. Apply it to every
+    /// row of the `List` that can be its first — the subtitle row, the
+    /// loading and empty states — with `rank` in list order, 0 first. The
+    /// card follows the lowest-ranked row that has laid out. A row that
+    /// scrolls away keeps its last reading, which only ever describes a card
+    /// already off screen; a row that leaves the list keeps it too, and the
+    /// row taking its place starts at the same edge.
+    ///
+    /// The mark is the row's background, which is laid out to the cell's
+    /// full bounds: its top edge is the row's top edge whatever the cell adds
+    /// around the content. It replaces the row's clear background.
+    func stretchyHeaderAnchor(rank: Int = 0) -> some View {
+        listRowBackground(StretchyHeaderAnchorBackground(rank: rank))
+    }
+}
+
+private struct StretchyHeaderAnchorBackground: View {
+    let rank: Int
     @Environment(\.stretchyHeaderScrollModel) private var model
 
     var body: some View {
         Color.clear
-            .frame(height: 0)
-            .listRowInsets(EdgeInsets())
-            // The row background is laid out to the cell's full bounds, so
-            // its top edge is the row's top edge whatever the cell adds
-            // around the content.
-            .listRowBackground(
-                Color.clear
-                    .onGeometryChange(for: CGFloat.self) { geometry in
-                        geometry.frame(in: .global).minY
-                    } action: { top in
-                        model?.rowsTop = top
-                    }
-            )
-            .listRowSeparator(.hidden, edges: .all)
-            .accessibilityHidden(true)
+            .onGeometryChange(for: CGFloat.self) { geometry in
+                geometry.frame(in: .global).minY
+            } action: { top in
+                model?.anchorTops[rank] = top
+            }
     }
 }
 
-/// The per-frame readings. `@Observable` scopes the invalidation: both are
+/// The per-frame readings. `@Observable` scopes the invalidation: they are
 /// only read inside `StretchyHeaderBackground.body`.
 @MainActor
 @Observable
 final class StretchyHeaderScrollModel {
-    /// The top edge of the list's first row, in window coordinates. Nil
-    /// until the anchor row has laid out, which draws the card at rest.
-    var rowsTop: CGFloat?
+    /// The top edge of each anchored row that has laid out, by rank, in
+    /// window coordinates.
+    var anchorTops: [Int: CGFloat] = [:]
     /// The card's own top edge, in window coordinates.
     var cardTop: CGFloat?
+
+    /// The top edge of the list's first row: the lowest-ranked anchor that
+    /// has laid out. Nil until one has, which draws the card at rest.
+    var rowsTop: CGFloat? {
+        anchorTops.min { $0.key < $1.key }?.value
+    }
 }
 
 extension EnvironmentValues {
@@ -104,12 +115,6 @@ private struct StretchyHeaderCardModifier<Header: View>: ViewModifier {
             // bottom edge.
             .contentMargins(.top, max(0, height - topInset) + extraTopMargin, for: .scrollContent)
             .environment(\.stretchyHeaderScrollModel, model)
-            // A List pads every row up to its minimum row height, the anchor
-            // row included, which would put a blank band above the first
-            // real row. With the minimum off, rows are as tall as their
-            // content and insets; a row that leaned on the minimum states
-            // its own height instead (see `ListSubtitleRow`).
-            .environment(\.defaultMinListRowHeight, 0)
             .background(alignment: .top) {
                 StretchyHeaderBackground(
                     baseHeight: height,

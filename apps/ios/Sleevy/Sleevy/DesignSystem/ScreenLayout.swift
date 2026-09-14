@@ -41,7 +41,8 @@ enum ScreenLayout {
 /// the card's stretch, and a pull-to-refresh grows the scroll inset enough
 /// that the card outruns the rows and the subtitle lands on the first one.
 /// As a row it moves with the rows by construction, in every pull and refresh
-/// state, so it cannot collide with them.
+/// state, so it cannot collide with them — and the card hangs from it (see
+/// `stretchyHeaderAnchor`), so the card cannot outrun it either.
 struct ListSubtitleRow: View {
     let subtitle: String?
 
@@ -50,13 +51,9 @@ struct ListSubtitleRow: View {
             Text(subtitle)
                 .font(.system(size: 15, weight: .medium))
                 .foregroundStyle(.secondary)
-                // The minimum row height is off under a header card (see
-                // `stretchyHeaderCard`), so the row states the height the
-                // List used to pad it to: the text and the first row sit
-                // exactly where they did.
-                .padding(.vertical, 2)
-                .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 0, trailing: 20))
-                .listRowBackground(Color.clear)
+                .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 10, trailing: 20))
+                // The first row under the header card; the card hangs from it.
+                .stretchyHeaderAnchor(rank: 0)
                 .listRowSeparator(.hidden)
         }
     }

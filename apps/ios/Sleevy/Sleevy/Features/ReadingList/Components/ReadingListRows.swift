@@ -8,7 +8,8 @@ struct ReadingListLoadingRow: View {
         ProgressView("Loading your Sleevy...")
             .frame(maxWidth: .infinity, minHeight: height)
             .listRowInsets(EdgeInsets())
-            .listRowBackground(Color.clear)
+            // First row of the Inbox while it loads and has no subtitle.
+            .stretchyHeaderAnchor(rank: 1)
             .listRowSeparator(.hidden)
     }
 }
@@ -24,7 +25,8 @@ struct EmptyReadingListRow: View {
         )
         .frame(maxWidth: .infinity, minHeight: height)
         .listRowInsets(EdgeInsets())
-        .listRowBackground(Color.clear)
+        // First row of an empty Inbox, which has no subtitle.
+        .stretchyHeaderAnchor(rank: 1)
         .listRowSeparator(.hidden)
     }
 }

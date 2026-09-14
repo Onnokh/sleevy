@@ -79,8 +79,6 @@ struct FolderLibraryView: View {
         headerTopInset: CGFloat
     ) -> some View {
         List {
-            StretchyHeaderAnchorRow()
-
             ListSubtitleRow(subtitle: navigationSubtitleText(
                 total: projection.destinationCount,
                 unread: projection.unreadDestinationCount
@@ -89,7 +87,9 @@ struct FolderLibraryView: View {
             if filter.isActive {
                 ActiveLibraryFilters(filter: $filter)
                     .listRowInsets(EdgeInsets(top: 8, leading: 18, bottom: 8, trailing: 18))
-                    .listRowBackground(Color.clear)
+                    // Each row that can be the folder's first carries the
+                    // header card's anchor, ranked in list order.
+                    .stretchyHeaderAnchor(rank: 1)
                     .listRowSeparator(.hidden)
             }
 
@@ -97,7 +97,7 @@ struct FolderLibraryView: View {
                 Text(errorMessage)
                     .font(.footnote)
                     .foregroundStyle(.red)
-                    .listRowBackground(Color.clear)
+                    .stretchyHeaderAnchor(rank: 2)
             }
 
             if projection.items.isEmpty {
@@ -106,7 +106,7 @@ struct FolderLibraryView: View {
                     systemImage: filter.isActive ? "line.3.horizontal.decrease.circle" : "folder",
                     description: Text(filter.isActive ? "Try changing or clearing your filters." : "Move saved items here from your Library.")
                 )
-                .listRowBackground(Color.clear)
+                .stretchyHeaderAnchor(rank: 3)
                 .listRowSeparator(.hidden)
             }
 
