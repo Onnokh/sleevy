@@ -42,6 +42,7 @@ import {
   PublicSavedItemsQuery,
   PublicSavedItemsResponse,
   RateLimitExceeded,
+  ReadableContentDto,
   ReadingActivityDay,
   ReadingActivityResponse,
   SavedItemDto,
@@ -106,6 +107,7 @@ export {
   PublicSavedItemsQuery,
   PublicSavedItemsResponse,
   RateLimitExceeded,
+  ReadableContentDto,
   ReadingActivityDay,
   ReadingActivityResponse,
   SavedItemDto,
@@ -165,6 +167,7 @@ export const savedItemToDto = ({
       isPublished: folder.isPublished,
     }) : null,
     isRead: savedItem.isRead,
+    hasReadableContent: enrichment.hasReadableContent,
     lastSavedAt: savedItem.lastSavedAt,
     createdAt: savedItem.createdAt,
     updatedAt: savedItem.updatedAt,
@@ -310,6 +313,15 @@ const savedItemsGroup = HttpApiGroup.make("saved-items")
     })
       .annotate(OpenApi.Summary, "List saved items")
       .annotate(OpenApi.Description, "List the authenticated account's Saved Items.\n\nUse `sort` to choose the ordering and `folder` to restrict the list to one Folder. Pass `limit` and the `nextCursor` of the previous response to page through the list; `nextCursor` is `null` on the last page. Treat the cursor as opaque and never construct one."),
+  )
+  .add(
+    HttpApiEndpoint.get("content", "/v1/saved-items/:id/content", {
+      params: Schema.Struct({ id: SavedItemId }),
+      success: ReadableContentDto,
+      error: [SavedItemNotFoundError, RateLimitExceeded],
+    })
+      .annotate(OpenApi.Summary, "Read a saved item's readable content")
+      .annotate(OpenApi.Description, "Return the Readable Content of this Saved Item as Markdown, for a Reader View.\n\nOnly the Markdown form is served. Check `hasReadableContent` on the Saved Item before calling: a Saved Item whose Link yielded no article answers 404, the same answer a Saved Item belonging to another account gets, so absence and non-ownership are indistinguishable. Extraction is best effort and most Links are not articles, so a 404 here is ordinary rather than an error to report."),
   )
   .add(
     HttpApiEndpoint.post("markOpened", "/v1/saved-items/:id/open", {
@@ -546,6 +558,7 @@ const oauthScopesByOperationId: Record<string, ReadonlyArray<ReadonlyArray<Scope
   "captures.capture": [["saved-items:capture"]],
   "captures.captureBatch": [["saved-items:capture"]],
   "saved-items.list": [["saved-items:read"]],
+  "saved-items.content": [["saved-items:read"]],
   "saved-items.markOpened": [["saved-items:write"]],
   "saved-items.markRead": [["saved-items:write"]],
   "saved-items.markUnread": [["saved-items:write"]],

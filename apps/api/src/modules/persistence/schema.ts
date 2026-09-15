@@ -1,8 +1,9 @@
-import { defineRelations, sql } from "drizzle-orm"
+import { defineRelations, sql, type SQL } from "drizzle-orm"
 import { randomUUID } from "node:crypto"
 
 import {
   boolean,
+  customType,
   index,
   integer,
   jsonb,
@@ -132,12 +133,65 @@ export const linkEnrichmentTable = pgTable(
       .$type<EnrichmentStatus>()
       .notNull()
       .default("pending"),
+    // Whether the Link has Readable Content, so a Saved Item list read answers
+    // "is there a Reader View" without joining link_content. Written by the
+    // readable-content Enrichment stage, and never true without a stored row.
+    hasReadableContent: boolean("has_readable_content").notNull().default(false),
     enrichedAt: timestamp("enriched_at", { withTimezone: true }),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [
     index("link_enrichment_type_idx").on(table.type),
     index("link_enrichment_status_idx").on(table.status),
+  ],
+)
+
+// Postgres tsvector has no drizzle column type. The column is generated rather
+// than written, so its shape only has to be right for the DDL.
+const tsvector = customType<{ data: string }>({
+  dataType: () => "tsvector",
+})
+
+// Readable Content lives in its own table rather than on link_metadata: every
+// list read joins that record per row, so a body column would be carried by
+// every Library, Inbox, Folder View, and search read to serve a view that opens
+// one item at a time (see ADR 0021).
+export const linkContentTable = pgTable(
+  "link_content",
+  {
+    linkId: text("link_id")
+      .$type<LinkId>()
+      .primaryKey()
+      .references(() => linksTable.id, { onDelete: "cascade" }),
+    // The extractor's own article HTML. Stored and never served, so no client
+    // sanitizes third-party markup in v1. It is kept so a better Markdown
+    // conversion can be run later without fetching the page again.
+    html: text("html").notNull(),
+    // What the Reader View renders and what the search index reads.
+    markdown: text("markdown").notNull(),
+    // Indexed from the start and read by nothing in v1: the column cannot be
+    // added later without rewriting the table, while the query can change at
+    // any time. The HTML form is never indexed.
+    //
+    // Markup is stripped before indexing. A Markdown link target is a term to
+    // Postgres, so an unfiltered index answers a search for "reference" with
+    // every page that happens to link to one — which is the same reason the
+    // HTML form is not indexed, arriving by a different route. Both
+    // replacements are IMMUTABLE, which a generated column requires.
+    //
+    // The bracket expressions are deliberate: a backslash escape does not
+    // survive this template literal, and the regex it decays into strips every
+    // word after a stray "]" rather than only a link target.
+    search: tsvector("search").generatedAlwaysAs(
+      (): SQL =>
+        sql`to_tsvector('english', regexp_replace(regexp_replace(${linkContentTable.markdown}, '[]][(][^)]*[)]', ']', 'g'), 'https?://[^[:space:]]+', ' ', 'g'))`,
+    ),
+    extractedAt: timestamp("extracted_at", { withTimezone: true })
+      .notNull()
+      .defaultNow(),
+  },
+  (table) => [
+    index("link_content_search_idx").using("gin", table.search),
   ],
 )
 
@@ -316,6 +370,7 @@ export const relationalSchema = {
   links: linksTable,
   linkMetadata: linkMetadataTable,
   linkEnrichment: linkEnrichmentTable,
+  linkContent: linkContentTable,
   sources: sourcesTable,
   folders: foldersTable,
   profiles: profilesTable,
@@ -334,6 +389,11 @@ export const relations = defineRelations(relationalSchema, (r) => ({
       from: r.links.id,
       to: r.linkEnrichment.linkId,
       optional: false,
+    }),
+    content: r.one.linkContent({
+      from: r.links.id,
+      to: r.linkContent.linkId,
+      optional: true,
     }),
     savedItems: r.many.savedItems({
       from: r.links.id,
@@ -354,6 +414,13 @@ export const relations = defineRelations(relationalSchema, (r) => ({
   linkEnrichment: {
     link: r.one.links({
       from: r.linkEnrichment.linkId,
+      to: r.links.id,
+      optional: false,
+    }),
+  },
+  linkContent: {
+    link: r.one.links({
+      from: r.linkContent.linkId,
       to: r.links.id,
       optional: false,
     }),
@@ -413,6 +480,7 @@ export const schema = {
   linksTable,
   linkMetadataTable,
   linkEnrichmentTable,
+  linkContentTable,
   sourcesTable,
   foldersTable,
   profilesTable,

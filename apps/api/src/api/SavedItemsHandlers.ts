@@ -2,6 +2,7 @@ import { Effect, Option } from "effect"
 import { HttpApiBuilder } from "effect/unstable/httpapi"
 
 import type { FolderId, SavedItemId } from "../domain/SavedItem.js"
+import { LinkContentRepository } from "../modules/content/LinkContentRepository.js"
 import { FolderRepository } from "../modules/folders/FolderRepository.js"
 import { ProfileRepository } from "../modules/profiles/ProfileRepository.js"
 import { PublicProfileCachePurger } from "../modules/profiles/PublicProfileCachePurger.js"
@@ -14,6 +15,7 @@ import { Analytics } from "../modules/analytics/Analytics.js"
 import {
   CurrentUser,
   FolderNotFoundError,
+  ReadableContentDto,
   SavedItemNotFoundError,
   SavedItemsResponse,
   savedItemToDto,
@@ -95,6 +97,50 @@ export const savedItemsGroupLive = HttpApiBuilder.group(sleevyApi, "saved-items"
         })
       }),
     ))
+    // A Link with no Readable Content answers exactly what a Saved Item owned
+    // by somebody else answers, so the response never tells a caller that an
+    // item exists. Most Links are not articles, so this 404 is the ordinary
+    // case rather than a fault.
+    .handle("content", gated("saved-items:read", ({ params }) =>
+      Effect.gen(function* () {
+        const repo = yield* SavedItemRepository
+        const contentRepo = yield* LinkContentRepository
+        const userId = yield* CurrentUser
+
+        const found = yield* repo.findByUserAndId(userId, params.id).pipe(
+          Effect.orDie,
+          Effect.flatMap(
+            Option.match({
+              onNone: () => Effect.succeedNone,
+              onSome: (item) =>
+                contentRepo.findByLinkId(item.link.id).pipe(
+                  Effect.orDie,
+                  Effect.map(Option.map((content) => ({ item, content }))),
+                ),
+            }),
+          ),
+        )
+
+        // One failure site for both misses: a Link with no Readable Content and
+        // a Saved Item owned by somebody else are answered identically, so the
+        // response never discloses that an item exists.
+        if (Option.isNone(found)) {
+          return yield* new SavedItemNotFoundError({
+            message: "Saved Item was not found.",
+            savedItemId: params.id,
+          })
+        }
+
+        return new ReadableContentDto({
+          savedItemId: found.value.item.savedItem.id,
+          // The Reader View always offers the Original URL, because extraction
+          // loses tables, embeds, and figure captions.
+          originalUrl: found.value.item.link.originalUrl,
+          title: found.value.item.metadata.title,
+          markdown: found.value.content.markdown,
+          extractedAt: found.value.content.extractedAt,
+        })
+      })))
     .handle("markOpened", gated("saved-items:write", ({ params }) =>
       Effect.gen(function* () {
         const repo = yield* SavedItemRepository

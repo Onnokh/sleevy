@@ -97,6 +97,7 @@ export type SavedItemDto = {
     readonly isPublished: boolean;
   } | null;
   readonly isRead: boolean;
+  readonly hasReadableContent: boolean;
   readonly lastSavedAt: string;
   readonly createdAt: string;
   readonly updatedAt: string;
@@ -149,6 +150,7 @@ export type SavedItemsResponse = {
       readonly isPublished: boolean;
     } | null;
     readonly isRead: boolean;
+    readonly hasReadableContent: boolean;
     readonly lastSavedAt: string;
     readonly createdAt: string;
     readonly updatedAt: string;
@@ -203,6 +205,7 @@ export type CaptureCreated = {
       readonly isPublished: boolean;
     } | null;
     readonly isRead: boolean;
+    readonly hasReadableContent: boolean;
     readonly lastSavedAt: string;
     readonly createdAt: string;
     readonly updatedAt: string;
@@ -257,6 +260,7 @@ export type CaptureUpdated = {
       readonly isPublished: boolean;
     } | null;
     readonly isRead: boolean;
+    readonly hasReadableContent: boolean;
     readonly lastSavedAt: string;
     readonly createdAt: string;
     readonly updatedAt: string;

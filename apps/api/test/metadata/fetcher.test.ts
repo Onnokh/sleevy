@@ -89,4 +89,21 @@ describe("MetadataFetcher", () => {
       expect(result.value.faviconUrl).toBe("https://example.com/favicon.ico")
     }),
   )
+  it.effect("prefers the Readable Content and keeps its structure", () =>
+    Effect.gen(function* () {
+      const fetcher = yield* MetadataFetcher
+      const result = yield* fetcher.extractContent(
+        page("<!doctype html><body><p>Ignored fallback prose.</p></body>"),
+        "## Monomorphic call sites\n\nOne shape per call site lets the engine inline the lookup.\n\n![Diagram](https://cdn.example.com/very/long/path/to/diagram.png)\n\n- [Read more](https://example.com/deep/link/target)",
+      )
+
+      expect(Option.isSome(result)).toBe(true)
+      if (Option.isNone(result)) return
+
+      expect(result.value).toContain("## Monomorphic call sites")
+      expect(result.value).toContain("- Read more")
+      expect(result.value).not.toContain("cdn.example.com")
+      expect(result.value).not.toContain("Ignored fallback prose")
+    }),
+  )
 })

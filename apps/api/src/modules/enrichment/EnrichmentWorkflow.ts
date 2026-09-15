@@ -11,8 +11,13 @@ import {
   EnrichmentStageResult,
 } from "../../domain/EnrichmentJob.js"
 import { AiEnricher, type AiEnrichmentResult } from "../ai/AiEnricher.js"
+import { LinkContentRepository } from "../content/LinkContentRepository.js"
+import {
+  ReadableContentExtractor,
+  type ExtractedArticle,
+} from "../content/ReadableContentExtractor.js"
 import { SavedItemIntake } from "../saved-items/SavedItemIntake.js"
-import { PageFetcher } from "../fetch/PageFetcher.js"
+import { PageDocument, PageFetcher } from "../fetch/PageFetcher.js"
 import { Metadata, MetadataFetcher } from "../metadata/MetadataFetcher.js"
 import { OEmbedFetcher } from "../metadata/OEmbedFetcher.js"
 
@@ -42,6 +47,45 @@ export class EnrichmentWorkflow extends Context.Service<EnrichmentWorkflow>()(
       const aiEnricher = yield* AiEnricher
       const pageFetcher = yield* PageFetcher
       const intake = yield* SavedItemIntake
+      const contentExtractor = yield* ReadableContentExtractor
+      const contentRepository = yield* LinkContentRepository
+
+      // Extraction is local. Where a page needs a browser to yield its markup
+      // at all, PageFetcher's Cloudflare tier has already produced it, so this
+      // runs against the rendered document like any other (see ADR 0021).
+      //
+      // The write belongs inside the stage, not after it: the stage is what
+      // turns a failure into a recorded skip, and a Readable Content row that
+      // could not be stored is a stage that did not succeed, not a job that
+      // throws away the metadata and Tags it already earned.
+      const extractReadable = (
+        page: PageDocument,
+        linkId: Link["id"],
+      ): Effect.Effect<StageResult<ExtractedArticle>, unknown> =>
+        Effect.gen(function* () {
+          const url = page.finalUrl
+
+          if (!(yield* contentExtractor.isReadable(page.html, url))) {
+            return {
+              _tag: "skip",
+              message: "The page holds no article prose to extract.",
+            }
+          }
+
+          const article = yield* contentExtractor.extract(page.html, url)
+          if (Option.isNone(article)) {
+            return {
+              _tag: "skip",
+              message: "The page passed the readability check but yielded no article.",
+            }
+          }
+
+          // The repository raises the flag on Link Enrichment in the same
+          // transaction, so the row and the flag can never disagree.
+          yield* contentRepository.upsert(linkId, article.value)
+
+          return { _tag: "success", value: article.value }
+        })
 
       return {
         enrich: Effect.fn("EnrichmentWorkflow.enrich")(function* (linkId: Link["id"]) {
@@ -112,13 +156,52 @@ export class EnrichmentWorkflow extends Context.Service<EnrichmentWorkflow>()(
             }
           }
 
+          // Readable Content is best effort: it skips rather than fails, so a
+          // Link that yields no prose stays exactly as usable as one saved
+          // before the Reader View existed. A page the gate rejects stores
+          // nothing at all, rather than a body marked absent.
+          let readableMarkdown: string | undefined
+          {
+            const result = yield* runStage<ExtractedArticle>(
+              "readable-content",
+              Result.isSuccess(pageResult)
+                ? Option.match(pageResult.success, {
+                  onNone: () =>
+                    Effect.succeed<StageResult<ExtractedArticle>>({
+                      _tag: "skip",
+                      message: "Fetched page was not HTML.",
+                    }),
+                  onSome: (page) => extractReadable(page, link.id),
+                })
+                : Effect.succeed<StageResult<ExtractedArticle>>({
+                  _tag: "skip",
+                  message: "The page could not be fetched.",
+                }),
+              stages,
+            )
+
+            if (Option.isSome(result)) {
+              // finishEnrichment does not write has_readable_content: adding it
+              // to the set list there would clear it on every job that extracts
+              // nothing.
+              readableMarkdown = result.value.markdown
+              linkEnrichment = new LinkEnrichment({
+                ...linkEnrichment,
+                hasReadableContent: true,
+                updatedAt: new Date(),
+              })
+            }
+          }
+
           // Extracted Page Content is best effort: AI Enrichment still runs on
-          // metadata alone when the page was not fetched or held no prose.
+          // metadata alone when the page was not fetched or held no prose. It
+          // is taken from the head of the Readable Content when there is any,
+          // because the extractor has already decided what the article is.
           const content = Result.isSuccess(pageResult)
             ? yield* Option.match(pageResult.success, {
               onNone: () => Effect.succeed(Option.none<string>()),
               onSome: (page) =>
-                Effect.all([metadataFetcher.extractContent(page)], {
+                Effect.all([metadataFetcher.extractContent(page, readableMarkdown)], {
                   mode: "result",
                 }).pipe(
                   Effect.map(([result]) =>
@@ -235,6 +318,8 @@ export class EnrichmentWorkflow extends Context.Service<EnrichmentWorkflow>()(
     Layer.provide(AiEnricher.defaultLayer),
     Layer.provide(PageFetcher.defaultLayer),
     Layer.provide(SavedItemIntake.defaultLayer),
+    Layer.provide(ReadableContentExtractor.layer),
+    Layer.provide(LinkContentRepository.defaultLayer),
   )
 }
 

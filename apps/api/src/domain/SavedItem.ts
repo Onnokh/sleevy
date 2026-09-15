@@ -62,6 +62,10 @@ export class LinkEnrichment extends Schema.Class<LinkEnrichment>("LinkEnrichment
   type: LinkType,
   tags: Schema.Array(Topic),
   status: EnrichmentStatus,
+  // Whether the Link has Readable Content, and therefore a Reader View. It is
+  // an Enrichment outcome, and it lives here rather than beside the body so a
+  // Saved Item list read answers the question without joining link_content.
+  hasReadableContent: Schema.Boolean,
   enrichedAt: Schema.optional(Schema.Date),
   updatedAt: Schema.Date,
 }) {}

@@ -92,7 +92,7 @@ The period of at least six months between announcing that an operation is being 
 _Avoid_: Breaking change notice, sunset policy page, changelog entry
 
 **Open Action**:
-The REST API action that records a Saved Item as opened and therefore read.
+The REST API action that records a Saved Item as opened and therefore read, whether the user opened the Reader View or the Original URL.
 _Avoid_: Manual read toggle, generic patch
 
 **Native iOS App**:
@@ -212,8 +212,16 @@ Server-side Enrichment that uses an AI provider to generate a Preview Summary an
 _Avoid_: On-device AI, manual categorization
 
 **Extracted Page Content**:
-The prose of a fetched page, without the site chrome, given to AI Enrichment so a Preview Summary and Tag can rest on what the page says.
-_Avoid_: Reading text, article body, scraped text, full text
+The opening slice of a page's prose, without the site chrome, given to AI Enrichment so a Preview Summary and Tag can rest on what the page says. Taken from the head of the Readable Content when a Link has any.
+_Avoid_: Reading text, scraped text, full text, Readable Content
+
+**Readable Content**:
+The article prose of a Link, extracted once and kept in two forms: the extractor's own article HTML, and the Markdown converted from it. The Reader View renders the Markdown; the HTML is kept only so a better conversion can be run later without re-fetching the page. It is what the page said, not a copy of the page: no assets are stored and images remain External Image URLs.
+_Avoid_: Archive, cached page, page copy, full text, Extracted Page Content
+
+**Reader View**:
+The in-product surface that renders a Saved Item's Readable Content instead of sending the user to the Original URL.
+_Avoid_: In-app browser, web view, archive view, detail screen
 
 **Enrichment Job**:
 An asynchronous backend task that performs Enrichment for a Link after capture.
@@ -586,7 +594,12 @@ _Avoid_: Deep link, route argument, UI test step
 - The v1 **API Key Rate Limit** applies only to API-key-authenticated requests, not **App Session** requests.
 - The v1 **API Key Rate Limit** is 20 requests per minute per **API Key**.
 - A request over the **API Key Rate Limit** receives a **Rate Limit Response** with HTTP 429, `Retry-After`, and rate-limit headers.
-- A **Link** retains **Saved Metadata**, not the full original content.
+- A **Link** retains **Saved Metadata** and, when extraction succeeds, **Readable Content**. It never retains a copy of the page itself: no assets, no archive, no offline bundle (see ADR 0021).
+- **Readable Content** is stored as article HTML and as Markdown, is shared per **Link** like the rest of Enrichment, and each form is capped at a fixed size. Both forms are always present: they are produced by one extraction or not at all.
+- The **Reader View** renders the Markdown form. The HTML form is stored and never served, so no client sanitizes third-party markup in v1.
+- **Readable Content** is never included in a Saved Item list response and never appears on a **Public Profile**.
+- A **Saved Item** response states only whether its **Link** has **Readable Content**, from a flag on **Link Enrichment**, so a list read never touches the stored body.
+- **Readable Content** is read through its own request, never as part of retrieval.
 - **Saved Metadata** is separated into **Link Metadata** and **Link Enrichment** so fetched page data and generated classification can evolve independently.
 - A **Saved Item** retains user-specific state such as read state, last saved time, and overrides.
 - A **Saved Item** may have **Saved Item Tags** supplied by API clients or other capture surfaces.
@@ -613,7 +626,14 @@ _Avoid_: Deep link, route argument, UI test step
 - **Saved Metadata** may include a **Preview Summary**.
 - Saved Item list rows use **Stable Row Height**, showing **Preview Summary** when available without changing row rhythm.
 - **Saved Metadata** may include an **External Image URL** loaded directly by iOS and web clients.
-- **Extracted Page Content** may be used during **Enrichment** but is not persisted in v1.
+- **Extracted Page Content** is not persisted; it is derived per **Enrichment Job** from the **Readable Content** when there is any, and from the fetched page directly when there is not.
+- **Readable Content** is produced by a best-effort **Enrichment Job** stage that skips rather than fails, so a **Link** that yields no prose stays exactly as usable as one saved before the Reader View existed.
+- A **Link** whose **Type** is not an article normally yields no **Readable Content**, because the extraction check rejects it rather than a rule about **Type** excluding it.
+- Extraction is two passes: a cheap check decides whether the page is readable, and only then is the body extracted. A rejected page stores nothing at all, rather than storing a body and marking it absent.
+- A page below the extractor's character floor yields no **Readable Content**, so a thin page produces nothing rather than producing a fragment.
+- Extraction is bounded by a node-count limit, because **Enrichment** runs against URLs anyone may submit.
+- Extraction always runs locally, against whatever markup the fetch produced. Where a page needs a browser to yield markup at all, the fetch has already used one, so a page blocked from the origin host is extracted exactly like one that was not.
+- **Readable Content** is stored with a search index over the prose of its Markdown form from the start — link targets and bare URLs are stripped before indexing, so a target is never a search term — but neither the **Search Tab** nor the **Command Palette** reads it in v1. The HTML form is never indexed.
 - A **Preview Summary** conveys what the page says. It never describes the page as an object, and it is absent rather than filler when the page yields nothing to say.
 - A **Link** may later receive AI-generated categorization and summarization.
 - A **Saved Item** records which **Capture Channel** created it.
@@ -712,11 +732,13 @@ _Avoid_: Deep link, route argument, UI test step
 - Each **Saved Item** has a **Read State**.
 - **Unread Dot** is the v1 visual indicator for unread **Read State**.
 - A **Saved Item** becomes read when the user opens it.
-- Opening a **Saved Item** sends the user to its **Original URL** in the browser.
+- Opening a **Saved Item** that has **Readable Content** opens the **Reader View**; opening one without it sends the user to its **Original URL** in the browser.
+- The **Reader View** always offers the **Original URL**, because extraction loses tables, embeds, and figure captions.
 - Clients may open the known **Original URL** immediately while asynchronously notifying the API to update **Read State**.
 - The **Open Action** is exposed as `POST /v1/saved-items/{id}/open`.
 - A **Delete Action** removes a **Saved Item** without archive or trash behavior in v1.
-- V1 has no Saved Item detail screen; list rows are the primary item surface.
+- The **Reader View** is the only Saved Item destination; list rows remain the primary item surface for everything else.
+- The **Reader View** loads **Readable Content** from its own request, so opening one item never changes what a list read costs.
 - The **Command Palette** searches Saved Items by title and host, surfaces page navigation and action commands, and detects pasted URLs to offer capture.
 - The **Command Palette** searches Saved Items across all Folders and unfiled Library content.
 - The **Command Palette** suppresses all global keyboard shortcuts while open and restores list selection state on close.
@@ -833,4 +855,14 @@ These record the reasoning behind decisions that are not obvious from the defini
 - A public Saved Item page is not ordered by **Last Saved At**; resolved: Saved Item creation time orders it, so a **Duplicate Save** cannot reorder a published page.
 - A public Saved Item page is not addressed by cursor; resolved: numbered pages give every page a shareable URL, which a crawler can reach and infinite scroll cannot.
 - The first publish has no review step; resolved: opt-in confirmation copy states the item count and the automatic future behavior, and Sleevy accepts that an existing library publishes in full at that moment.
+- **Readable Content** is not an archive; resolved: Sleevy stores the article prose only, while Shiori's WARC page copy and EPUB export are deliberately not adopted, which is what lets a **Link** still be said to retain what a page said rather than the page (see ADR 0021).
+- **Readable Content** keeps two forms like Shiori, but a different pair and a different contract; resolved: Shiori stores plain text for search beside sanitized HTML for rendering and serves both, while Sleevy stores the extractor's article HTML beside Markdown, renders and indexes only the Markdown, and never serves the HTML.
+- The HTML form is kept even though nothing reads it; resolved: converting to Markdown is lossy and one-way, and re-fetching a page months later to recover a table or a code block is not a plan, because the page may be paywalled, rewritten, or gone.
+- Serving the HTML form is deferred, not designed out; resolved: the day the **Reader View** renders it, Sleevy must sanitize third-party markup on both clients, and that cost is taken on deliberately rather than inherited by accident.
+- **Readable Content** is not extracted by Cloudflare; resolved: Cloudflare Browser Rendering supplies markup for pages the origin host cannot fetch, which on a blocklisted host is a large share of ordinary articles, but the article is always chosen by the local extractor. Cloudflare's Markdown endpoint converts a whole page rather than extracting an article, so it is not used at all (see ADR 0021).
+- **Readable Content** does not live on **Link Metadata**; resolved: every list read joins that record per row, so a body column would be carried by every Library, Inbox, Folder View, and search read to serve a view that opens one item at a time.
+- **Readable Content** does not repeat the **Preview Summary**'s role; resolved: a Preview Summary decides whether to open a Saved Item, while Readable Content is what is read after opening it.
+- **Readable Content** is not searched in v1 even though it is indexed; resolved: the index cannot be added later without rewriting the table, while the query can be changed at any time, and whether an article's body should rank beside its title is a product question this change does not answer.
+- **Readable Content** is not re-extracted when the local extractor finds no article; resolved: re-rendering such a page recovered nothing measurable, and the **Reader View** already falls back to the **Original URL**, which is the same posture Shiori takes minus its page archive (see ADR 0021).
+- **Readable Content** is not re-extracted for existing **Links** in this change; resolved: it is written once per Link, and a backfill is a later operational concern rather than a product behavior.
 - "Reading Queue" named the pre-Inbox home list of all Saved Items, and later specs and iOS code reused it for the unread-only surface; resolved: **Inbox** is the canonical name for the unread triage surface and the **Library** for the complete collection, so Reading Queue and Queue Tab are retired (see ADR 0019).

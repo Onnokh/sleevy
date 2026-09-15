@@ -17,6 +17,11 @@ import {
   AiEnricherError,
   type AiEnrichmentInput,
 } from "../../src/modules/ai/AiEnricher.js"
+import { LinkContentRepository } from "../../src/modules/content/LinkContentRepository.js"
+import {
+  ReadableContentExtractor,
+  type ExtractedArticle,
+} from "../../src/modules/content/ReadableContentExtractor.js"
 import { EnrichmentWorkflow } from "../../src/modules/enrichment/EnrichmentWorkflow.js"
 import { PageDocument } from "../../src/modules/fetch/PageDocument.js"
 import { PageFetcher } from "../../src/modules/fetch/PageFetcher.js"
@@ -59,6 +64,7 @@ const makeEnrichment = (type: LinkEnrichment["type"] = "article") =>
     type,
     tags: [],
     status: "pending",
+    hasReadableContent: false,
     updatedAt: now,
   })
 
@@ -73,13 +79,13 @@ const makeJob = () =>
     startedAt: now,
   })
 
-const makePage = (url: string) =>
+const makePage = (url: string, html?: string) =>
   new PageDocument({
     requestedUrl: url,
     finalUrl: url,
     contentType: "text/html",
     fetchedAt: now,
-    html: [
+    html: html ?? [
       "<!doctype html>",
       "<title>Effect API Testing - Example</title>",
       '<meta name="description" content="A practical guide to testing an Effect API.">',
@@ -90,6 +96,22 @@ const makePage = (url: string) =>
     ].join(""),
   })
 
+const articlePage = (() => {
+  const paragraph =
+    "<p>Readability scores a block by its punctuation and its length, so a " +
+    "paragraph has to carry real sentences before it counts toward the " +
+    "article. This page repeats it until it clears the character floor.</p>"
+
+  return [
+    "<!doctype html><html><head><title>Extraction - Example</title></head><body>",
+    '<meta property="og:site_name" content="Example Docs">',
+    "<nav>Docs Pricing</nav>",
+    "<article><h1>Extraction</h1>",
+    paragraph.repeat(6),
+    "</article><footer>Cookie notice</footer></body></html>",
+  ].join("")
+})()
+
 const workflowLayer = (input: {
   readonly status?: LinkEnrichment["status"] | undefined
   readonly type?: LinkEnrichment["type"] | undefined
@@ -98,6 +120,9 @@ const workflowLayer = (input: {
   readonly aiFails?: boolean | undefined
   readonly onAiInput?: ((input: AiEnrichmentInput) => void) | undefined
   readonly onStart?: (() => void) | undefined
+  readonly readableHtml?: string | undefined
+  readonly onContentStored?: ((article: ExtractedArticle) => void) | undefined
+  readonly contentStoreFails?: boolean | undefined
   readonly onFinish?: ((result: FinishedEnrichment) => void) | undefined
 }) =>
   EnrichmentWorkflow.layer.pipe(
@@ -131,7 +156,31 @@ const workflowLayer = (input: {
       Layer.succeed(
         PageFetcher,
         PageFetcher.of({
-          fetch: (url) => Effect.succeed(Option.some(makePage(url))),
+          fetch: (url) =>
+            Effect.succeed(Option.some(makePage(url, input.readableHtml))),
+        }),
+      ),
+    ),
+    // The extractor is pure, so the real one runs: "the gate rejects, nothing
+    // is stored" is then an assertion rather than a mock returning none.
+    Layer.provideMerge(ReadableContentExtractor.layer),
+    Layer.provideMerge(
+      Layer.succeed(
+        LinkContentRepository,
+        LinkContentRepository.of({
+          upsert: (_linkId, article) =>
+            Effect.suspend(() => {
+              input.onContentStored?.(article)
+              return input.contentStoreFails
+                // Stands in for the SqlError a real write fails with. The
+                // assertion keeps the double off @effect/sql, which the api
+                // does not depend on directly.
+                ? Effect.fail(
+                  new Error("link_content write failed") as unknown as never,
+                )
+                : Effect.succeed(now)
+            }),
+          findByLinkId: () => Effect.succeed(Option.none()),
         }),
       ),
     ),
@@ -181,6 +230,7 @@ describe("EnrichmentWorkflow", () => {
         expect(finished?.job.status).toBe("succeeded")
         expect(finished?.job.stages.map((stage) => `${stage.stage}:${stage.status}`)).toEqual([
           "metadata:succeeded",
+          "readable-content:skipped",
           "tagging:succeeded",
           "preview-summary:succeeded",
         ])
@@ -208,6 +258,7 @@ describe("EnrichmentWorkflow", () => {
       expect(aiInputs.length).toBe(1)
       expect(finished?.job.stages.map((stage) => `${stage.stage}:${stage.status}`)).toEqual([
         "metadata:succeeded",
+        "readable-content:skipped",
         "tagging:succeeded",
         "preview-summary:succeeded",
       ])
@@ -244,6 +295,7 @@ describe("EnrichmentWorkflow", () => {
       expect(finished?.job.status).toBe("partial")
       expect(finished?.job.stages.map((stage) => `${stage.stage}:${stage.status}`)).toEqual([
         "metadata:succeeded",
+        "readable-content:skipped",
         "tagging:failed",
         "preview-summary:failed",
       ])
@@ -285,6 +337,7 @@ describe("EnrichmentWorkflow", () => {
       expect(finished?.job.status).toBe("succeeded")
       expect(finished?.job.stages.map((stage) => `${stage.stage}:${stage.status}`)).toEqual([
         "metadata:succeeded",
+        "readable-content:skipped",
         "tagging:skipped",
         "preview-summary:skipped",
       ])
@@ -317,6 +370,7 @@ describe("EnrichmentWorkflow", () => {
       expect(finished?.job.status).toBe("succeeded")
       expect(finished?.job.stages.map((stage) => `${stage.stage}:${stage.status}`)).toEqual([
         "metadata:succeeded",
+        "readable-content:skipped",
         "tagging:succeeded",
         "preview-summary:skipped",
       ])
@@ -328,6 +382,120 @@ describe("EnrichmentWorkflow", () => {
         onAiInput: () => {
           asked = true
         },
+        onFinish: (result) => {
+          finished = result
+        },
+      })),
+    )
+  })
+  it.effect("stores Readable Content in both forms and reads the AI input from it", () => {
+    const stored: ExtractedArticle[] = []
+    const aiInputs: AiEnrichmentInput[] = []
+    let finished: FinishedEnrichment | undefined
+
+    return Effect.gen(function* () {
+      const workflow = yield* EnrichmentWorkflow
+      yield* workflow.enrich(linkId)
+
+      expect(finished?.job.stages.map((stage) => `${stage.stage}:${stage.status}`)).toEqual([
+        "metadata:succeeded",
+        "readable-content:succeeded",
+        "tagging:succeeded",
+        "preview-summary:succeeded",
+      ])
+
+      // Two stored forms, written together.
+      expect(stored.length).toBe(1)
+      expect(stored[0]?.html).toContain("<p>")
+      expect(stored[0]?.markdown).toContain("Readability scores a block")
+
+      // The flag says a Reader View exists.
+      expect(finished?.enrichment.hasReadableContent).toBe(true)
+
+      // Extracted Page Content now comes from the head of that Markdown, and
+      // carries the article rather than the chrome around it.
+      const content = aiInputs[0]?.content
+      expect(content && Option.isSome(content)).toBe(true)
+      if (!content || Option.isNone(content)) return
+      expect(content.value).toContain("Readability scores a block")
+      expect(content.value).not.toContain("Cookie notice")
+      expect(content.value).not.toContain("Pricing")
+    }).pipe(
+      Effect.provide(workflowLayer({
+        readableHtml: articlePage,
+        aiTags: ["typescript"],
+        aiPreview: "How Readability scores a page.",
+        onContentStored: (article) => {
+          stored.push(article)
+        },
+        onAiInput: (value) => {
+          aiInputs.push(value)
+        },
+        onFinish: (result) => {
+          finished = result
+        },
+      })),
+    )
+  })
+
+  it.effect("stores nothing and raises no flag when the gate rejects the page", () => {
+    const stored: ExtractedArticle[] = []
+    let finished: FinishedEnrichment | undefined
+
+    return Effect.gen(function* () {
+      const workflow = yield* EnrichmentWorkflow
+      yield* workflow.enrich(linkId)
+
+      // A rejected page stores nothing at all, rather than a body marked
+      // absent, so the flag and the row can never disagree.
+      expect(stored).toEqual([])
+      expect(finished?.enrichment.hasReadableContent).toBe(false)
+      // Best effort: the stage skips, and the job still succeeds.
+      expect(finished?.job.status).toBe("succeeded")
+      expect(finished?.enrichment.status).toBe("enriched")
+    }).pipe(
+      Effect.provide(workflowLayer({
+        aiTags: ["typescript"],
+        aiPreview: "A summary from metadata alone.",
+        onContentStored: (article) => {
+          stored.push(article)
+        },
+        onFinish: (result) => {
+          finished = result
+        },
+      })),
+    )
+  })
+  it.effect("records a failed stage, and finishes the job, when the write fails", () => {
+    let finished: FinishedEnrichment | undefined
+
+    return Effect.gen(function* () {
+      const workflow = yield* EnrichmentWorkflow
+      yield* workflow.enrich(linkId)
+
+      // The write lives inside the stage, so a database failure is a recorded
+      // stage failure rather than a job that throws away the metadata and Tags
+      // it already earned.
+      expect(finished).toBeDefined()
+      expect(finished?.job.stages.map((stage) => `${stage.stage}:${stage.status}`)).toEqual([
+        "metadata:succeeded",
+        "readable-content:failed",
+        "tagging:succeeded",
+        "preview-summary:succeeded",
+      ])
+
+      // No row was stored, so no Reader View is claimed.
+      expect(finished?.enrichment.hasReadableContent).toBe(false)
+      // The rest of the job survived.
+      expect(finished?.metadata.title).toBe("Extraction")
+      expect(finished?.enrichment.tags).toEqual(["typescript"])
+      expect(finished?.job.status).toBe("partial")
+    }).pipe(
+      Effect.provide(workflowLayer({
+        readableHtml: articlePage,
+        contentStoreFails: true,
+        aiTags: ["typescript"],
+        aiPreview: "How Readability scores a page.",
         onFinish: (result) => {
           finished = result
         },

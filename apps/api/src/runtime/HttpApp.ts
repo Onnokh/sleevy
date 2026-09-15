@@ -8,6 +8,7 @@ import { AUTH_BASE_PATH, authServerUrl, BetterAuth } from "../modules/auth/Bette
 import { authServerMetadataPaths, withAgentAuthMetadata } from "../modules/auth/AgentAuthMetadata.js"
 import { CaptureService } from "../modules/capture/CaptureService.js"
 import { ConnectCodeRepository } from "../modules/connect/ConnectCodeRepository.js"
+import { LinkContentRepository } from "../modules/content/LinkContentRepository.js"
 import { EnrichmentWorkflow } from "../modules/enrichment/EnrichmentWorkflow.js"
 import { FolderRepository } from "../modules/folders/FolderRepository.js"
 import { IdempotencyStore } from "../modules/idempotency/IdempotencyStore.js"
@@ -197,7 +198,7 @@ const mcpServerCardResponse = (request: Request, input: {
 export const makeApiWebHandler = Effect.gen(function* () {
   const config = yield* AppConfig
   const context = yield* Effect.context<
-    Analytics | AuthHandler | BetterAuth | CaptureService | EnrichmentWorkflow | IdempotencyStore | SavedItemRepository | FolderRepository | ProfileRepository | PublicProfileCachePurger | PublicProfileRepository | AnonymousRateLimiter | ApiKeyRateLimiter | BearerRateLimiter | ConnectCodeRepository | ConnectAuthorizeRateLimiter | ConnectExchangeRateLimiter | PublicProfileRateLimiter
+    Analytics | AuthHandler | BetterAuth | CaptureService | EnrichmentWorkflow | IdempotencyStore | LinkContentRepository | SavedItemRepository | FolderRepository | ProfileRepository | PublicProfileCachePurger | PublicProfileRepository | AnonymousRateLimiter | ApiKeyRateLimiter | BearerRateLimiter | ConnectCodeRepository | ConnectAuthorizeRateLimiter | ConnectExchangeRateLimiter | PublicProfileRateLimiter
   >()
   const authHandler = yield* AuthHandler
   const { auth } = yield* BetterAuth
