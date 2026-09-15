@@ -384,6 +384,12 @@
   font-weight: 500;
 }
 
+.empty-state .empty-state-hint {
+  margin-top: -0.375rem;
+  color: var(--faint);
+  font-weight: 400;
+}
+
 .settings-list {
   border: 1px solid var(--border);
   border-radius: 0.5rem;
