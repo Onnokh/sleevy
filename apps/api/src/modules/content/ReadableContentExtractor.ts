@@ -9,6 +9,14 @@ import { parseHtml, type HtmlDocument } from "../../lib/html.js"
  * as. The pair is produced together or not at all: there is no state where one
  * form exists without the other.
  */
+type TurndownNode = {
+  readonly nodeName: string
+  readonly parentNode?: TurndownNode | null
+  readonly firstChild?: TurndownNode | null
+  readonly textContent?: string | null
+  readonly getAttribute?: (name: string) => string | null
+}
+
 export type ExtractedArticle = {
   readonly html: string
   readonly markdown: string
@@ -73,6 +81,41 @@ const withBaseUrl = (document: HtmlDocument, url: string): HtmlDocument => {
   return document
 }
 
+const HEADINGS = new Set(["H1", "H2", "H3", "H4", "H5", "H6"])
+
+const isInPageAnchor = (node: TurndownNode) =>
+  node.nodeName === "A" && (node.getAttribute?.("href") ?? "").startsWith("#")
+
+const isInsideHeading = (node: TurndownNode) => {
+  let parent = node.parentNode
+  while (parent) {
+    if (HEADINGS.has(parent.nodeName)) return true
+    parent = parent.parentNode
+  }
+  return false
+}
+
+/**
+ * The language a highlighter left on a code block. Sites disagree about where
+ * it goes — on the `code`, on the `pre`, as a class or as a data attribute — so
+ * every shape seen in the corpus is checked before giving up.
+ */
+const languageOf = (node: TurndownNode | null | undefined): string => {
+  if (!node) return ""
+
+  // A data attribute holds the language as its whole value.
+  for (const attribute of ["data-language", "data-lang"]) {
+    const value = node.getAttribute?.(attribute)?.trim()
+    if (value && /^[a-z0-9+#-]+$/i.test(value)) return value.toLowerCase()
+  }
+
+  // A class holds it behind a prefix, and carries unrelated classes beside it.
+  const match = (node.getAttribute?.("class") ?? "").match(
+    /(?:^|\s)(?:language|lang|highlight-source|highlight)-([a-z0-9+#]+)/i,
+  )
+  return match?.[1]?.toLowerCase() ?? ""
+}
+
 const createTurndown = () => {
   const turndown = new TurndownService({
     headingStyle: "atx",
@@ -83,6 +126,39 @@ const createTurndown = () => {
   // Readability keeps these when a page wraps prose in them, and none of them
   // survives a Markdown conversion in a form worth reading.
   turndown.remove(["style", "script", "noscript"])
+
+  // A permalink affordance sitting inside a heading. Vercel's reads "Copy link
+  // to heading" and appeared 17 times in one article, ahead of every real
+  // heading — in the Reader View, in the search index, and in the text the
+  // summarizer reads. It is chrome, so it goes.
+  turndown.addRule("headingPermalink", {
+    filter: (node) => isInPageAnchor(node) && isInsideHeading(node),
+    replacement: () => "",
+  })
+
+  // An anchor into the original page's own table of contents. It cannot resolve
+  // in a Reader View, so the words stay and the link does not.
+  turndown.addRule("inPageAnchor", {
+    filter: (node) => isInPageAnchor(node) && !isInsideHeading(node),
+    replacement: (content) => content,
+  })
+
+  // Turndown only reads the language off the `code` element's class. Readability
+  // runs first with keepClasses off and strips those classes, so in the stored
+  // corpus no article kept one — the data attributes did, on six. Keeping the
+  // classes was measured at +19% article HTML for no language recovered on a
+  // real page, so the attributes that survive are read instead.
+  turndown.addRule("fencedCodeWithLanguage", {
+    filter: (node) =>
+      node.nodeName === "PRE" && node.firstChild?.nodeName === "CODE",
+    replacement: (_content, node) => {
+      const code = node.firstChild
+      const language = languageOf(code) || languageOf(node)
+      const text = (code?.textContent ?? "").replace(/\n+$/, "")
+      return `\n\n\`\`\`${language}\n${text}\n\`\`\`\n\n`
+    },
+  })
+
   return turndown
 }
 
@@ -98,6 +174,26 @@ export class ReadableContentExtractor extends Context.Service<ReadableContentExt
       const turndown = createTurndown()
 
       return {
+        /**
+         * Convert stored article HTML to Markdown again, without fetching the
+         * page. This is what the HTML column is for: a converter fix reaches
+         * every Link already extracted, and the Reader View, the search index,
+         * and the summarizer's input all improve together.
+         */
+        convert: Effect.fn("ReadableContentExtractor.convert")(function* (
+          html: string,
+        ) {
+          return yield* Effect.try({
+            try: () => turndown.turndown(html).trim(),
+            catch: (cause) =>
+              new ReadableContentExtractorError({
+                operation: "convert",
+                url: "",
+                cause,
+              }),
+          })
+        }),
+
         /**
          * The gate. Cheap, and the only thing that decides: a page this rejects
          * stores nothing at all, rather than storing a body and marking it

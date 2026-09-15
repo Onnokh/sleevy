@@ -143,4 +143,72 @@ describe("ReadableContentExtractor", () => {
       expect(yield* extractor.isReadable(html, url)).toBe(false)
     }),
   )
+  // Every shape below was taken from a real page in the corpus.
+  it.effect("drops the permalink affordance a heading carries", () =>
+    Effect.gen(function* () {
+      const extractor = yield* ReadableContentExtractor
+      const html = article(
+        [
+          '<h2><a href="#what-we-built">Copy link to heading</a>What we built</h2>',
+          Array.from({ length: 6 }, (_unused, i) => prose(`Paragraph ${i}.`)).join(""),
+        ].join(""),
+      )
+
+      const result = yield* extractor.extract(html, url)
+      expect(Option.isSome(result)).toBe(true)
+      if (Option.isNone(result)) return
+
+      // The heading reads as its own title, not as the button beside it — in
+      // the Reader View, the search index, and the summarizer's input alike.
+      expect(result.value.markdown).toContain("## What we built")
+      expect(result.value.markdown).not.toContain("Copy link to heading")
+    }),
+  )
+
+  it.effect("keeps the words of an in-page anchor and drops the link", () =>
+    Effect.gen(function* () {
+      const extractor = yield* ReadableContentExtractor
+      const html = article(
+        [
+          '<p>This guide assumes familiarity with <a href="#relations">Relations</a>.</p>',
+          Array.from({ length: 6 }, (_unused, i) => prose(`Paragraph ${i}.`)).join(""),
+        ].join(""),
+      )
+
+      const result = yield* extractor.extract(html, url)
+      expect(Option.isSome(result)).toBe(true)
+      if (Option.isNone(result)) return
+
+      // An anchor into the original page's own contents cannot resolve here.
+      expect(result.value.markdown).toContain("familiarity with Relations")
+      expect(result.value.markdown).not.toContain("](#relations)")
+    }),
+  )
+
+  it.effect("keeps the language a highlighter left on a code block", () =>
+    Effect.gen(function* () {
+      const extractor = yield* ReadableContentExtractor
+      const html = article(
+        [
+          Array.from({ length: 6 }, (_unused, i) => prose(`Paragraph ${i}.`)).join(""),
+          '<pre><code data-language="python">print("hi")</code></pre>',
+          '<pre data-lang="go"><code>fmt.Println("hi")</code></pre>',
+          "<pre><code>no language here</code></pre>",
+        ].join(""),
+      )
+
+      const result = yield* extractor.extract(html, url)
+      expect(Option.isSome(result)).toBe(true)
+      if (Option.isNone(result)) return
+
+      const markdown = result.value.markdown
+      // Sites disagree about where the language goes, and only the data
+      // attributes survive Readability — a `language-*` class does not, which
+      // is why none of the stored corpus carries one.
+      expect(markdown).toContain("```python")
+      expect(markdown).toContain("```go")
+      // An unlabelled block stays unlabelled rather than being guessed at.
+      expect(markdown).toContain("```\nno language here")
+    }),
+  )
 })
