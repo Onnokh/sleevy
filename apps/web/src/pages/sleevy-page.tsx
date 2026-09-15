@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef } from "react"
+import { CircleCheck } from "lucide-react"
 
 import { type SavedItem, useDeleteItem, useMarkAsRead, useSavedItems, useSetReadState } from "../sleevy/saved-items"
 import { AuroraBackground } from "../components/aurora/aurora-background"
@@ -51,7 +52,13 @@ export function SleevyPage() {
 
       {!savedItemsQuery.isLoading && !savedItemsQuery.isError ? (
         items.length === 0 ? (
-          <p>Inbox is empty. Save something above.</p>
+          <div className="empty-state">
+            <span className="empty-state-icon" aria-hidden="true">
+              <CircleCheck size={28} strokeWidth={1.75} />
+            </span>
+            <p>All caught up.</p>
+            <p className="empty-state-hint">Unread saves will appear here.</p>
+          </div>
         ) : (
           <ul className="item-list">
             {items.map((item, index) => (
