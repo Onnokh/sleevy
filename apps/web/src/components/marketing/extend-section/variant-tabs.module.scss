@@ -1,0 +1,211 @@
+/* PROTOTYPE — throwaway. */
+@use "../shared" as *;
+
+.section {
+  padding: 7rem 0 3rem;
+
+  @media (max-width: 768px) {
+    padding: 4.5rem 0 1.5rem;
+  }
+}
+
+.inner {
+  @include container;
+}
+
+.statement {
+  max-width: 21em;
+  margin: 0;
+  font-size: 2.25rem;
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: -0.03em;
+  color: #fff;
+  text-wrap: balance;
+
+  span {
+    color: #8b8b90;
+  }
+
+  @media (max-width: 768px) {
+    font-size: 1.75rem;
+  }
+}
+
+.card {
+  display: grid;
+  grid-template-columns: 5fr 7fr;
+  min-height: 32rem;
+  margin-top: 3.5rem;
+  overflow: hidden;
+  background:
+    radial-gradient(90% 60% at 0% 0%, rgb(255 255 255 / 4%), transparent 70%),
+    #131417;
+
+  @include card-border(0.75rem, 0 8px 24px rgba(0, 0, 0, 0.4));
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+    margin-top: 2.5rem;
+  }
+}
+
+.copy {
+  display: flex;
+  flex-direction: column;
+  padding: 2.5rem;
+
+  @media (max-width: 768px) {
+    padding: 1.75rem 1.5rem;
+  }
+}
+
+/* Segmented switch: a dark track with a lit pill for the active tab. */
+.tabs {
+  display: inline-flex;
+  align-self: flex-start;
+  gap: 0.25rem;
+  padding: 0.25rem;
+  background: rgb(0 0 0 / 35%);
+  border: 1px solid rgb(255 255 255 / 8%);
+  border-radius: 0.6rem;
+}
+
+.tab {
+  height: 2.25rem;
+  padding: 0 1rem;
+  font: inherit;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: #8b8b90;
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+  border-radius: 0.4rem;
+  transition: color 0.2s, background-color 0.2s;
+
+  &:hover {
+    color: #fff;
+  }
+}
+
+.tabActive {
+  color: #fff;
+  background: rgb(255 255 255 / 9%);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 10%);
+}
+
+.body {
+  max-width: 26rem;
+  margin: 1.75rem 0 0;
+  font-size: 1.0625rem;
+  line-height: 1.55;
+  color: #fff;
+}
+
+.facts {
+  display: grid;
+  gap: 0.6rem;
+  margin: 1.5rem 0 2rem;
+  padding: 0;
+  list-style: none;
+
+  li {
+    position: relative;
+    padding-left: 1.25rem;
+    font-size: 0.9375rem;
+    line-height: 1.5;
+    color: #8b8b90;
+
+    &::before {
+      position: absolute;
+      top: 0.6em;
+      left: 0.1rem;
+      width: 0.35rem;
+      height: 0.35rem;
+      background: #9db7ff;
+      border-radius: 50%;
+      content: "";
+    }
+  }
+}
+
+.cta {
+  @include glass-button;
+
+  align-self: flex-start;
+  margin-top: auto;
+  background: rgb(255 255 255 / 6%);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+
+  svg {
+    transition: transform 0.2s;
+  }
+
+  &:hover {
+    background: rgb(255 255 255 / 10%);
+
+    svg {
+      transform: translateX(2px);
+    }
+  }
+}
+
+/* The code side: a darker inset pane that runs to the card's edges. */
+.terminal {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background: #0b0c0e;
+  border-left: 1px solid rgb(255 255 255 / 6%);
+
+  @media (max-width: 768px) {
+    border-top: 1px solid rgb(255 255 255 / 6%);
+    border-left: 0;
+  }
+}
+
+.bar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  height: 3.25rem;
+  padding: 0 0.75rem 0 1.25rem;
+  border-bottom: 1px solid rgb(255 255 255 / 6%);
+}
+
+.dots {
+  display: flex;
+  gap: 0.4rem;
+
+  i {
+    width: 0.625rem;
+    height: 0.625rem;
+    background: rgb(255 255 255 / 12%);
+    border-radius: 50%;
+  }
+}
+
+.file {
+  flex: 1;
+  font: 0.8125rem ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: #7d7d84;
+}
+
+.code,
+.output {
+  padding: 1.75rem 1.5rem;
+  font-size: 0.9375rem;
+
+  @media (max-width: 768px) {
+    padding: 1.25rem;
+    font-size: 0.8125rem;
+  }
+}
+
+/* The response under the command, a step quieter. */
+.output {
+  padding-top: 0;
+  opacity: 0.75;
+}

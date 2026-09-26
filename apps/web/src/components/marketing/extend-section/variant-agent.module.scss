@@ -1,0 +1,182 @@
+/* PROTOTYPE — throwaway. */
+@use "../shared" as *;
+
+$mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+
+.section {
+  padding: 7rem 0 3rem;
+
+  @media (max-width: 768px) {
+    padding: 4.5rem 0 1.5rem;
+  }
+}
+
+.inner {
+  @include container;
+
+  display: grid;
+  grid-template-columns: 5fr 6fr;
+  gap: 4rem;
+  align-items: center;
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+    gap: 2.5rem;
+  }
+}
+
+.statement {
+  margin: 0;
+  font-size: 2.25rem;
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: -0.03em;
+  color: #fff;
+  text-wrap: balance;
+
+  span {
+    color: #8b8b90;
+  }
+
+  @media (max-width: 768px) {
+    font-size: 1.75rem;
+  }
+}
+
+.prompts {
+  display: grid;
+  margin: 2.25rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* A prompt row: grey until it plays, then white with a line that fills for
+   as long as its conversation runs. */
+.prompt {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.95rem 0;
+  font: inherit;
+  font-size: 1.0625rem;
+  color: #6c6c73;
+  text-align: left;
+  cursor: pointer;
+  background: none;
+  border: 0;
+  border-top: 1px solid rgb(255 255 255 / 8%);
+  transition: color 0.25s;
+
+  &:hover {
+    color: #c9c9ce;
+  }
+}
+
+.promptActive {
+  color: #fff;
+
+  &:hover {
+    color: #fff;
+  }
+}
+
+.promptAvatar {
+  width: 1.6rem;
+  height: 1.6rem;
+  opacity: 0.45;
+  transition: opacity 0.25s;
+
+  svg {
+    width: 0.875rem;
+    height: 0.875rem;
+  }
+
+  .promptActive & {
+    opacity: 1;
+  }
+}
+
+.progress {
+  position: absolute;
+  top: -1px;
+  left: 0;
+  height: 1px;
+  background: rgb(255 255 255 / 70%);
+  animation: fill linear both;
+}
+
+@keyframes fill {
+  from {
+    width: 0;
+  }
+
+  to {
+    width: 100%;
+  }
+}
+
+.install {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 1.75rem;
+  padding: 0.4rem 0.4rem 0.4rem 1rem;
+  background: rgb(255 255 255 / 3%);
+  border: 1px solid rgb(255 255 255 / 8%);
+  border-radius: 0.6rem;
+
+  code {
+    flex: 1;
+    overflow-x: auto;
+    font: 0.8125rem $mono;
+    color: #c9c9ce;
+    white-space: nowrap;
+    scrollbar-width: none;
+
+    span {
+      color: #fff;
+    }
+  }
+}
+
+.links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.75rem;
+  margin-top: 1.25rem;
+
+  a {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-size: 0.9375rem;
+    font-weight: 500;
+    color: #fff;
+    text-decoration: none;
+  }
+
+  a + a {
+    color: #8b8b90;
+  }
+
+  svg {
+    width: 1rem;
+    height: 1rem;
+    transition: transform 0.2s;
+  }
+
+  a:hover svg {
+    transform: translateX(2px);
+  }
+}
+
+/* One height for every conversation, so the page does not move as they play. */
+.window {
+  height: 30rem;
+
+  @media (max-width: 768px) {
+    height: 27rem;
+  }
+}

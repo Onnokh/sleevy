@@ -1,0 +1,59 @@
+/* PROTOTYPE — throwaway. Code colours shared by the extend-section looks:
+   white commands, grey flags, the hero's blue for strings. */
+.code {
+  margin: 0;
+  overflow-x: auto;
+  font: 0.875rem/1.75 ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: #c9c9ce;
+  white-space: pre;
+  scrollbar-width: none;
+}
+
+.line {
+  display: block;
+}
+
+.cmd {
+  color: #fff;
+}
+
+.flag {
+  color: #7d7d84;
+}
+
+.str {
+  color: #9db7ff;
+}
+
+.var {
+  color: #d7b4ff;
+}
+
+.text {
+  color: #c9c9ce;
+}
+
+.copy {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  color: rgb(255 255 255 / 60%);
+  cursor: pointer;
+  background: transparent;
+  border: 1px solid rgb(255 255 255 / 10%);
+  border-radius: 0.4rem;
+  transition: color 0.2s, background-color 0.2s, border-color 0.2s;
+
+  svg {
+    width: 0.95rem;
+    height: 0.95rem;
+  }
+
+  &:hover {
+    color: #fff;
+    background: rgb(255 255 255 / 6%);
+    border-color: rgb(255 255 255 / 18%);
+  }
+}

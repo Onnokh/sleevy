@@ -1,0 +1,158 @@
+/* PROTOTYPE — throwaway. */
+@use "../shared" as *;
+
+.section {
+  padding: 7rem 0 3rem;
+
+  @media (max-width: 768px) {
+    padding: 4.5rem 0 1.5rem;
+  }
+}
+
+.inner {
+  @include container;
+}
+
+.statement {
+  max-width: 21em;
+  margin: 0;
+  font-size: 2.25rem;
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: -0.03em;
+  color: #fff;
+  text-wrap: balance;
+
+  span {
+    color: #8b8b90;
+  }
+
+  @media (max-width: 768px) {
+    font-size: 1.75rem;
+  }
+}
+
+/* The cards share their rows through subgrid, so the two command wells, the
+   lists, and the buttons line up although the commands differ in length. */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 1.5rem;
+  margin-top: 3.5rem;
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+    row-gap: 1.5rem;
+    margin-top: 2.5rem;
+  }
+}
+
+.card {
+  display: grid;
+  grid-row: span 5;
+  grid-template-rows: subgrid;
+  row-gap: 0;
+  min-width: 0;
+  padding: 2.5rem;
+  background:
+    radial-gradient(90% 60% at 0% 0%, rgb(255 255 255 / 4%), transparent 70%),
+    #131417;
+
+  @include card-border(0.75rem, 0 8px 24px rgba(0, 0, 0, 0.4));
+
+  h3 {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 500;
+    line-height: 1.15;
+    letter-spacing: -0.025em;
+    color: #fff;
+  }
+
+  @media (max-width: 768px) {
+    display: flex;
+    flex-direction: column;
+    padding: 1.75rem 1.5rem;
+  }
+}
+
+.body {
+  max-width: 28rem;
+  margin: 0.625rem 0 0;
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: #8b8b90;
+}
+
+/* The command, inset into the card like a well. */
+.snippet {
+  display: flex;
+  flex-direction: column;
+  margin-top: 1.75rem;
+  background: #0b0c0e;
+  border: 1px solid rgb(255 255 255 / 6%);
+  border-radius: 0.6rem;
+}
+
+.snippetBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 2.75rem;
+  padding: 0 0.4rem 0 1rem;
+  font-size: 0.8125rem;
+  color: #7d7d84;
+  border-bottom: 1px solid rgb(255 255 255 / 6%);
+}
+
+.code {
+  padding: 1rem;
+  font-size: 0.8125rem;
+}
+
+.facts {
+  display: grid;
+  align-content: start;
+  gap: 0.6rem;
+  margin: 1.75rem 0 2rem;
+  padding: 0;
+  list-style: none;
+
+  li {
+    display: flex;
+    gap: 0.6rem;
+    font-size: 0.9375rem;
+    line-height: 1.45;
+    color: #c9c9ce;
+  }
+
+  svg {
+    flex: none;
+    width: 1rem;
+    height: 1rem;
+    margin-top: 0.1rem;
+    color: #9db7ff;
+  }
+}
+
+.cta {
+  @include glass-button;
+
+  justify-self: start;
+  align-self: end;
+  background: rgb(255 255 255 / 6%);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+
+  svg {
+    transition: transform 0.2s;
+  }
+
+  &:hover {
+    background: rgb(255 255 255 / 10%);
+
+    svg {
+      transform: translateX(2px);
+    }
+  }
+}
