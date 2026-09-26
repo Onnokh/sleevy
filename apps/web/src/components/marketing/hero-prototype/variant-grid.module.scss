@@ -1,0 +1,425 @@
+/* PROTOTYPE — throwaway. Geometry measured from payloadcms.com at 1440×900,
+   converted at the marketing site's 16px-per-rem @ 1440 fluid root. */
+@use "../shared" as *;
+
+$rule: rgb(255 255 255 / 12.5%);
+$gutter: 4rem; /* 64px */
+$nav: 4.75rem; /* 76px */
+
+/* This variant brings its own flat nav; hide the floating pill while it is mounted. */
+body:has(.stage) div:has(> nav[aria-label="Primary"]) {
+  display: none;
+}
+
+@mixin frame-width {
+  width: calc(100% - #{$gutter * 2});
+  margin-right: auto;
+  margin-left: auto;
+
+  @media (max-width: 768px) {
+    width: calc(100% - 3rem);
+  }
+}
+
+.stage {
+  position: relative;
+  height: max(100svh, 50rem);
+  /* Reclaim the pill nav's reserved space: this stage starts at the very top. */
+  margin-top: calc(-1 * var(--navbar-total-spacing));
+  overflow: hidden;
+  background: #000;
+
+  @media (max-width: 768px) {
+    height: auto;
+    padding-bottom: 3rem;
+  }
+}
+
+.canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* Four columns drawn as rules, fading in below the nav like Payload's
+   linear-gradient(transparent 80px, rgb(255 255 255 / 12.5%) 240px). */
+.rules {
+  @include frame-width;
+
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+
+  span {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: linear-gradient(transparent 5rem, $rule 15rem);
+
+    @for $i from 1 through 5 {
+      &:nth-child(#{$i}) {
+        left: calc(#{($i - 1) * 25%} - #{if($i == 5, 1px, 0px)});
+      }
+    }
+  }
+}
+
+/* ── Flat nav: logo in column 1, links from column 2, actions at the right edge ── */
+.nav {
+  @include frame-width;
+
+  position: relative;
+  z-index: 3;
+  display: grid;
+  grid-template-columns: 25% 1fr auto;
+  align-items: center;
+  height: $nav;
+  font-size: 0.9375rem;
+
+  a {
+    color: rgb(255 255 255 / 88%);
+    text-decoration: none;
+    transition: color 0.2s;
+
+    &:hover {
+      color: #fff;
+    }
+  }
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  width: max-content;
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  color: #fff !important;
+
+  img {
+    width: auto;
+    height: 1.2rem;
+  }
+}
+
+.navLinks {
+  display: flex;
+  gap: 2.1rem;
+
+  @media (max-width: 768px) {
+    display: none;
+  }
+}
+
+.navEnd {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.github {
+  display: inline-flex;
+
+  svg {
+    width: 1.3rem;
+    height: 1.3rem;
+  }
+}
+
+/* Payload's "Get Started": white, black text, 4px radius, 28px tall. */
+.navButton {
+  display: inline-flex;
+  align-items: center;
+  height: 1.75rem;
+  padding: 0 0.5rem;
+  color: #000 !important;
+  background: #fff;
+  border-radius: 0.25rem;
+}
+
+/* ── Hero content: vertically centred between 141px and 84px from the bottom ── */
+.content {
+  @include frame-width;
+
+  position: absolute;
+  top: 8.8125rem;
+  right: 0;
+  bottom: 5.25rem;
+  left: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+
+  @media (max-width: 768px) {
+    position: relative;
+    top: auto;
+    bottom: auto;
+    flex-direction: column;
+    align-items: stretch;
+    padding-top: 3rem;
+  }
+}
+
+.left {
+  position: relative;
+  z-index: 2;
+  width: 25%;
+
+  /* Tablet: one Payload column is too narrow for the command row. */
+  @media (max-width: 1024px) {
+    width: 33%;
+  }
+
+  @media (max-width: 768px) {
+    width: 100%;
+  }
+}
+
+.headline {
+  width: 7.7em;
+  margin: 0;
+  font-size: 4rem;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: -0.05em;
+  text-wrap: balance;
+  /* A soft dark halo keeps the headline readable over lit ribs. */
+  text-shadow: 0 0 2rem rgb(0 0 0 / 70%), 0 0 0.5rem rgb(0 0 0 / 50%);
+
+  @media (max-width: 768px) {
+    width: auto;
+    font-size: 3rem;
+  }
+}
+
+.stack {
+  margin: 2rem 0 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid $rule;
+  /* Dark glass cells: the raking light makes the ribs behind bright enough
+     to swallow the labels. A small element, so the blur stays cheap. */
+  background: rgb(3 4 8 / 62%);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+
+  li {
+    border-bottom: 1px solid $rule;
+  }
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  width: 100%;
+  height: 4.4rem;
+  padding: 0 1.5rem;
+  font: inherit;
+  font-size: 1rem;
+  color: #fff;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  background: transparent;
+  border: 0;
+  transition: background-color 0.3s;
+
+  &:hover {
+    background: rgb(255 255 255 / 3%);
+  }
+}
+
+.rowCode code {
+  font: 0.875rem ui-monospace, SFMono-Regular, Menlo, monospace;
+  white-space: nowrap;
+}
+
+.dim {
+  color: rgb(255 255 255 / 40%);
+}
+
+.rowIcon {
+  display: inline-flex;
+  flex: none;
+  width: 1.1rem;
+  height: 1.1rem;
+  margin-left: auto;
+  opacity: 0.8;
+
+  svg {
+    width: 100%;
+    height: 100%;
+  }
+}
+
+/* Label roll on hover: the label leaves upward while its twin arrives. */
+.roll {
+  display: inline-grid;
+  overflow: hidden;
+  line-height: 1.5;
+}
+
+.rollLabel {
+  grid-area: 1 / 1;
+  transition: transform 0.45s cubic-bezier(0.19, 1, 0.22, 1);
+
+  &:nth-child(2) {
+    transform: translateY(100%);
+  }
+
+  .row:hover &:nth-child(1) {
+    transform: translateY(-100%);
+  }
+
+  .row:hover &:nth-child(2) {
+    transform: none;
+  }
+}
+
+/* ── Media stack: two 902px glass frames, the product in front ── */
+.media {
+  position: absolute;
+  top: 50%;
+  left: 43.75%; /* 574 / 1312 */
+
+  @media (max-width: 1024px) {
+    left: 50%;
+  }
+  width: 71.75rem; /* 1148px: front offset + frame width */
+  height: 41rem; /* 656px */
+  pointer-events: none;
+  transform: translateY(-50%);
+
+  @media (max-width: 768px) {
+    position: relative;
+    top: auto;
+    left: 0;
+    height: 24rem;
+    margin-top: 3rem;
+    transform: scale(0.55);
+    transform-origin: top left;
+  }
+}
+
+.frame {
+  position: absolute;
+  width: 56.375rem; /* 902px */
+  padding: 0.25rem;
+  background: rgb(255 255 255 / 10%);
+  border: 1px solid rgb(255 255 255 / 5%);
+  border-radius: 0.5rem;
+  box-shadow: 0 3rem 4rem 1rem rgb(0 0 0 / 50%);
+}
+
+.front {
+  top: 0;
+  left: 15.375rem; /* 246px */
+  z-index: 1;
+}
+
+.back {
+  top: 5.9375rem; /* 95px */
+  left: 0;
+}
+
+.browser,
+.terminal {
+  overflow: hidden;
+  border: 1px solid rgb(255 255 255 / 5%);
+  border-radius: 0.25rem;
+}
+
+.browser img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.bar {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  height: 2rem;
+  padding: 0 0.75rem;
+  background: #16171b;
+  border-bottom: 1px solid rgb(255 255 255 / 6%);
+
+  i {
+    width: 0.55rem;
+    height: 0.55rem;
+    background: rgb(255 255 255 / 16%);
+    border-radius: 50%;
+  }
+}
+
+.barTitle {
+  margin-left: 0.6rem;
+  font-size: 0.6875rem;
+  color: rgb(255 255 255 / 45%);
+}
+
+.url {
+  margin-left: 1rem;
+  padding: 0.2rem 3rem 0.2rem 0.6rem;
+  font-size: 0.6875rem;
+  color: rgb(255 255 255 / 55%);
+  background: rgb(255 255 255 / 6%);
+  border-radius: 0.3rem;
+}
+
+.terminal {
+  height: 34.4rem; /* ≈ Payload's 551px back image */
+  background: #0c0d10;
+}
+
+.terminalBody {
+  margin: 0;
+  padding: 1rem 1.25rem;
+  font: 0.8125rem/1.7 ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: rgb(255 255 255 / 82%);
+  white-space: pre;
+}
+
+.ok {
+  color: #4ade80;
+}
+
+.you {
+  color: #8fa8ff;
+}
+
+.tool {
+  color: #c4a6ff;
+}
+
+.caret {
+  display: inline-block;
+  width: 0.55em;
+  height: 1.1em;
+  vertical-align: text-bottom;
+  background: rgb(255 255 255 / 70%);
+  animation: blink 1.1s steps(1) infinite;
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+.fade {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 2;
+  height: 7rem;
+  background: linear-gradient(to bottom, transparent, var(--page));
+  pointer-events: none;
+}

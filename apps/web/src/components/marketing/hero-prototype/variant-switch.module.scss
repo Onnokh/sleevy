@@ -1,0 +1,496 @@
+/* PROTOTYPE — throwaway. */
+@use "../shared" as *;
+
+$rule: rgb(255 255 255 / 8%);
+
+.stage {
+  position: relative;
+  height: max(calc(100svh - var(--navbar-total-spacing)), 46rem);
+  overflow: hidden;
+
+  @media (max-width: 768px) {
+    height: auto;
+  }
+}
+
+.glow {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(40% 55% at 78% 45%, rgb(47 83 164 / 22%), transparent 70%),
+    radial-gradient(30% 40% at 95% 85%, rgb(128 57 127 / 16%), transparent 70%);
+  pointer-events: none;
+}
+
+/* Three rules: container edges and the split between copy and stage. */
+.rules {
+  @include container;
+
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+
+  span {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: $rule;
+
+    &:nth-child(1) { left: 0; }
+    &:nth-child(2) { left: 45%; }
+    &:nth-child(3) { right: 0; }
+  }
+
+  @media (max-width: 768px) {
+    display: none;
+  }
+}
+
+.inner {
+  @include container;
+
+  position: relative;
+  display: grid;
+  grid-template-columns: 45% 1fr;
+  align-items: center;
+  height: 100%;
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.left {
+  position: relative;
+  z-index: 2;
+  padding: 2rem 0;
+}
+
+.kicker {
+  margin: 0 0 1.25rem 2rem;
+  font: 0.75rem ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: 0.02em;
+  color: rgb(255 255 255 / 45%);
+  text-transform: uppercase;
+
+  @media (max-width: 768px) {
+    margin-left: 0;
+  }
+}
+
+.headline {
+  max-width: 9em;
+  margin: 0 0 2.5rem 2rem;
+  font-size: 3.75rem;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.045em;
+  text-wrap: balance;
+
+  @media (max-width: 768px) {
+    margin-left: 0;
+    font-size: 2.75rem;
+  }
+}
+
+.stack {
+  border-top: 1px solid $rule;
+}
+
+.row {
+  position: relative;
+  border-bottom: 1px solid $rule;
+  transition: background-color 0.25s;
+}
+
+.rowOpen {
+  background: linear-gradient(90deg, rgb(255 255 255 / 5%), rgb(255 255 255 / 1%));
+}
+
+.rowHead {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  width: 100%;
+  height: 3.5rem;
+  padding: 0 2rem;
+  font: inherit;
+  color: #fff;
+  text-align: left;
+  cursor: pointer;
+  background: none;
+  border: 0;
+
+  &:hover .rowLabel {
+    opacity: 1;
+  }
+
+  @media (max-width: 768px) {
+    padding: 0 1rem;
+  }
+}
+
+.icon {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  opacity: 0.55;
+  filter: grayscale(1);
+  transition: opacity 0.25s, filter 0.25s;
+
+  img {
+    max-width: 100%;
+    max-height: 100%;
+  }
+
+  .rowOpen & {
+    opacity: 1;
+    filter: none;
+  }
+}
+
+.iconText {
+  font: 600 0.8rem ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.rowLabel {
+  flex: none;
+  width: 4.5rem;
+  font-size: 1.0625rem;
+  font-weight: 500;
+  opacity: 0.6;
+  transition: opacity 0.25s;
+
+  .rowOpen & {
+    opacity: 1;
+  }
+}
+
+.rowPitch {
+  overflow: hidden;
+  font-size: 0.875rem;
+  color: rgb(255 255 255 / 40%);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Accordion body: 0fr → 1fr so the height animates without measuring. */
+.rowBody {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+
+  .rowOpen & {
+    grid-template-rows: 1fr;
+  }
+}
+
+.rowBodyInner {
+  overflow: hidden;
+}
+
+.rowAction {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  width: calc(100% - 6.4rem);
+  margin: 0 2rem 1.1rem 4.4rem;
+  padding: 0.7rem 0.9rem;
+  font: inherit;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: #fff;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  background: rgb(255 255 255 / 6%);
+  border: 1px solid rgb(255 255 255 / 8%);
+  border-radius: 0.5rem;
+  transition: background-color 0.2s;
+
+  &:hover {
+    background: rgb(255 255 255 / 10%);
+  }
+
+  code {
+    overflow: hidden;
+    font: 0.8125rem ui-monospace, SFMono-Regular, Menlo, monospace;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  @media (max-width: 768px) {
+    width: calc(100% - 2rem);
+    margin: 0 1rem 1rem;
+  }
+}
+
+.copyHint {
+  flex: none;
+  font-size: 0.75rem;
+  color: rgb(255 255 255 / 50%);
+}
+
+/* Autoplay timer along the open row's bottom rule. */
+.progress {
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  height: 1px;
+  background: rgb(255 255 255 / 70%);
+  animation: progress 6s linear forwards;
+}
+
+@keyframes progress {
+  from { width: 0; }
+  to { width: 100%; }
+}
+
+/* ── Visual stage ── */
+.visuals {
+  position: relative;
+  align-self: stretch;
+  min-height: 30rem;
+  pointer-events: none;
+}
+
+.visual {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  transform: translateY(1.25rem) scale(0.985);
+  transition: opacity 0.45s ease, transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.visualShown {
+  opacity: 1;
+  transform: none;
+}
+
+.window {
+  position: absolute;
+  top: 50%;
+  left: 3.5rem;
+  overflow: hidden;
+  background: #0d0e11;
+  border: 1px solid rgb(255 255 255 / 10%);
+  border-radius: 0.75rem;
+  box-shadow: 0 2.5rem 5rem rgb(0 0 0 / 60%), 0 0 0 1px rgb(0 0 0 / 60%);
+  transform: translateY(-50%);
+
+  img {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+}
+
+.windowBar {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  height: 2.1rem;
+  padding: 0 0.8rem;
+  background: #16171b;
+  border-bottom: 1px solid rgb(255 255 255 / 6%);
+
+  i {
+    width: 0.55rem;
+    height: 0.55rem;
+    background: rgb(255 255 255 / 16%);
+    border-radius: 50%;
+  }
+}
+
+.windowTitle {
+  margin-left: 0.6rem;
+  font-size: 0.6875rem;
+  color: rgb(255 255 255 / 45%);
+}
+
+.url {
+  flex: 1;
+  max-width: 24rem;
+  margin-left: 1rem;
+  padding: 0.25rem 0.6rem;
+  font-size: 0.6875rem;
+  color: rgb(255 255 255 / 55%);
+  background: rgb(255 255 255 / 6%);
+  border-radius: 0.3rem;
+}
+
+/* Web: the companion bleeds off the right edge like Payload's admin shot. */
+.web {
+  width: 56rem;
+}
+
+.raycast {
+  width: 40rem;
+  border-radius: 1rem;
+}
+
+.code {
+  width: 36rem;
+}
+
+.codeBody {
+  margin: 0;
+  padding: 1.1rem 1.2rem 1.5rem;
+  font: 0.78rem/1.7 ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: rgb(255 255 255 / 85%);
+  white-space: pre;
+}
+
+.dim { color: rgb(255 255 255 / 38%); }
+.str { color: #9be7a8; }
+.key { color: #8fb4ff; }
+.you { color: #8fa8ff; }
+.tool { color: #c4a6ff; }
+
+/* Chrome: a page with the extension's saved toast. */
+.chrome {
+  width: 44rem;
+}
+
+.extension {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.4rem;
+  height: 1.4rem;
+  margin-left: auto;
+  background: rgb(255 255 255 / 10%);
+  border-radius: 0.3rem;
+
+  img {
+    width: auto !important;
+    height: 0.8rem !important;
+  }
+}
+
+.article {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  height: 22rem;
+  padding: 2.5rem 4rem;
+  background: #f4f1ea;
+}
+
+.articleKicker {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #9a8f7a;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.articleTitle {
+  margin-bottom: 0.8rem;
+  font-family: Georgia, serif;
+  font-size: 2rem;
+  line-height: 1.1;
+  color: #1d1b17;
+}
+
+.articleLine {
+  height: 0.55rem;
+  background: #d9d3c6;
+  border-radius: 0.2rem;
+}
+
+.popup {
+  position: absolute;
+  top: 2.6rem;
+  right: 0.8rem;
+  display: flex;
+  gap: 0.7rem;
+  align-items: center;
+  width: 16rem;
+  padding: 0.8rem 0.9rem;
+  color: #fff;
+  background: #16171b;
+  border: 1px solid rgb(255 255 255 / 10%);
+  border-radius: 0.6rem;
+  box-shadow: 0 1rem 2rem rgb(0 0 0 / 40%);
+  animation: popup 0.5s 0.5s cubic-bezier(0.22, 1, 0.36, 1) backwards;
+
+  b {
+    display: block;
+    font-size: 0.8125rem;
+  }
+
+  small {
+    display: block;
+    font-size: 0.6875rem;
+    color: rgb(255 255 255 / 50%);
+  }
+}
+
+.visual:not(.visualShown) .popup {
+  animation: none;
+}
+
+.popupCheck {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.6rem;
+  height: 1.6rem;
+  font-size: 0.8rem;
+  color: #0b1a10;
+  background: #4ade80;
+  border-radius: 50%;
+}
+
+@keyframes popup {
+  from {
+    opacity: 0;
+    transform: translateY(-0.5rem) scale(0.96);
+  }
+}
+
+/* iPhone: the phone stands in the stage, running the hero loop. */
+.phone {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 15rem;
+  aspect-ratio: 1300 / 2650;
+  filter: drop-shadow(0 2rem 3rem rgb(0 0 0 / 70%));
+  transform: translate(-50%, -48%);
+}
+
+.phoneScreen {
+  position: absolute;
+  top: 0.9811%;
+  left: 2.1538%;
+  width: 95.6923%;
+  height: 98.3396%;
+  object-fit: fill;
+  border-radius: 14.39% / 6.87%;
+}
+
+.phoneFrame {
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.fade {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 3;
+  height: 5rem;
+  background: linear-gradient(to bottom, transparent, var(--page));
+  pointer-events: none;
+}

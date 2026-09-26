@@ -1,0 +1,40 @@
+/* PROTOTYPE — throwaway. Deliberately loud so it never reads as part of a design. */
+.bar {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  font: 500 13px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: #111;
+  background: #ffe14d;
+  border-radius: 999px;
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 40%), 0 10px 30px rgb(0 0 0 / 50%);
+  transform: translateX(-50%);
+}
+
+.label {
+  min-width: 220px;
+  padding: 0 8px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.arrow {
+  width: 30px;
+  height: 30px;
+  font: inherit;
+  font-size: 15px;
+  color: #ffe14d;
+  cursor: pointer;
+  background: #111;
+  border: 0;
+  border-radius: 999px;
+
+  &:hover {
+    background: #333;
+  }
+}
