@@ -77,6 +77,35 @@ describe("ReadableContentExtractor", () => {
     }),
   )
 
+  it.effect("keeps a table as a table, with its rows intact", () =>
+    Effect.gen(function* () {
+      const extractor = yield* ReadableContentExtractor
+      const html = article(
+        [
+          Array.from({ length: 6 }, (_, i) => prose(`Paragraph ${i}.`)).join(""),
+          "<table>",
+          "<thead><tr><th>Desired quality</th><th>Established terminology</th></tr></thead>",
+          "<tbody>",
+          "<tr><td>Types enforce invariants</td><td>Type-driven design</td></tr>",
+          "<tr><td>Guards leave early</td><td>Fail-fast design</td></tr>",
+          "</tbody></table>",
+        ].join(""),
+      )
+
+      const result = yield* extractor.extract(html, url)
+      expect(Option.isSome(result)).toBe(true)
+      if (Option.isNone(result)) return
+
+      // Turndown carries no table rule of its own: without the plugin every one
+      // of these cells became a paragraph of its own, and nothing said which
+      // quality paired with which term.
+      const markdown = result.value.markdown
+      expect(markdown).toContain("| Desired quality | Established terminology |")
+      expect(markdown).toContain("| Types enforce invariants | Type-driven design |")
+      expect(markdown).toContain("| Guards leave early | Fail-fast design |")
+    }),
+  )
+
   it.effect("resolves relative images and links against the page", () =>
     Effect.gen(function* () {
       const extractor = yield* ReadableContentExtractor
@@ -209,6 +238,37 @@ describe("ReadableContentExtractor", () => {
       expect(markdown).toContain("```go")
       // An unlabelled block stays unlabelled rather than being guessed at.
       expect(markdown).toContain("```\nno language here")
+    }),
+  )
+  it.effect("promotes a card-shaped link onto its heading", () =>
+    Effect.gen(function* () {
+      const extractor = yield* ReadableContentExtractor
+      // An index page wraps the whole card in one anchor. A Markdown link holds
+      // inline content only, so this used to emit a bare "[" and "](url)" that
+      // reached the reader as literal characters.
+      const html = article(
+        [
+          Array.from({ length: 6 }, (_unused, i) => prose(`Paragraph ${i}.`)).join(""),
+          '<a href="https://example.com/blog/microfilm">',
+          "<p>09/01/2026 Engineering</p>",
+          "<h2>Microfilm</h2>",
+          "<p>A Gradle plugin for Android image resource compression</p>",
+          "<p>Patrick Tyska</p>",
+          "</a>",
+        ].join(""),
+      )
+
+      const result = yield* extractor.extract(html, url)
+      expect(Option.isSome(result)).toBe(true)
+      if (Option.isNone(result)) return
+
+      const markdown = result.value.markdown
+      // The heading carries the link the card was pointing at.
+      expect(markdown).toContain("## [Microfilm](https://example.com/blog/microfilm)")
+      // And no bracket is left stranded on a line of its own.
+      expect(markdown).not.toMatch(/^\[\s*$/m)
+      expect(markdown).not.toMatch(/^\]\(/m)
+      expect(markdown).toContain("Patrick Tyska")
     }),
   )
 })

@@ -1,4 +1,5 @@
 import { Readability, isProbablyReaderable } from "@mozilla/readability"
+import { tables } from "@joplin/turndown-plugin-gfm"
 import { Context, Data, Effect, Layer, Option } from "effect"
 import TurndownService from "turndown"
 
@@ -15,6 +16,7 @@ type TurndownNode = {
   readonly firstChild?: TurndownNode | null
   readonly textContent?: string | null
   readonly getAttribute?: (name: string) => string | null
+  readonly querySelector?: (selectors: string) => unknown
 }
 
 export type ExtractedArticle = {
@@ -83,6 +85,10 @@ const withBaseUrl = (document: HtmlDocument, url: string): HtmlDocument => {
 
 const HEADINGS = new Set(["H1", "H2", "H3", "H4", "H5", "H6"])
 
+/** Elements that cannot sit inside a Markdown link. */
+const BLOCK_SELECTOR =
+  "p, div, h1, h2, h3, h4, h5, h6, ul, ol, blockquote, pre, figure, section, article, table, hr"
+
 const isInPageAnchor = (node: TurndownNode) =>
   node.nodeName === "A" && (node.getAttribute?.("href") ?? "").startsWith("#")
 
@@ -143,6 +149,33 @@ const createTurndown = () => {
     replacement: (content) => content,
   })
 
+  // A card on an index page — date, heading, image, byline — wrapped in one
+  // anchor. Markdown links hold inline content only, so turndown emits a "[" and
+  // a "](url)" around block text and both leak into the reader as literal
+  // characters. Seven articles carried sixteen of them, ten on one blog index.
+  //
+  // The link is promoted onto the card's heading where there is one, which is
+  // what the card was pointing at anyway, and dropped where there is not.
+  turndown.addRule("blockLevelLink", {
+    filter: (node) =>
+      node.nodeName === "A" &&
+      Boolean(node.getAttribute?.("href")) &&
+      Boolean(node.querySelector?.(BLOCK_SELECTOR)),
+    replacement: (content, node) => {
+      const body = content.trim()
+      if (body.length === 0) return ""
+
+      const href = (node as TurndownNode).getAttribute?.("href") ?? ""
+      const heading = body.match(/^(#{1,6}) (.+)$/m)
+      const linked =
+        heading && href
+          ? body.replace(heading[0], `${heading[1]} [${heading[2]}](${href})`)
+          : body
+
+      return `\n\n${linked}\n\n`
+    },
+  })
+
   // Turndown only reads the language off the `code` element's class. Readability
   // runs first with keepClasses off and strips those classes, so in the stored
   // corpus no article kept one — the data attributes did, on six. Keeping the
@@ -158,6 +191,16 @@ const createTurndown = () => {
       return `\n\n\`\`\`${language}\n${text}\n\`\`\`\n\n`
     },
   })
+
+  // Turndown has no table rule of its own, so every cell of every table fell
+  // through to the default and became its own paragraph. A benchmark table on
+  // one page became 225 one-word paragraphs; a two-column reference table on
+  // another became 24 paragraphs with nothing to say which term paired with
+  // which quality. A third of the corpus carries at least one table.
+  //
+  // Applied last, because turndown gives the newest rule priority and the plugin
+  // must own TABLE, TR, and the cells. It claims no node the rules above claim.
+  turndown.use(tables)
 
   return turndown
 }
