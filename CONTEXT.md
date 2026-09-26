@@ -164,16 +164,16 @@ A capture experience that saves a URL without requiring categorization, notes, o
 _Avoid_: Manual filing, import workflow
 
 **Account**:
-The authenticated owner of a private collection of Saved Items.
+The authenticated owner of a private collection of Saved Items, identified by one email address.
 _Avoid_: Workspace, team, profile, multi-user tenant
 
 **App Session**:
-The authenticated session used by the human-facing app after Google login.
-_Avoid_: API token, magic link, Sign in with Apple
+The authenticated session used by a human-facing app after the user signs in with Google or Apple.
+_Avoid_: API token, magic link, Prototype Auth
 
-**Prototype Auth**:
-A temporary pre-production authentication approach used before paid Apple Developer Program setup is justified.
-_Avoid_: Production auth, public login
+**Sign-In Identity**:
+One Google or Apple identity that signs in to an Account. Better Auth stores it as a row in its `account` table, which is not a Sleevy Account.
+_Avoid_: Linked account, social account, provider account
 
 **API Key**:
 A personal credential used by external systems and non-interactive clients to access an Account through the REST API.
@@ -571,11 +571,13 @@ _Avoid_: Deep link, route argument, UI test step
 - The **Web Companion** represents Folder navigation with **Web Folder Routes**, leaving query state available for sorting or filtering within a Folder View.
 - The **Web Companion** creates Folders from the Library sidebar and exposes rename and delete through a Folder contextual menu.
 - The **Web Companion** shows its Library sidebar as a standing column on a wide viewport and as a **Sidebar Sheet** — an off-canvas panel opened from a floating menu button — on a narrow one, with the same rows in both.
-- V1 has one **Account** per Google email.
-- Any Google email may create an **Account** in v1.
+- Each **Account** has one email address, and no two Accounts share one.
+- An **Account** can have a Google **Sign-In Identity**, an Apple one, or both.
+- Sign-in finds the **Account** by its **Sign-In Identity** first, then by email. A new Google or Apple identity with the same verified email joins that Account automatically.
+- An Apple sign-in that uses Hide My Email brings a relay address, so it creates a separate **Account**. Sleevy cannot merge two Accounts or link an identity by hand.
+- Anyone with a Google or Apple identity may create an **Account**; there is no allowlist.
 - An **Account** owns a private collection of **Saved Items**.
-- An **App Session** authenticates the web app for an **Account**.
-- **Prototype Auth** may be used before production **App Session** setup.
+- An **App Session** authenticates the **Web Companion** or the **Native iOS App** for an **Account**.
 - An **API Key** authenticates external systems and non-interactive clients for an **Account**.
 - **API Key** support is part of v1.
 - An **Account** may have many **API Keys**.
@@ -792,7 +794,8 @@ These record the reasoning behind decisions that are not obvious from the defini
 - `CapturedLink` from bookmarks-core should be removed for v1; resolved: capture does not need its own persisted domain record.
 - iOS is the primary mobile client; the Web Companion is the primary desktop client with its own keyboard-first interaction model (see ADR 0010).
 - The **Web Companion** should be separate from the API project; resolved: keep UI framework concerns out of the Effect backend.
-- Defer Sign in with Apple until native distribution is production-worthy; use **Prototype Auth** during early validation.
+- Sign in with Apple was deferred until native distribution was production-worthy, with Google-only Prototype Auth in the meantime; superseded: Sleevy is in the App Store, the Web Companion and the Native iOS App offer Sign in with Apple beside Google, and Prototype Auth is retired (see ADR 0022).
+- Better Auth's `account` table does not hold Sleevy **Accounts**; resolved: each of its rows is a **Sign-In Identity**, and a Sleevy Account is a Better Auth `user` row.
 - **Type** should not depend on AI in v1; resolved: use hard rules for type and AI only for tag and preview summary.
 - **Enrichment Tags** should not have a non-AI fallback in v1; resolved: no AI means no Enrichment Tags unless the Saved Item has **Saved Item Tags**.
 - "category" was too broad; resolved: use **Type** for content kind and **Tag** for subject area.
