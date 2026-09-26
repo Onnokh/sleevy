@@ -1,7 +1,7 @@
-import { type ReactNode, type Ref, useEffect, useState } from "react"
+import { type ComponentProps, type ReactNode, type Ref, useEffect, useState } from "react"
 import { Link, useRouter } from "@tanstack/react-router"
 import { ArrowLeft, ExternalLink } from "lucide-react"
-import Markdown from "react-markdown"
+import Markdown, { type Components } from "react-markdown"
 import remarkGfm from "remark-gfm"
 
 import { useReadableContent } from "../sleevy/readable-content"
@@ -46,6 +46,62 @@ function ReaderHeader({
     </>
   )
 }
+
+/**
+ * An External Image URL from the article, loaded straight from the site that
+ * serves it — Sleevy stores no assets, so a picture is only as available as
+ * its host. When the host has taken it away, or refuses to serve it to us, the
+ * image is left out rather than drawn broken: the browser answers a broken
+ * image by printing its `alt` text at body size, which in an article reads as
+ * a stray paragraph that the reader cannot tell from the writing.
+ *
+ * The failure is remembered against the URL that failed, so the next article
+ * to use this same position in the tree starts with a clean slate.
+ *
+ * Loaded eagerly. Markdown carries no width or height, so an image reserves
+ * nothing until it arrives; deferring it to the moment it is scrolled to means
+ * the article grows under the reader exactly as they reach the end of it. A
+ * Reader View holds one article the reader has already chosen, so its pictures
+ * are fetched with it and the page settles before they get there.
+ */
+function ArticleImage({ ...props }: ComponentProps<"img">) {
+  const [failedSrc, setFailedSrc] = useState<string | undefined>(undefined)
+
+  if (props.src && failedSrc === props.src) return null
+
+  return <img {...props} alt={props.alt ?? ""} onError={() => setFailedSrc(props.src)} />
+}
+
+/**
+ * The element overrides, built once.
+ *
+ * react-markdown takes these as the component *types* for the nodes it builds,
+ * and React answers a new type by throwing the old node away and mounting a
+ * fresh one. Declared inline they were new functions on every render, so every
+ * link and every image in the article was rebuilt each time the page rendered
+ * — and a rebuilt `img` starts its download again from nothing. While a
+ * trackpad was scrolling, the renders came faster than the image could load,
+ * so it never finished: it flickered between no height and its full height
+ * instead of appearing once.
+ */
+const READER_COMPONENTS: Components = {
+  // An in-page anchor is a link into the original page's own table of
+  // contents. Half the corpus carries them, and opening one in a new tab lands
+  // on a blank reader, so they render as plain text instead. Everything else
+  // leaves in a new tab.
+  a: ({ children, href, ...props }) =>
+    href?.startsWith("#") ? (
+      <span>{children}</span>
+    ) : (
+      <a {...props} href={href} target="_blank" rel="noreferrer ugc">
+        {children}
+      </a>
+    ),
+  img: ArticleImage,
+}
+
+/** Once, for the same reason: a new array is a new pipeline every render. */
+const READER_REMARK_PLUGINS = [remarkGfm]
 
 type ReaderPageProps = {
   readonly savedItemId: string
@@ -158,24 +214,7 @@ export function ReaderPage({ savedItemId, item }: ReaderPageProps) {
               rehype-raw is added, so third-party markup is never injected and
               the Markdown-only decision in ADR 0021 still holds. */}
           <div className={styles.article}>
-            <Markdown
-              remarkPlugins={[remarkGfm]}
-              components={{
-                // An in-page anchor is a link into the original page's own
-                // table of contents. Half the corpus carries them, and opening
-                // one in a new tab lands on a blank reader, so they render as
-                // plain text instead. Everything else leaves in a new tab.
-                a: ({ children, href, ...props }) =>
-                  href?.startsWith("#") ? (
-                    <span>{children}</span>
-                  ) : (
-                    <a {...props} href={href} target="_blank" rel="noreferrer ugc">
-                      {children}
-                    </a>
-                  ),
-                img: ({ ...props }) => <img {...props} loading="lazy" alt={props.alt ?? ""} />,
-              }}
-            >
+            <Markdown remarkPlugins={READER_REMARK_PLUGINS} components={READER_COMPONENTS}>
               {content.markdown}
             </Markdown>
           </div>
