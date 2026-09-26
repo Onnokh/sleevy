@@ -1,6 +1,10 @@
 /* Shared marketing building blocks, used across the marketing components'
    modules via `@use "../shared" as *`. */
 
+/* On phones every edge — the nav's logo and menu, the hero, the sections —
+   sits this far in. Pixels, not rem: the root font shrinks on phones. */
+$phone-gutter: 24px;
+
 /* Centered content column. Both terms scale with the root font (vw), so this is
    fluid through the desktop band; the 71rem (1136px @ 1440) cap only bites once
    the root freezes at 1920px. */
@@ -10,7 +14,7 @@
   margin-right: auto;
 
   @media (max-width: 768px) {
-    width: min(100% - 1.5rem, 1136px);
+    width: calc(100% - 2 * #{$phone-gutter});
   }
 }
 
@@ -26,6 +30,28 @@
     box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 0.15), $shadow;
   } @else {
     box-shadow: inset 0 1px 1px 0 rgba(255, 255, 255, 0.15);
+  }
+}
+
+/* The homepage's scroll cue: a vertical line of dots that flow slowly down,
+   from under the hero's buttons into the intro. Include
+   dotted-line-keyframes once at the root of the same module. */
+@mixin dotted-line {
+  width: 3px;
+  background: radial-gradient(circle, rgb(255 255 255 / 40%) 1px, transparent 1.5px) 0 0 / 3px 8px repeat-y;
+  animation: dotted-line-flow 1.2s linear infinite;
+  pointer-events: none;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+
+@mixin dotted-line-keyframes {
+  @keyframes dotted-line-flow {
+    to {
+      background-position-y: 8px;
+    }
   }
 }
 
@@ -64,6 +90,40 @@
 
   &:active {
     background: #cdcece;
+  }
+}
+
+/* Dark glass button, for calls to action that sit on the marketing glass: it
+   blurs the lit ribs behind it, so its label stays legible. Pass nothing to
+   get the hero's size; override height, padding, and font-size to grow it. */
+@mixin glass-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  height: 2.75rem;
+  padding: 0 1.1rem;
+  color: #fff;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  white-space: nowrap;
+  text-decoration: none;
+  background: rgb(8 10 16 / 55%);
+  border: 1px solid rgb(255 255 255 / 18%);
+  border-radius: 0.5rem;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: background-color 0.2s, border-color 0.2s;
+
+  svg {
+    flex: none;
+    width: 1rem;
+    height: 1rem;
+  }
+
+  &:hover {
+    background: rgb(20 23 32 / 72%);
+    border-color: rgb(255 255 255 / 32%);
   }
 }
 

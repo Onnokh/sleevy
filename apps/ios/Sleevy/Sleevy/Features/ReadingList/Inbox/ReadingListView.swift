@@ -34,7 +34,10 @@ struct ReadingListView: View {
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
-        .background(Color(uiColor: .systemBackground))
+        // AppBackground is the Web Companion's content colour in dark mode
+        // (--content in apps/web/src/styles/base.css), not pure black, and the
+        // AccentColor is the web's --accent, so the app and the web match.
+        .background(Color(.appBackground))
         .scrollBounceBehavior(.always, axes: .vertical)
         .refreshable {
             await store.refresh()
