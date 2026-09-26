@@ -1,0 +1,463 @@
+@use "../shared" as *;
+
+.window {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background:
+    radial-gradient(80% 50% at 100% 0%, rgb(157 183 255 / 6%), transparent 70%),
+    #131417;
+
+  @include card-border(0.875rem, 0 1.5rem 3rem rgb(0 0 0 / 45%));
+}
+
+.windowBar {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  height: 3rem;
+  padding: 0 1.1rem;
+  border-bottom: 1px solid rgb(255 255 255 / 6%);
+}
+
+.client {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #fff;
+}
+
+.clientMark {
+  width: 1.1rem;
+  height: 1.1rem;
+}
+
+/* The chat on the left, the app on the right; the app gives way on a phone. */
+.panes {
+  display: grid;
+  flex: 1;
+  grid-template-columns: 1fr 1fr;
+  min-height: 0;
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.chat {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+/* The clipped stage the conversations slide across. */
+.slides {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Newest at the bottom, over the message box, the way a chat app sits. */
+.thread {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 1.1rem;
+  overflow: hidden;
+  padding: 1.5rem 1.75rem 1.25rem;
+
+  p {
+    margin: 0;
+  }
+
+  @media (max-width: 768px) {
+    padding: 1.25rem;
+  }
+}
+
+.user {
+  align-self: flex-end;
+  max-width: 82%;
+  padding: 0.75rem 1rem;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: #fff;
+  background: rgb(255 255 255 / 8%);
+  border-radius: 1.1rem 1.1rem 0.35rem;
+}
+
+/* The shared link, as a row card inside the bubble. */
+.row.attachment {
+  margin: 0.6rem 0 0;
+  background: rgb(0 0 0 / 25%);
+
+  &::after {
+    display: none;
+  }
+}
+
+.calls {
+  display: grid;
+  justify-items: start;
+  gap: 0.2rem;
+}
+
+/* The connector at work, as the clients show it: the app icon and one plain
+   line, grey, with a chevron to open the details. */
+.call {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  max-width: 100%;
+  padding: 0.3rem 0.5rem 0.3rem 0.3rem;
+  font-size: 0.875rem;
+  color: #8b8b90;
+  border-radius: 0.5rem;
+}
+
+.sleevyIcon {
+  flex: none;
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 0.3rem;
+}
+
+/* A one-line window the running and done texts roll through. */
+.callRoll {
+  position: relative;
+  display: inline-flex;
+  min-width: 0;
+  overflow: hidden;
+  padding-block: 0.1em;
+}
+
+.callText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* While a step runs, a soft light passes over its words. */
+.running {
+  color: transparent;
+  background: linear-gradient(90deg, #6c6c73 0%, #6c6c73 40%, #e4e4e7 50%, #6c6c73 60%, #6c6c73 100%) 0 0 / 250% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  animation: shimmer 1.4s linear infinite;
+
+  @media (prefers-reduced-motion: reduce) {
+    color: #8b8b90;
+    animation: none;
+  }
+}
+
+@keyframes shimmer {
+  from {
+    background-position: 100% 0;
+  }
+
+  to {
+    background-position: 0 0;
+  }
+}
+
+.chevron {
+  flex: none;
+  width: 0.8rem;
+  height: 0.8rem;
+  color: #5a5a61;
+}
+
+.reply {
+  display: flex;
+  gap: 0.75rem;
+  max-width: 90%;
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  color: #e4e4e7;
+}
+
+.avatar {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  margin-top: -0.1rem;
+  background: rgb(255 255 255 / 6%);
+  border: 1px solid rgb(255 255 255 / 8%);
+  border-radius: 50%;
+
+  svg {
+    width: 1rem;
+    height: 1rem;
+  }
+}
+
+.chatgpt {
+  color: #fff;
+}
+
+.foundWrap {
+  display: block;
+}
+
+.row.found {
+  margin: 0.75rem 0 0;
+  background: #0f0f11;
+  border: 1px solid rgb(255 255 255 / 8%);
+
+  &::after {
+    display: none;
+  }
+}
+
+.composer {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  height: 2.9rem;
+  margin: 0 1.25rem 1.25rem;
+  padding: 0 0.4rem 0 1rem;
+  font-size: 0.875rem;
+  color: #6c6c73;
+  background: rgb(255 255 255 / 4%);
+  border: 1px solid rgb(255 255 255 / 8%);
+  border-radius: 0.8rem;
+}
+
+.send {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  color: #131417;
+  background: rgb(255 255 255 / 55%);
+  border-radius: 0.55rem;
+
+  svg {
+    width: 0.9rem;
+    height: 0.9rem;
+  }
+}
+
+/* A saved item as the Web Companion's Inbox draws it: saved-card.module.scss
+   with the dark theme's values in place of its variables. */
+.row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  min-width: 0;
+  margin: 0 -0.5rem;
+  padding: 0.625rem 0.5rem;
+  border-radius: 0.5rem;
+  transition: background-color 0.3s, outline-color 0.3s;
+  outline: 1px solid transparent;
+  outline-offset: -1px;
+
+  &::after {
+    position: absolute;
+    right: 0.5rem;
+    bottom: 0;
+    left: 0.5rem;
+    height: 1px;
+    background: rgb(255 255 255 / 8%);
+    content: "";
+    pointer-events: none;
+  }
+}
+
+/* The app's own selected row (saved-card's .selected), on the item the agent
+   is working on. */
+.selected {
+  background: #202124;
+  outline-color: #e6e6e6;
+
+  &::after {
+    display: none;
+  }
+}
+
+/* Several rows at once: the selected row's fill without its outline. */
+.touched {
+  background: #202124;
+
+  &::after {
+    display: none;
+  }
+}
+
+/* A row that just dropped into a Folder: it lands filled, then the fill
+   fades and the divider comes back. */
+.arrived {
+  animation: arrived 2.2s ease-out var(--arrive-delay, 0s) both;
+
+  &::after {
+    animation: arrived-divider 2.2s ease-out var(--arrive-delay, 0s) both;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+
+    &::after {
+      animation: none;
+    }
+  }
+}
+
+@keyframes arrived {
+  0%,
+  45% {
+    background-color: #202124;
+  }
+
+  100% {
+    background-color: transparent;
+  }
+}
+
+@keyframes arrived-divider {
+  0%,
+  45% {
+    opacity: 0;
+  }
+
+  100% {
+    opacity: 1;
+  }
+}
+
+.favicon {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  background: #1b1c1f;
+  border-radius: 6px;
+}
+
+.body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.0625rem;
+  min-width: 0;
+}
+
+.title {
+  overflow: hidden;
+  font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.125rem;
+  color: #fff;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.host {
+  overflow: hidden;
+  font-size: 0.75rem;
+  line-height: 0.9375rem;
+  color: #737373;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.date {
+  flex-shrink: 0;
+  font-size: 0.75rem;
+  color: #737373;
+  white-space: nowrap;
+}
+
+/* The Unread Dot, before the date. */
+.unreadDate::before {
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  margin-right: 0.375rem;
+  vertical-align: 0.0625rem;
+  background: color-mix(in srgb, #737373 55%, transparent);
+  border-radius: 999px;
+  content: "";
+}
+
+/* A simplified Web Companion pane: the page title and count over the rows,
+   on the app's content background. Its views slide across it. */
+.pane {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: #0f0f11;
+  border-left: 1px solid rgb(255 255 255 / 6%);
+
+  @media (max-width: 768px) {
+    display: none;
+  }
+}
+
+.paneView {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 1.5rem 1.5rem 0;
+}
+
+.paneHead {
+  margin-bottom: 1rem;
+}
+
+.paneTitle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+  color: #fff;
+
+  svg {
+    flex: none;
+    color: #737373;
+  }
+}
+
+.paneSubtitle {
+  margin: 0.3rem 0 0;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: #737373;
+}
+
+/* The list carries the rows' half-rem bleed past the text column (saved-card
+   puts it on the row). It clips, and so does each item while its height
+   animates: a bleed inside either one cut the selected outline's sides and
+   round corners away. */
+.paneRows {
+  margin: 0 -0.5rem;
+  padding: 0;
+  overflow: hidden;
+  list-style: none;
+}
+
+.paneItem {
+  overflow: hidden;
+
+  .row {
+    margin: 0;
+  }
+}

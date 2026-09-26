@@ -1,217 +1,241 @@
 @use "../shared" as *;
 
-/* "Built to extend." — the visual heading is two rows of tiled headline text that
-   bleed off both viewport edges (per design), so the real h2 is visually hidden
-   and the tiles are decorative. */
+$mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+
 .section {
-  position: relative;
-  /* Isolate so the glow's z-index: -1 stays inside this section instead of
-     dropping behind the page background. */
-  z-index: 0;
-  padding: 7.5rem 0 2.5rem;
+  padding: 7rem 0 3rem;
 
   @media (max-width: 768px) {
-    padding: 5rem 0 1.5rem;
+    padding: 4.5rem 0 1.5rem;
   }
 }
 
-.glow {
-  @include page-glow;
-
-  top: -14.4375rem;
-  left: -32.5rem;
-  /* Behind the marquee text; the section's own stacking context (z-index: 0
-     above) keeps -1 from dropping under the page background. */
-  z-index: -1;
-}
-
-.title {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  margin: -1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
-}
-
-/* Clip the full-bleed marquee rows here (not on the section) so the edge glow
-   can bleed past the section box without being cut off. */
-.marquee {
-  overflow: hidden;
-}
-
-.row {
-  position: relative;
-  color: #fff;
-  font-size: 4rem;
-  font-weight: 700;
-  letter-spacing: -0.04em;
-  line-height: 1.02;
-  white-space: nowrap;
-
-  & + & {
-    margin-top: 1.125rem;
-  }
-
-  @media (max-width: 768px) {
-    font-size: 2.5rem;
-  }
-}
-
-/* Second row starts half a tile off-grid so the rows brick instead of stacking.
-   The shift lives on the tracks (via margin, not transform — motion owns the
-   tracks' transform) so the row's spotlight mask stays viewport-centered. */
-.rowOffset .track {
-  margin-left: -13.5rem;
-
-  @media (max-width: 768px) {
-    margin-left: -8.5rem;
-  }
-}
-
-.track {
-  display: flex;
-  width: max-content;
-
-  /* Spacing as margin (not flex gap) so every tile occupies exactly
-     tile + spacing — the uniform period the JS wrap relies on. */
-  span {
-    margin-right: 2.4375rem;
-
-    @media (max-width: 768px) {
-      margin-right: 1.5rem;
-    }
-  }
-}
-
-.trackDim {
-  opacity: 0.35;
-}
-
-/* Stationary window over the row: the full-opacity track shows only through a
-   roughly tile-wide center slot, so one tile per row reads at 100% while the
-   dimmed base track carries the rest. */
-.spotlight {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  -webkit-mask-image: linear-gradient(
-    90deg,
-    transparent calc(50% - 20rem),
-    #000 calc(50% - 10rem),
-    #000 calc(50% + 10rem),
-    transparent calc(50% + 20rem)
-  );
-  mask-image: linear-gradient(
-    90deg,
-    transparent calc(50% - 20rem),
-    #000 calc(50% - 10rem),
-    #000 calc(50% + 10rem),
-    transparent calc(50% + 20rem)
-  );
-
-  @media (max-width: 768px) {
-    -webkit-mask-image: linear-gradient(
-      90deg,
-      transparent calc(50% - 12rem),
-      #000 calc(50% - 6rem),
-      #000 calc(50% + 6rem),
-      transparent calc(50% + 12rem)
-    );
-    mask-image: linear-gradient(
-      90deg,
-      transparent calc(50% - 12rem),
-      #000 calc(50% - 6rem),
-      #000 calc(50% + 6rem),
-      transparent calc(50% + 12rem)
-    );
-  }
-}
-
-.body {
+.inner {
   @include container;
+}
 
+.head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1.5rem 3rem;
+}
+
+/* The intro's statement: the claim in white, the rest in grey. */
+.statement {
+  max-width: 21em;
+  margin: 0;
+  font-size: 2.25rem;
+  font-weight: 500;
+  line-height: 1.2;
+  letter-spacing: -0.03em;
+  color: #fff;
+  text-wrap: balance;
+
+  span {
+    color: #8b8b90;
+  }
+
+  @media (max-width: 768px) {
+    font-size: 1.75rem;
+  }
+}
+
+.worksWith {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: #fff;
+
+  span {
+    font-weight: 400;
+    color: #8b8b90;
+  }
+
+  span:first-child {
+    margin-right: 0.35rem;
+  }
+
+  span:last-child {
+    margin-left: 0.35rem;
+  }
+}
+
+.mark {
+  width: 1.15rem;
+  height: 1.15rem;
+  margin-left: 0.35rem;
+  color: #fff;
+}
+
+/* The example requests, with one pill that slides to the one that plays. */
+.prompts {
+  position: relative;
+  display: flex;
+  gap: 0.25rem;
+  margin-top: 2.5rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.pill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  background: rgb(255 255 255 / 7%);
+  border: 1px solid rgb(255 255 255 / 10%);
+  border-radius: 999px;
+}
+
+.prompt {
+  position: relative;
+  flex: none;
+  height: 2.5rem;
+  padding: 0 1rem;
+  font: inherit;
+  font-size: 0.9375rem;
+  color: #8b8b90;
+  cursor: pointer;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  transition: color 0.2s;
+
+  &:hover {
+    color: #fff;
+  }
+
+  &:focus-visible {
+    outline: 2px solid rgb(255 255 255 / 60%);
+    outline-offset: 2px;
+  }
+}
+
+.promptActive {
+  color: #fff;
+}
+
+/* One height for every conversation, so the page does not move as they play. */
+.demo {
+  height: 27rem;
+  margin-top: 1rem;
+
+  @media (max-width: 768px) {
+    height: 28rem;
+  }
+}
+
+.ways {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  column-gap: 2.8125rem;
-  margin-top: 3.3125rem;
+  gap: 2.5rem;
+  margin-top: 3rem;
 
-  p,
-  li {
-    margin: 0;
-    color: #808080;
-    font-size: 1.5rem;
-    font-weight: 300;
-    line-height: 1.7;
+  > div {
+    padding-top: 1.25rem;
+    border-top: 1px solid rgb(255 255 255 / 10%);
   }
 
-  ul {
+  h3 {
     margin: 0;
-    padding-left: 2.25rem;
+    font-size: 1.125rem;
+    font-weight: 500;
+    color: #fff;
+  }
+
+  p {
+    max-width: 28rem;
+    margin: 0.5rem 0 0;
+    font-size: 0.9375rem;
+    line-height: 1.6;
+    color: #8b8b90;
+
+    a {
+      color: inherit;
+      text-decoration-color: rgb(255 255 255 / 30%);
+      text-underline-offset: 0.2em;
+
+      &:hover {
+        color: #fff;
+      }
+    }
   }
 
   @media (max-width: 768px) {
     grid-template-columns: 1fr;
-    row-gap: 3rem;
-    margin-top: 2.5rem;
-
-    p,
-    li {
-      font-size: 1.125rem;
-    }
+    gap: 2rem;
   }
 }
 
-.column {
-  display: flex;
-  flex-direction: column;
-  gap: 1.375rem;
-}
-
-/* White heading over the grey body text so each column reads as its own topic
-   (the API vs. the MCP server) instead of one merged feature list. */
-.columnTitle {
-  margin: 0;
-  color: #fff;
-  font-size: 1.75rem;
+.cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin-top: 1rem;
+  font-size: 0.9375rem;
   font-weight: 500;
-  letter-spacing: -0.03em;
-  line-height: 1.1;
-
-  @media (max-width: 768px) {
-    font-size: 1.375rem;
-  }
-}
-
-.footer {
-  @include container;
-
-  display: flex;
-  flex-wrap: wrap;
-  gap: 1.25rem 2rem;
-  justify-content: space-between;
-  margin-top: 5.625rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.35);
-  padding-top: 1.125rem;
-
-  a {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4375rem;
-    color: #fff;
-    font-size: 1.25rem;
-    letter-spacing: -0.04em;
-    line-height: 1.02;
-    text-decoration: underline;
-  }
+  color: #fff;
+  text-decoration: none;
 
   svg {
     width: 1rem;
     height: 1rem;
+    transition: transform 0.2s;
   }
 
-  @media (max-width: 768px) {
-    margin-top: 3rem;
+  &:hover svg {
+    transform: translateX(2px);
+  }
+}
+
+.install {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  max-width: 30rem;
+  margin-top: 1rem;
+  padding: 0.35rem 0.35rem 0.35rem 0.9rem;
+  background: rgb(255 255 255 / 3%);
+  border: 1px solid rgb(255 255 255 / 8%);
+  border-radius: 0.6rem;
+
+  code {
+    flex: 1;
+    overflow-x: auto;
+    font: 0.8125rem $mono;
+    color: #c9c9ce;
+    white-space: nowrap;
+    scrollbar-width: none;
+  }
+}
+
+.copy {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  color: rgb(255 255 255 / 60%);
+  cursor: pointer;
+  background: transparent;
+  border: 1px solid rgb(255 255 255 / 10%);
+  border-radius: 0.4rem;
+  transition: color 0.2s, background-color 0.2s, border-color 0.2s;
+
+  svg {
+    width: 0.95rem;
+    height: 0.95rem;
+  }
+
+  &:hover {
+    color: #fff;
+    background: rgb(255 255 255 / 6%);
+    border-color: rgb(255 255 255 / 18%);
   }
 }

@@ -1,0 +1,119 @@
+/* PROTOTYPE — throwaway. */
+@use "../shared" as *;
+
+.footer {
+  position: relative;
+  min-height: 30rem;
+  margin-top: auto;
+  overflow: hidden;
+  border-top: 1px solid rgb(255 255 255 / 8%);
+
+  @media (max-width: 768px) {
+    min-height: 0;
+  }
+}
+
+/* The mark, 462×587, as a mask over the glass: about 40% of it sits below the
+   footer's bottom edge. */
+.mark {
+  position: absolute;
+  right: 6%;
+  bottom: -13rem;
+  width: 28rem;
+  aspect-ratio: 462 / 587;
+  -webkit-mask: url("/logo-mark-white.svg") center / contain no-repeat;
+  mask: url("/logo-mark-white.svg") center / contain no-repeat;
+
+  @media (max-width: 768px) {
+    right: -3rem;
+    bottom: -7rem;
+    width: 14rem;
+    opacity: 0.6;
+  }
+}
+
+.glassScale {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  left: 0;
+  height: 56.25rem;
+  transform: translateY(-50%);
+}
+
+.inner {
+  @include container;
+
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 3.5rem;
+  padding: 4.5rem 0 4rem;
+
+  @media (max-width: 768px) {
+    gap: 2.5rem;
+    padding: 3rem 0 9rem;
+  }
+}
+
+.brand p {
+  max-width: 22rem;
+  margin: 1rem 0 0;
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: #8b8b90;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+
+  img {
+    width: 1.1rem;
+    height: auto;
+  }
+
+  span {
+    font-size: 1.25rem;
+    font-weight: 500;
+    letter-spacing: -0.03em;
+  }
+}
+
+/* Three columns on the left half, clear of the mark. */
+.navs {
+  display: grid;
+  grid-template-columns: repeat(3, max-content);
+  gap: 4rem;
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr 1fr;
+    gap: 2.5rem 1.5rem;
+  }
+}
+
+.col {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.75rem;
+  font-size: 0.9375rem;
+
+  a {
+    color: #8b8b90;
+    text-decoration: none;
+    transition: color 0.15s;
+
+    &:hover {
+      color: #fff;
+    }
+  }
+}
+
+.colTitle {
+  margin-bottom: 0.25rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #fff;
+}

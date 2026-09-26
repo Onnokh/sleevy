@@ -1,0 +1,182 @@
+/* PROTOTYPE — throwaway. */
+@use "../shared" as *;
+
+.footer {
+  position: relative;
+  margin-top: auto;
+}
+
+/* Full bleed, like the hero. */
+.cta {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-height: 30rem;
+  margin-top: 4rem;
+  overflow: hidden;
+
+  @media (max-width: 768px) {
+    min-height: 26rem;
+  }
+}
+
+/* The glass rises out of the page: transparent at the top, full by a third,
+   and sinking back into the dark under the links. */
+.glass {
+  position: absolute;
+  inset: 0;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 38%, #000 70%, transparent 100%);
+  mask-image: linear-gradient(to bottom, transparent 0%, #000 38%, #000 70%, transparent 100%);
+}
+
+.glassScale {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  left: 0;
+  height: 56.25rem;
+  transform: translateY(-50%);
+}
+
+/* The pointer goes through the copy to the glass, as in the hero; only the
+   buttons take it. */
+.ctaInner {
+  @include container;
+
+  position: relative;
+  padding: 6rem 0 5rem;
+  pointer-events: none;
+
+  a {
+    pointer-events: auto;
+  }
+}
+
+.ctaTitle {
+  margin: 0;
+  font-size: 4rem;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: -0.05em;
+  color: #fff;
+  text-shadow: 0 0 2.5rem rgb(0 0 0 / 55%);
+
+  @media (max-width: 768px) {
+    font-size: 2.75rem;
+  }
+}
+
+.ctaBody {
+  max-width: 26rem;
+  margin: 1.25rem 0 0;
+  font-size: 1.125rem;
+  line-height: 1.5;
+  color: rgb(255 255 255 / 72%);
+  text-shadow: 0 0 1.5rem rgb(0 0 0 / 60%);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.625rem;
+  margin-top: 2rem;
+}
+
+.primary {
+  @include glass-button;
+
+  color: #000;
+  background: #fff;
+  border-color: #fff;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+
+  &:hover {
+    background: #e4e5e8;
+    border-color: #e4e5e8;
+  }
+}
+
+.secondary {
+  @include glass-button;
+
+  svg {
+    transition: transform 0.2s ease-out;
+  }
+
+  &:hover svg {
+    transform: translateX(0.15rem);
+  }
+}
+
+.inner {
+  @include container;
+
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) repeat(3, minmax(0, 0.7fr));
+  gap: 3rem;
+  padding: 3rem 0 3.5rem;
+  border-top: 1px solid rgb(255 255 255 / 8%);
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr 1fr;
+    gap: 2.5rem 1.5rem;
+    padding: 2.5rem 0;
+  }
+}
+
+.brand {
+  p {
+    max-width: 19rem;
+    margin: 1rem 0 0;
+    font-size: 0.9375rem;
+    line-height: 1.6;
+    color: #8b8b90;
+  }
+
+  @media (max-width: 768px) {
+    grid-column: 1 / -1;
+  }
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+
+  img {
+    width: 1.1rem;
+    height: auto;
+  }
+
+  span {
+    font-size: 1.25rem;
+    font-weight: 500;
+    letter-spacing: -0.03em;
+  }
+}
+
+.col {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.75rem;
+  font-size: 0.9375rem;
+
+  a {
+    color: #8b8b90;
+    text-decoration: none;
+    transition: color 0.15s;
+
+    &:hover {
+      color: #fff;
+    }
+  }
+}
+
+.colTitle {
+  margin-bottom: 0.25rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #fff;
+}
