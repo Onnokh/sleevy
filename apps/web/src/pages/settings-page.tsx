@@ -1,9 +1,10 @@
-import { useRef } from "react"
+import { useState } from "react"
 
 import { AccountPanel, DeleteAccountControl } from "../components/account/account"
 import { ApiKeysPanel } from "../components/api-keys/api-keys"
 import { ConnectedAppsPanel } from "../components/connected-apps/connected-apps"
 import { PublicProfilePanel } from "../components/public-profile/public-profile"
+import { ReaderViewPanel } from "../components/reader-view/reader-view-setting"
 import { SourceNamePanel } from "../components/source-name/source-name"
 import { PageTitleBar } from "../components/ui/page-title-bar/page-title-bar"
 
@@ -11,15 +12,15 @@ import { PageTitleBar } from "../components/ui/page-title-bar/page-title-bar"
 /// flush page header, the same collapsing title, and a column of cards where
 /// the Library keeps its Folder cards and Saved Item rows.
 export function SettingsPage() {
-  const titleRef = useRef<HTMLHeadingElement>(null)
+  const [titleEl, setTitleEl] = useState<HTMLHeadingElement | null>(null)
 
   return (
     <>
-      <PageTitleBar title="Settings" watch={titleRef} />
+      <PageTitleBar title="Settings" watch={titleEl} />
 
       <div className="page-header">
         <div className="page-heading">
-          <h1 className="page-title" ref={titleRef}>Settings</h1>
+          <h1 className="page-title" ref={setTitleEl}>Settings</h1>
           <p className="page-subtitle">Make Sleevy yours, everywhere you save.</p>
         </div>
       </div>
@@ -34,6 +35,7 @@ export function SettingsPage() {
           </div>
           <AccountPanel />
         </section>
+        <ReaderViewPanel />
         <SourceNamePanel />
         <PublicProfilePanel />
         <ConnectedAppsPanel />

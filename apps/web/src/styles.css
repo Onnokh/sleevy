@@ -12,7 +12,9 @@
 }
 
 .sidebar {
-  width: 360px;
+  /* The same width the Reader View's article list takes, so the two columns
+     read as one pair rather than two sizes. */
+  width: 21.5rem;
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
@@ -281,8 +283,8 @@
 /* Settings reads as a column of cards, the way the Library home reads as a
    grid of Folder cards above its rows. It is the query container for those
    cards: what decides whether a card can hold two columns is its own width,
-   not the window's. The 360px sidebar means the content column runs out of
-   room long before a viewport breakpoint would fire. */
+   not the window's. The sidebar takes 21.5rem of it, so the content column
+   runs out of room long before a viewport breakpoint would fire. */
 .page-sections {
   container-type: inline-size;
   display: flex;

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { Library, Pencil } from "lucide-react"
 
 import { type SavedItem, type SavedItemSort, useDeleteItem, useMarkAsRead, useSavedItems, useSetReadState } from "../sleevy/saved-items"
@@ -15,6 +15,7 @@ import {
   tagCountsOf,
 } from "../components/source-filter/source-filter-utils"
 import { useKeyboardNav } from "../contexts/keyboard-nav-context"
+import { useOpenSavedItem } from "../hooks/use-open-saved-item"
 import { useSelectedItemActions } from "../hooks/use-selected-item-actions"
 import { folderErrorMessage, type Folder, useFolders, useRenameFolder } from "../sleevy/folders"
 import { Button } from "../components/ui/button/button"
@@ -42,11 +43,14 @@ export function LibraryPage({ folderId }: { readonly folderId?: string }) {
   const renameMutation = useRenameFolder()
   const deleteMutation = useDeleteItem()
   const markAsReadMutation = useMarkAsRead()
+  // Opening from the Library carries the Folder it is showing, so the Reader
+  // View's list is this Folder and not the whole library.
+  const openSavedItem = useOpenSavedItem(folderId ?? "none")
   const setReadStateMutation = useSetReadState()
   const { activeSource, setActiveSource, activeType, activeTag, setActiveTag } = useSourceFilter()
   const { selectedIndex, setSelectedIndex, setListLength, setItemActions, pendingDelete } = useKeyboardNav()
   const [editingFolder, setEditingFolder] = useState<Folder | null>(null)
-  const titleRef = useRef<HTMLHeadingElement>(null)
+  const [titleEl, setTitleEl] = useState<HTMLHeadingElement | null>(null)
 
   // Source and Tag show their state in the toolbar chips, so repeating them
   // beside the title says the same thing twice. Type has no control yet.
@@ -76,14 +80,11 @@ export function LibraryPage({ folderId }: { readonly folderId?: string }) {
   ]
 
   const getItemActions = useCallback((item: SavedItem) => ({
-    onOpen: () => {
-      if (!item.isRead) markAsReadMutation.mutate(item.id)
-      window.open(item.originalUrl, "_blank", "noreferrer")
-    },
+    onOpen: () => openSavedItem(item),
     onToggleRead: () => setReadStateMutation.mutate({ id: item.id, isRead: !item.isRead }),
     onCopyUrl: () => void navigator.clipboard.writeText(item.originalUrl).catch(() => {}),
     onDelete: () => deleteMutation.mutate(item.id),
-  }), [deleteMutation, markAsReadMutation, setReadStateMutation])
+  }), [deleteMutation, openSavedItem, setReadStateMutation])
 
   useSelectedItemActions({ items, selectedIndex, setListLength, setItemActions, getItemActions })
 
@@ -95,7 +96,7 @@ export function LibraryPage({ folderId }: { readonly folderId?: string }) {
 
   return (
     <>
-      <PageTitleBar title={pageTitle} watch={titleRef} />
+      <PageTitleBar title={pageTitle} watch={titleEl} />
 
       <div className={folder ? "page-header page-header-card" : "page-header"}>
         {folder ? (
@@ -106,7 +107,7 @@ export function LibraryPage({ folderId }: { readonly folderId?: string }) {
           />
         ) : null}
         <div className="page-heading">
-          <h1 className="page-title" ref={titleRef}>
+          <h1 className="page-title" ref={setTitleEl}>
             <span>{pageTitle}</span>
             {activeFilters.length > 0 && (
               <span className="page-title-filters">
@@ -178,7 +179,7 @@ export function LibraryPage({ folderId }: { readonly folderId?: string }) {
           <ul className="item-list">
             {items.map((item, index) => (
               <li key={item.id}>
-                <SavedCard item={item} isSelected={index === selectedIndex} pendingDelete={index === selectedIndex && pendingDelete} onDelete={(id) => deleteMutation.mutate(id)} onOpen={(id) => markAsReadMutation.mutate(id)} onSetReadState={(id, isRead) => setReadStateMutation.mutate({ id, isRead })} />
+                <SavedCard item={item} folder={folderId ?? "none"} isSelected={index === selectedIndex} pendingDelete={index === selectedIndex && pendingDelete} onDelete={(id) => deleteMutation.mutate(id)} onOpen={(id) => markAsReadMutation.mutate(id)} onSetReadState={(id, isRead) => setReadStateMutation.mutate({ id, isRead })} />
               </li>
             ))}
           </ul>

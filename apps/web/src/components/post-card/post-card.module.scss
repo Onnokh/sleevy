@@ -1,0 +1,58 @@
+/* A post is its own preview: the message is the Link Metadata title and the
+   writer is the Link Author. Nothing here comes from extraction, which is why a
+   post reads well even though x.com yields no article. */
+.card {
+  padding: 1.75rem;
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  background: var(--panel);
+}
+
+.author {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+}
+
+.avatar {
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.names {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.name {
+  color: var(--text);
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.handle {
+  color: var(--faint);
+  font-size: 0.9rem;
+}
+
+.message {
+  margin: 0;
+  color: var(--text);
+  font-size: 1.15rem;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.media {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin-top: 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+}

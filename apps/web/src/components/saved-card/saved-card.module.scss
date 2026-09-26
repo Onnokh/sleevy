@@ -72,12 +72,29 @@
 }
 
 .host {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  min-width: 0;
   font-size: 0.75rem;
   line-height: 0.9375rem;
   color: var(--faint);
+}
+
+/* The name needs its own box now that a mark can sit beside it: text directly
+   inside a flex container is an anonymous item, which `text-overflow` cannot
+   reach, so a long host would have run past the card instead of ellipsising. */
+.hostName {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* Beside the host, because it says where this row goes rather than anything
+   about the item. It keeps its size while the host gives way. */
+.external {
+  flex-shrink: 0;
 }
 
 .date {

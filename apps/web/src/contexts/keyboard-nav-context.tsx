@@ -14,6 +14,13 @@ type KeyboardNavContextValue = {
   readonly setSelectedIndex: (i: number) => void
   readonly setListLength: (n: number) => void
   readonly setItemActions: (actions: ItemActions | null) => void
+  /**
+   * Claimed by a page that drives its own list with the list keys, so the
+   * global j and k stop moving a cursor nobody can see. The Reader View is the
+   * one: there the list and the open article are the same thing, so moving is
+   * opening and the page has to own the move.
+   */
+  readonly claimListKeys: (claimed: boolean) => void
   readonly paletteOpen: boolean
   readonly openPalette: () => void
   readonly closePalette: () => void
@@ -52,6 +59,7 @@ export function KeyboardNavProvider({ children }: { children: ReactNode }) {
   })
   const [captureDialogInitialUrl, setCaptureDialogInitialUrl] = useState("")
   const [pendingDelete, setPendingDelete] = useState(false)
+  const [listKeysClaimed, setListKeysClaimed] = useState(false)
 
   const listLengthRef = useRef(0)
   const itemActionsRef = useRef<ItemActions | null>(null)
@@ -63,6 +71,10 @@ export function KeyboardNavProvider({ children }: { children: ReactNode }) {
 
   const setItemActions = useCallback((actions: ItemActions | null) => {
     itemActionsRef.current = actions
+  }, [])
+
+  const claimListKeys = useCallback((claimed: boolean) => {
+    setListKeysClaimed(claimed)
   }, [])
 
   const openPalette = useCallback(() => {
@@ -96,11 +108,11 @@ export function KeyboardNavProvider({ children }: { children: ReactNode }) {
 
   useHotkey("J", () => {
     setSelectedIndex(Math.min(selectedIndex + 1, listLengthRef.current - 1))
-  }, { enabled: !suppressGlobal })
+  }, { enabled: !suppressGlobal && !listKeysClaimed })
 
   useHotkey("K", () => {
     setSelectedIndex(Math.max(selectedIndex - 1, 0))
-  }, { enabled: !suppressGlobal })
+  }, { enabled: !suppressGlobal && !listKeysClaimed })
 
   useHotkey("O", () => {
     itemActionsRef.current?.onOpen()
@@ -167,6 +179,7 @@ export function KeyboardNavProvider({ children }: { children: ReactNode }) {
     setSelectedIndex,
     setListLength,
     setItemActions,
+    claimListKeys,
     paletteOpen,
     openPalette,
     closePalette,
@@ -179,6 +192,7 @@ export function KeyboardNavProvider({ children }: { children: ReactNode }) {
     pendingDelete,
   }), [
     selectedIndex,
+    claimListKeys,
     paletteOpen,
     openPalette,
     closePalette,

@@ -28,7 +28,11 @@ function detectSourceName(): string {
 }
 
 export const savedItemsQueryKey = ["saved-items"] as const
-type FolderSelector = string | "none" | undefined
+/**
+ * Which Folder a list is showing: one Folder by id, `"none"` for the Saved
+ * Items that are in no Folder, or nothing at all for every Saved Item.
+ */
+export type FolderSelector = string | "none" | undefined
 
 const savedItemsListQueryKey = (sort: SavedItemSort, folder: FolderSelector) =>
   [...savedItemsQueryKey, sort, folder ?? "all"] as const

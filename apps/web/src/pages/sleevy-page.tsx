@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { CircleCheck } from "lucide-react"
 
 import { type SavedItem, useDeleteItem, useMarkAsRead, useSavedItems, useSetReadState } from "../sleevy/saved-items"
@@ -7,27 +7,26 @@ import { PageTitleBar } from "../components/ui/page-title-bar/page-title-bar"
 import { SavedCard } from "../components/saved-card/saved-card"
 import { SavedListSkeleton } from "../components/saved-card/saved-card-skeleton"
 import { useKeyboardNav } from "../contexts/keyboard-nav-context"
+import { useOpenSavedItem } from "../hooks/use-open-saved-item"
 import { useSelectedItemActions } from "../hooks/use-selected-item-actions"
 
 export function SleevyPage() {
   const savedItemsQuery = useSavedItems()
   const deleteMutation = useDeleteItem()
   const markAsReadMutation = useMarkAsRead()
+  const openSavedItem = useOpenSavedItem()
   const setReadStateMutation = useSetReadState()
   const { selectedIndex, setSelectedIndex, setListLength, setItemActions, pendingDelete } = useKeyboardNav()
-  const titleRef = useRef<HTMLHeadingElement>(null)
+  const [titleEl, setTitleEl] = useState<HTMLHeadingElement | null>(null)
 
   const items = (savedItemsQuery.data?.savedItems ?? []).filter((item) => !item.isRead)
 
   const getItemActions = useCallback((item: SavedItem) => ({
-    onOpen: () => {
-      if (!item.isRead) markAsReadMutation.mutate(item.id)
-      window.open(item.originalUrl, "_blank", "noreferrer")
-    },
+    onOpen: () => openSavedItem(item),
     onToggleRead: () => setReadStateMutation.mutate({ id: item.id, isRead: !item.isRead }),
     onCopyUrl: () => void navigator.clipboard.writeText(item.originalUrl).catch(() => {}),
     onDelete: () => deleteMutation.mutate(item.id),
-  }), [deleteMutation, markAsReadMutation, setReadStateMutation])
+  }), [deleteMutation, openSavedItem, setReadStateMutation])
 
   useSelectedItemActions({ items, selectedIndex, setListLength, setItemActions, getItemActions })
 
@@ -37,12 +36,12 @@ export function SleevyPage() {
 
   return (
     <>
-      <PageTitleBar title="Inbox" watch={titleRef} />
+      <PageTitleBar title="Inbox" watch={titleEl} />
 
       <div className="page-header page-header-card">
         <AuroraBackground className="page-header-card-shader" />
         <div className="page-heading">
-          <h1 className="page-title" ref={titleRef}>Inbox</h1>
+          <h1 className="page-title" ref={setTitleEl}>Inbox</h1>
           {savedItemsQuery.data ? <p className="page-subtitle">{items.length} unread</p> : null}
         </div>
       </div>

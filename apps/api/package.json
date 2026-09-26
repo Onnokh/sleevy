@@ -24,6 +24,7 @@
     "@better-auth/oauth-provider": "^1.6.23",
     "@effect/platform-bun": "4.0.0-beta.74",
     "@effect/sql-pg": "4.0.0-beta.74",
+    "@joplin/turndown-plugin-gfm": "1.0.68",
     "@modelcontextprotocol/sdk": "^1.27.1",
     "@mozilla/readability": "^0.6.0",
     "@sleevy/contract": "workspace:*",

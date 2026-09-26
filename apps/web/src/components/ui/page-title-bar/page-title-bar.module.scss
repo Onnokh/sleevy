@@ -1,18 +1,25 @@
+@use "../../../styles/page-fade" as *;
+
 .bar {
   position: sticky;
   z-index: 2;
   /* Sticky offsets are clamped to the containing block, which is the content
      column's content box — inside its padding. A plain `top: 0` therefore
      parks the bar one padding below the top edge, with a strip of unblurred
-     page scrolling above it. Pulling `top` up by that padding lands it flush. */
-  top: calc(var(--content-padding, 2rem) * -1);
+     page scrolling above it. Pulling `top` up by that padding lands it flush.
+
+     The inset is --content-padding for a page, but a column with an inset of
+     its own — the Reader View's article list — overrides these two so the same
+     bar lands flush there too. The two axes are separate because that column's
+     top inset and side inset are not the same number. */
+  top: calc(var(--title-bar-inset-block, var(--content-padding, 2rem)) * -1);
   /* No height and no negative bottom margin. Cancelling the height with
      `margin-bottom` looked equivalent, but that margin collapses with the
      header card's own negative top margin below it and drags the card out of
      its bleed. A zero-height box holding an absolutely positioned surface
      takes no room without touching its neighbours. */
   height: 0;
-  margin: 0 calc(var(--content-padding, 2rem) * -1);
+  margin: 0 calc(var(--title-bar-inset-inline, var(--content-padding, 2rem)) * -1);
   opacity: 0;
   pointer-events: none;
   transition: opacity 180ms ease-out;
@@ -33,24 +40,7 @@
      travel and read as a hard edge. */
   height: 6.5rem;
   padding-top: 0.875rem;
-  /* Solid page colour behind the title, fading to nothing at the bottom edge,
-     so the bar dissolves into the page instead of ending on a ruled line.
-     `--content` is the page's own background, so this is black in the dark
-     theme and white in the light one without branching on either.
-
-     The stops ease out rather than running straight to transparent: a plain
-     two-stop ramp spends too much of its length near full opacity and then
-     falls off a cliff, which is exactly what makes it look like an edge. */
-  background: linear-gradient(
-    to bottom,
-    var(--content) 0%,
-    color-mix(in srgb, var(--content) 97%, transparent) 32%,
-    color-mix(in srgb, var(--content) 87%, transparent) 46%,
-    color-mix(in srgb, var(--content) 68%, transparent) 60%,
-    color-mix(in srgb, var(--content) 44%, transparent) 73%,
-    color-mix(in srgb, var(--content) 20%, transparent) 87%,
-    transparent 100%
-  );
+  @include page-fade(to bottom);
 }
 
 .title {
