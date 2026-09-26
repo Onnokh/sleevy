@@ -67,6 +67,14 @@
     margin: 0 0 1.25rem;
   }
 
+  /* A paragraph that held nothing but an image the host would not serve. The
+     image leaves rather than draw itself broken, and without this its
+     paragraph would keep its bottom margin as an unexplained gap in the
+     prose. */
+  p:empty {
+    display: none;
+  }
+
   /* All six levels, and the weight stated rather than left to the browser.
      Tailwind Preflight arrives with the Fumadocs stylesheet and resets
      `h1..h6 { font-size: inherit; font-weight: inherit }` across the whole app,

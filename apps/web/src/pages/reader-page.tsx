@@ -1,4 +1,4 @@
-import { type ReactNode, type Ref, useEffect, useState } from "react"
+import { type ComponentProps, type ReactNode, type Ref, useEffect, useState } from "react"
 import { Link, useRouter } from "@tanstack/react-router"
 import { ArrowLeft, ExternalLink } from "lucide-react"
 import Markdown, { type Components } from "react-markdown"
@@ -48,6 +48,31 @@ function ReaderHeader({
 }
 
 /**
+ * An External Image URL from the article, loaded straight from the site that
+ * serves it — Sleevy stores no assets, so a picture is only as available as
+ * its host. When the host has taken it away, or refuses to serve it to us, the
+ * image is left out rather than drawn broken: the browser answers a broken
+ * image by printing its `alt` text at body size, which in an article reads as
+ * a stray paragraph that the reader cannot tell from the writing.
+ *
+ * The failure is remembered against the URL that failed, so the next article
+ * to use this same position in the tree starts with a clean slate.
+ *
+ * Loaded eagerly. Markdown carries no width or height, so an image reserves
+ * nothing until it arrives; deferring it to the moment it is scrolled to means
+ * the article grows under the reader exactly as they reach the end of it. A
+ * Reader View holds one article the reader has already chosen, so its pictures
+ * are fetched with it and the page settles before they get there.
+ */
+function ArticleImage({ ...props }: ComponentProps<"img">) {
+  const [failedSrc, setFailedSrc] = useState<string | undefined>(undefined)
+
+  if (props.src && failedSrc === props.src) return null
+
+  return <img {...props} alt={props.alt ?? ""} onError={() => setFailedSrc(props.src)} />
+}
+
+/**
  * The element overrides, built once.
  *
  * react-markdown takes these as the component *types* for the nodes it builds,
@@ -72,12 +97,7 @@ const READER_COMPONENTS: Components = {
         {children}
       </a>
     ),
-  // Loaded eagerly. Markdown carries no width or height, so an image reserves
-  // nothing until it arrives; deferring it to the moment it is scrolled to
-  // means the article grows under the reader exactly as they reach the end of
-  // it. A Reader View holds one article the reader has already chosen, so its
-  // pictures are fetched with it and the page settles before they get there.
-  img: ({ ...props }) => <img {...props} alt={props.alt ?? ""} />,
+  img: ArticleImage,
 }
 
 /** Once, for the same reason: a new array is a new pipeline every render. */
