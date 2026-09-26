@@ -1,0 +1,25 @@
+/// The ramp that dissolves a pinned edge into the page.
+///
+/// Solid page colour at the pinned edge, fading to nothing at the far one, so
+/// the edge reads as the page thinning out rather than ending on a ruled line.
+/// `--content` is the page's own background, so this is black in the dark theme
+/// and white in the light one without branching on either.
+///
+/// The stops ease out rather than running straight to transparent: a plain
+/// two-stop ramp spends too much of its length near full opacity and then falls
+/// off a cliff, which is exactly what makes it look like an edge.
+///
+/// `$to` is the direction the fade travels: `to bottom` for an edge pinned at
+/// the top, `to top` for one pinned at the bottom.
+@mixin page-fade($to) {
+  background: linear-gradient(
+    $to,
+    var(--content) 0%,
+    color-mix(in srgb, var(--content) 97%, transparent) 32%,
+    color-mix(in srgb, var(--content) 87%, transparent) 46%,
+    color-mix(in srgb, var(--content) 68%, transparent) 60%,
+    color-mix(in srgb, var(--content) 44%, transparent) 73%,
+    color-mix(in srgb, var(--content) 20%, transparent) 87%,
+    transparent 100%
+  );
+}

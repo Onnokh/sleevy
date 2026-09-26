@@ -10,7 +10,8 @@
     "start": "bun server.ts",
     "preview": "vite preview",
     "test": "bun test",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "dev:raw": "vite --host 127.0.0.1 --port 4000"
   },
   "dependencies": {
     "@better-auth/api-key": "^1.6.23",
@@ -38,6 +39,8 @@
     "motion": "^12.42.2",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1",
     "sass": "^1.99.0",
     "shiki": "^4.3.1",
     "simple-liquid-glass": "^4.1.0",

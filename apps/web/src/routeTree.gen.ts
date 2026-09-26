@@ -34,6 +34,7 @@ import { Route as DocsSplatRouteImport } from './routes/docs/$'
 import { Route as DocsChar123Char125DotmdRouteImport } from './routes/docs/{$}[.]md'
 import { Route as OauthConsentRouteImport } from './routes/oauth/consent'
 import { Route as OauthLoginRouteImport } from './routes/oauth/login'
+import { Route as AppReadSavedItemIdRouteImport } from './routes/_app/read.$savedItemId'
 import { Route as MarketingArticlesBestBookmarkManagerChromeRouteImport } from './routes/_marketing/articles_.best-bookmark-manager-chrome'
 import { Route as MarketingArticlesBestReadItLaterAppsRouteImport } from './routes/_marketing/articles_.best-read-it-later-apps'
 import { Route as MarketingArticlesBookmarkManagerForDevelopersRouteImport } from './routes/_marketing/articles_.bookmark-manager-for-developers'
@@ -174,6 +175,11 @@ const OauthLoginRoute = OauthLoginRouteImport.update({
   path: '/oauth/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AppReadSavedItemIdRoute = AppReadSavedItemIdRouteImport.update({
+  id: '/read/$savedItemId',
+  path: '/read/$savedItemId',
+  getParentRoute: () => AppRoute,
+} as any)
 const MarketingArticlesBestBookmarkManagerChromeRoute =
   MarketingArticlesBestBookmarkManagerChromeRouteImport.update({
     id: '/articles_/best-bookmark-manager-chrome',
@@ -276,6 +282,7 @@ export interface FileRoutesByFullPath {
   '/docs/{$}.md': typeof DocsChar123Char125DotmdRoute
   '/oauth/consent': typeof OauthConsentRoute
   '/oauth/login': typeof OauthLoginRoute
+  '/read/$savedItemId': typeof AppReadSavedItemIdRoute
   '/articles/best-bookmark-manager-chrome': typeof MarketingArticlesBestBookmarkManagerChromeRoute
   '/articles/best-read-it-later-apps': typeof MarketingArticlesBestReadItLaterAppsRoute
   '/articles/bookmark-manager-for-developers': typeof MarketingArticlesBookmarkManagerForDevelopersRoute
@@ -314,6 +321,7 @@ export interface FileRoutesByTo {
   '/docs/{$}.md': typeof DocsChar123Char125DotmdRoute
   '/oauth/consent': typeof OauthConsentRoute
   '/oauth/login': typeof OauthLoginRoute
+  '/read/$savedItemId': typeof AppReadSavedItemIdRoute
   '/articles/best-bookmark-manager-chrome': typeof MarketingArticlesBestBookmarkManagerChromeRoute
   '/articles/best-read-it-later-apps': typeof MarketingArticlesBestReadItLaterAppsRoute
   '/articles/bookmark-manager-for-developers': typeof MarketingArticlesBookmarkManagerForDevelopersRoute
@@ -355,6 +363,7 @@ export interface FileRoutesById {
   '/oauth/consent': typeof OauthConsentRoute
   '/oauth/login': typeof OauthLoginRoute
   '/_marketing/': typeof MarketingIndexRoute
+  '/_app/read/$savedItemId': typeof AppReadSavedItemIdRoute
   '/_marketing/articles_/best-bookmark-manager-chrome': typeof MarketingArticlesBestBookmarkManagerChromeRoute
   '/_marketing/articles_/best-read-it-later-apps': typeof MarketingArticlesBestReadItLaterAppsRoute
   '/_marketing/articles_/bookmark-manager-for-developers': typeof MarketingArticlesBookmarkManagerForDevelopersRoute
@@ -395,6 +404,7 @@ export interface FileRouteTypes {
     | '/docs/{$}.md'
     | '/oauth/consent'
     | '/oauth/login'
+    | '/read/$savedItemId'
     | '/articles/best-bookmark-manager-chrome'
     | '/articles/best-read-it-later-apps'
     | '/articles/bookmark-manager-for-developers'
@@ -433,6 +443,7 @@ export interface FileRouteTypes {
     | '/docs/{$}.md'
     | '/oauth/consent'
     | '/oauth/login'
+    | '/read/$savedItemId'
     | '/articles/best-bookmark-manager-chrome'
     | '/articles/best-read-it-later-apps'
     | '/articles/bookmark-manager-for-developers'
@@ -473,6 +484,7 @@ export interface FileRouteTypes {
     | '/oauth/consent'
     | '/oauth/login'
     | '/_marketing/'
+    | '/_app/read/$savedItemId'
     | '/_marketing/articles_/best-bookmark-manager-chrome'
     | '/_marketing/articles_/best-read-it-later-apps'
     | '/_marketing/articles_/bookmark-manager-for-developers'
@@ -677,6 +689,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OauthLoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_app/read/$savedItemId': {
+      id: '/_app/read/$savedItemId'
+      path: '/read/$savedItemId'
+      fullPath: '/read/$savedItemId'
+      preLoaderRoute: typeof AppReadSavedItemIdRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_marketing/articles_/best-bookmark-manager-chrome': {
       id: '/_marketing/articles_/best-bookmark-manager-chrome'
       path: '/articles/best-bookmark-manager-chrome'
@@ -776,6 +795,7 @@ interface AppRouteChildren {
   AppInboxRoute: typeof AppInboxRoute
   AppLibraryRoute: typeof AppLibraryRoute
   AppSettingsRoute: typeof AppSettingsRoute
+  AppReadSavedItemIdRoute: typeof AppReadSavedItemIdRoute
   AppLibraryFoldersFolderIdRoute: typeof AppLibraryFoldersFolderIdRoute
 }
 
@@ -784,6 +804,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppInboxRoute: AppInboxRoute,
   AppLibraryRoute: AppLibraryRoute,
   AppSettingsRoute: AppSettingsRoute,
+  AppReadSavedItemIdRoute: AppReadSavedItemIdRoute,
   AppLibraryFoldersFolderIdRoute: AppLibraryFoldersFolderIdRoute,
 }
 

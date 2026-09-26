@@ -1,0 +1,78 @@
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.5rem;
+}
+
+.text {
+  min-width: 0;
+}
+
+.label {
+  display: block;
+  color: var(--text);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.description {
+  margin: 0.2rem 0 0;
+  color: var(--muted);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+/* The checkbox itself is the track. `appearance: none` keeps the element — and
+   with it the label, the keyboard, and the checked state — and drops only the
+   tick the browser would draw. */
+.input {
+  appearance: none;
+  flex-shrink: 0;
+  position: relative;
+  width: 2.25rem;
+  height: 1.3rem;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--panel-muted);
+  cursor: pointer;
+  transition: background 160ms ease-out, border-color 160ms ease-out;
+
+  /* The knob. */
+  &::after {
+    content: "";
+    position: absolute;
+    top: 0.15rem;
+    left: 0.15rem;
+    width: 0.85rem;
+    height: 0.85rem;
+    border-radius: 999px;
+    background: var(--muted);
+    transition: translate 160ms ease-out, background 160ms ease-out;
+  }
+
+  &:checked {
+    border-color: var(--text);
+    background: var(--text);
+  }
+
+  &:checked::after {
+    translate: 0.95rem 0;
+    background: var(--content);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--text);
+    outline-offset: 2px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .input,
+  .input::after {
+    transition: none;
+  }
+}
