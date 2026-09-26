@@ -1,7 +1,6 @@
 import styles from "./usp-section.module.scss"
 
-// Heroicons 24/solid path data (https://heroicons.com), filled with the shared
-// usp gradient below instead of a flat color.
+// Heroicons 24/solid path data (https://heroicons.com), drawn white.
 const usps = [
   {
     title: "One tap to capture",
@@ -35,31 +34,16 @@ const usps = [
 export function UspSection() {
   return (
     <section className={styles.section} aria-label="Why Sleevy">
-      <svg aria-hidden="true" width="0" height="0" style={{ position: "absolute" }}>
-        <defs>
-          <linearGradient id="usp-icon-gradient" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="24" y2="24">
-            <stop offset="8.82%" stopColor="#FFFFFF" />
-            <stop offset="90.88%" stopColor="#6E6ECD" />
-          </linearGradient>
-        </defs>
-      </svg>
       <div className={styles.grid}>
         {usps.map((usp) => (
           <article className={styles.usp} key={usp.title}>
-            <svg className={styles.icon} viewBox="0 0 24 24" fill="none" aria-hidden="true">
-              {usp.paths.map((d) => (
-                <path
-                  key={d}
-                  fillRule="evenodd"
-                  clipRule="evenodd"
-                  d={d}
-                  fill="url(#usp-icon-gradient)"
-                  stroke="#fff"
-                  strokeOpacity={0.3}
-                  vectorEffect="non-scaling-stroke"
-                />
-              ))}
-            </svg>
+            <span className={styles.icon} aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="currentColor">
+                {usp.paths.map((d) => (
+                  <path key={d} fillRule="evenodd" clipRule="evenodd" d={d} />
+                ))}
+              </svg>
+            </span>
             <h2>{usp.title}</h2>
             <p>{usp.body}</p>
           </article>

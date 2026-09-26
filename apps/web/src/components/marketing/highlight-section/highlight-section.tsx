@@ -1,13 +1,10 @@
 import { Link } from "@tanstack/react-router"
 import clsx from "clsx"
 
-import { GlassPill } from "../glass-pill/glass-pill"
-import { BlueMeshGradient } from "../hero/blue-mesh-gradient"
+import { GlassBackground } from "../glass-background/glass-background"
 import { appStoreUrl, raycastDeeplink } from "../store-links"
 import styles from "./highlight-section.module.scss"
 
-/* Straddle the frame's bottom edge, as the old .cta did. Inline because
-   GlassPill positioning can't come from a class (see glass-pill.tsx). */
 /* Progressive blur band at the frame's bottom edge (see .fade in the module). */
 function BlurFade() {
   return (
@@ -21,11 +18,19 @@ function BlurFade() {
   )
 }
 
-const ctaGlassPosition = {
-  position: "absolute",
-  bottom: 0,
-  left: "50%",
-  transform: "translate(-50%, 50%)",
+/* A hint of the hero's glass, not a copy: the glass zoomed in five times past
+   the hero's scale (its 900px height at 1440), so a card holds a few very
+   broad ribs, over the hero's light at a bit more than the card's height.
+   Slow, dim, and still under the pointer, with a dark top for the title and
+   copy; each card gets its own seed. */
+const cardGlass = {
+  glassHeight: 56.25 * 5,
+  lightHeight: 54,
+  tone: 0.5,
+  roamingLight: 0.1,
+  speed: 0.4,
+  interactive: false,
+  calm: [0.5, 0.85, 0.25],
 } as const
 
 export function HighlightSection() {
@@ -34,7 +39,7 @@ export function HighlightSection() {
       <div className={styles.grid}>
         <article className={styles.card}>
           <div className={clsx(styles.frame, styles.frameShare)}>
-            <BlueMeshGradient variant="share" />
+            <GlassBackground {...cardGlass} seed={1} />
             <h3>Native Share</h3>
             <p>Hit share in any app, pick Sleevy, and the link is saved. Nothing to copy or paste.</p>
             <img
@@ -48,16 +53,14 @@ export function HighlightSection() {
             <BlurFade />
           </div>
           <img className={styles.icon} src="/ios26-82.webp" alt="Sleevy iPhone app icon" width={82} height={82} loading="lazy" />
-          <GlassPill radius={28} style={ctaGlassPosition}>
-            <a className={styles.cta} href={appStoreUrl}>
-              <img src="/appstore-glyph-96.webp" alt="App Store icon" width={96} height={96} loading="lazy" />
-              Install on your iPhone
-            </a>
-          </GlassPill>
+          <a className={styles.cta} href={appStoreUrl}>
+            <img src="/appstore-glyph-96.webp" alt="" width={96} height={96} loading="lazy" />
+            Install on your iPhone
+          </a>
         </article>
         <article className={styles.card}>
           <div className={clsx(styles.frame, styles.frameRaycast)}>
-            <BlueMeshGradient variant="workflow" />
+            <GlassBackground {...cardGlass} seed={2} />
             <h3>In your workflow</h3>
             <p>Capture and search with the <Link className={styles.inlineLink} to="/raycast">Raycast link-saving extension</Link> without leaving the keyboard.</p>
             <img
@@ -78,12 +81,10 @@ export function HighlightSection() {
             height={82}
             loading="lazy"
           />
-          <GlassPill radius={28} style={ctaGlassPosition}>
-            <a className={clsx(styles.cta, styles.ctaRaycast)} href={raycastDeeplink}>
-              <img src="/raycast-82.webp" alt="Raycast icon" width={82} height={82} loading="lazy" />
-              Add to your Raycast
-            </a>
-          </GlassPill>
+          <a className={clsx(styles.cta, styles.ctaRaycast)} href={raycastDeeplink}>
+            <img src="/raycast-82.webp" alt="" width={82} height={82} loading="lazy" />
+            Add to your Raycast
+          </a>
         </article>
       </div>
     </section>

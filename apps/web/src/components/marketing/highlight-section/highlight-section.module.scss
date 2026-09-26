@@ -54,7 +54,7 @@
   /* Contain the fade's z-index so it can't stack above the frame's siblings
      (the straddling icon and glass CTA). */
   isolation: isolate;
-  background-color: #170e0f;
+  background-color: #000;
 
   @include card-border(0.75rem, 0 8px 24px rgba(0, 0, 0, 0.4));
 
@@ -144,25 +144,26 @@
   height: 4rem;
 }
 
-/* Content box only — the pill surface is the GlassPill wrapper (positioned
-   inline in the tsx to straddle the frame's bottom edge). */
+/* The hero's dark glass button, a size up, straddling the frame's bottom
+   edge. It sits outside the frame's clip, so it is a sibling of the frame. */
 .cta {
-  display: inline-flex;
-  align-items: center;
-  gap: 1.4375rem;
-  min-height: 3.4375rem;
-  padding: 0 1.4375rem 0 0.9375rem;
-  color: #fff;
-  font-size: 1.25rem;
-  font-weight: 500;
-  letter-spacing: -0.03em;
-  white-space: nowrap;
-  text-decoration: none;
+  @include glass-button;
+
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  z-index: 1;
+  gap: 0.75rem;
+  height: 3.25rem;
+  padding: 0 1.3rem 0 0.9rem;
+  font-size: 1.0625rem;
+  background: rgb(8 10 16 / 72%);
+  box-shadow: 0 1rem 2rem rgb(0 0 0 / 45%);
+  transform: translate(-50%, 50%);
 
   img {
-    width: 1.75rem;
-    height: 1.75rem;
-    filter: drop-shadow(0 4px 4px rgba(0, 0, 0, 0.25));
+    width: 1.6rem;
+    height: 1.6rem;
   }
 }
 
@@ -170,7 +171,7 @@
   padding-left: 0.75rem;
 
   img {
-    width: 2rem;
-    height: 2rem;
+    width: 1.85rem;
+    height: 1.85rem;
   }
 }

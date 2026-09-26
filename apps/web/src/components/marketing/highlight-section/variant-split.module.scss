@@ -1,0 +1,148 @@
+/* PROTOTYPE — throwaway. */
+@use "../shared" as *;
+
+.section {
+  padding: 3rem 0 2rem;
+}
+
+.rows {
+  @include container;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 5fr 7fr;
+  gap: 4rem;
+  align-items: center;
+  padding: 4rem 0;
+  border-top: 1px solid rgb(255 255 255 / 8%);
+
+  &:last-child {
+    border-bottom: 1px solid rgb(255 255 255 / 8%);
+  }
+
+  /* Mirror the second row: screenshot left, copy right. */
+  &.raycast {
+    grid-template-columns: 7fr 5fr;
+
+    .copy {
+      order: 2;
+    }
+  }
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+    gap: 2.5rem;
+
+    &.raycast {
+      grid-template-columns: 1fr;
+
+      .copy {
+        order: 0;
+      }
+    }
+  }
+}
+
+.copy {
+  h3 {
+    margin: 1.25rem 0 0;
+    font-size: 2.5rem;
+    font-weight: 500;
+    line-height: 1.05;
+    letter-spacing: -0.04em;
+    color: #fff;
+  }
+
+  p {
+    max-width: 26rem;
+    margin: 1rem 0 0;
+    font-size: 1.0625rem;
+    line-height: 1.6;
+    color: #8b8b90;
+
+    a {
+      color: inherit;
+      text-decoration-color: rgb(255 255 255 / 30%);
+      text-underline-offset: 0.2em;
+
+      &:hover {
+        color: #fff;
+      }
+    }
+  }
+}
+
+.eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: rgb(255 255 255 / 70%);
+
+  img {
+    width: 2.25rem;
+    height: 2.25rem;
+  }
+}
+
+.cta {
+  @include glass-button;
+
+  gap: 0.65rem;
+  margin-top: 2rem;
+  padding-left: 0.8rem;
+
+  img {
+    width: 1.4rem;
+    height: 1.4rem;
+  }
+}
+
+/* A still pool of the hero's blue behind the frame, baked into gradient stops
+   (no blur filters). */
+.media {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  justify-content: center;
+
+  &::before {
+    position: absolute;
+    inset: -20% -10%;
+    z-index: -1;
+    background: radial-gradient(50% 50% at 50% 55%, rgb(26 86 255 / 22%), rgb(26 86 255 / 8%) 45%, transparent 75%);
+    content: "";
+    pointer-events: none;
+  }
+}
+
+/* The hero's product frame: a thin glass rim around the screenshot. */
+.frame {
+  padding: 0.25rem;
+  background: rgb(255 255 255 / 10%);
+  border: 1px solid rgb(255 255 255 / 5%);
+  border-radius: 1.2rem;
+  box-shadow: 0 2rem 4rem rgb(0 0 0 / 50%);
+
+  img {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: 1rem;
+  }
+}
+
+.share .frame {
+  width: 22rem;
+  border-radius: 2.2rem;
+
+  img {
+    border-radius: 2rem;
+  }
+}
+
+.raycast .frame {
+  width: 100%;
+}

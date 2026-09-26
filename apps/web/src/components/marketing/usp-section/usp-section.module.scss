@@ -50,13 +50,22 @@
 }
 
 .icon {
-  width: 4.75rem;
-  height: 4.75rem;
-  opacity: 0.72;
-  filter: drop-shadow(0 4px 4px rgba(0, 0, 0, 0.25));
+  display: block;
+  width: 2.75rem;
+  height: 2.75rem;
+  color: #fff;
+  /* White with a faint glow of the hero's blue: calm next to the real app
+     icons on the cards below, but lit by the same light. */
+  filter: drop-shadow(0 0 1.25rem rgb(70 120 255 / 45%));
+
+  svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
 
   @media (max-width: 768px) {
-    width: 4rem;
-    height: 4rem;
+    width: 2.5rem;
+    height: 2.5rem;
   }
 }

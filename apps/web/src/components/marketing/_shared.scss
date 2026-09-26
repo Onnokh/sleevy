@@ -67,6 +67,40 @@
   }
 }
 
+/* Dark glass button, for calls to action that sit on the marketing glass: it
+   blurs the lit ribs behind it, so its label stays legible. Pass nothing to
+   get the hero's size; override height, padding, and font-size to grow it. */
+@mixin glass-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  height: 2.75rem;
+  padding: 0 1.1rem;
+  color: #fff;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  letter-spacing: -0.005em;
+  white-space: nowrap;
+  text-decoration: none;
+  background: rgb(8 10 16 / 55%);
+  border: 1px solid rgb(255 255 255 / 18%);
+  border-radius: 0.5rem;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: background-color 0.2s, border-color 0.2s;
+
+  svg {
+    flex: none;
+    width: 1rem;
+    height: 1rem;
+  }
+
+  &:hover {
+    background: rgb(20 23 32 / 72%);
+    border-color: rgb(255 255 255 / 32%);
+  }
+}
+
 /* Progressive blur anchored to a clipped container's bottom — stacked layers,
    each with a higher blur radius revealed in its own band, so the blur ramps
    from 0 at the top of the fade to the max near the bottom edge (a single
