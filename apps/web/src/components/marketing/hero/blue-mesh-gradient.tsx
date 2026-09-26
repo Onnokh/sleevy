@@ -12,31 +12,6 @@ const definitions = {
       { x: 0.55, y: 0.68, color: [82, 91, 169], reach: 0.98, radius: 0.62 },
     ],
   },
-  share: {
-    base: [29, 25, 44],
-    anchors: [
-      { x: 0.1, y: 0.2, color: [60, 84, 148], reach: 0.62, radius: 0.48 },
-      { x: 0.88, y: 0.34, color: [112, 62, 109], reach: 0.68, radius: 0.64 },
-      { x: 0.24, y: 0.94, color: [84, 39, 82], reach: 0.68, radius: 0.42 },
-      { x: 0.56, y: 0.66, color: [87, 79, 137], reach: 0.82, radius: 0.58 },
-    ],
-  },
-  workflow: {
-    base: [27, 24, 42],
-    anchors: [
-      { x: 0.24, y: 0.16, color: [56, 76, 142], reach: 0.6, radius: 0.52 },
-      { x: 0.78, y: 0.2, color: [118, 67, 112], reach: 0.56, radius: 0.7 },
-      { x: 0.08, y: 0.78, color: [82, 42, 84], reach: 0.72, radius: 0.44 },
-      { x: 0.62, y: 0.74, color: [88, 71, 129], reach: 0.9, radius: 0.6 },
-    ],
-  },
-  footer: {
-    base: [8, 9, 15],
-    anchors: [
-      { x: 0.08, y: 0.14, color: [55, 30, 78], reach: 0.7, radius: 0.58 },
-      { x: 0.88, y: 0.86, color: [32, 62, 123], reach: 0.7, radius: 0.6 },
-    ],
-  },
   login: {
     base: [10, 11, 21],
     anchors: [
@@ -59,9 +34,6 @@ const falloff = 1.75
 // Keep the field present but comfortably behind the product imagery and copy.
 const illumination = {
   hero: 0.42,
-  share: 0.29,
-  workflow: 0.29,
-  footer: 0.24,
   login: 0.36,
   settings: 0.3,
 } as const

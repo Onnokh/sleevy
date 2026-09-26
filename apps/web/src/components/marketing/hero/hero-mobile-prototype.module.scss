@@ -1,0 +1,162 @@
+/* PROTOTYPE — throwaway. The mobile hero variants (hero-mobile-prototype.tsx).
+   Phones only: on wider screens the desktop hero shows. */
+@use "../shared" as *;
+
+.root {
+  display: none;
+
+  @media (max-width: 768px) {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    /* Under the floating nav, aligned with its logo. */
+    padding: calc(var(--navbar-total-spacing) + 2.5rem) 2rem 0;
+  }
+}
+
+.copy {
+  position: relative;
+  z-index: 2;
+}
+
+.headline {
+  margin: 0;
+  font-size: 3.5rem;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: -0.05em;
+  text-shadow: 0 0 2rem rgb(0 0 0 / 70%), 0 0 0.5rem rgb(0 0 0 / 50%);
+}
+
+.actions {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.75rem;
+  margin-top: 2rem;
+}
+
+.wide {
+  justify-content: center;
+  width: 100%;
+  height: 3.5rem;
+  font-size: 1.25rem;
+}
+
+.textLink {
+  display: inline-flex;
+  align-items: center;
+  align-self: center;
+  gap: 0.4rem;
+  padding: 0.5rem;
+  font-size: 1.125rem;
+  color: rgb(255 255 255 / 72%);
+  text-decoration: none;
+
+  svg {
+    width: 1rem;
+  }
+}
+
+.phone {
+  position: absolute;
+  aspect-ratio: 1300 / 2650;
+
+  &::before {
+    position: absolute;
+    inset: 1% 2%;
+    border-radius: 15% / 7.4%;
+    box-shadow: 0 3rem 4rem 1rem rgb(0 0 0 / 60%);
+    content: "";
+  }
+}
+
+/* ── Rise: one big iPhone rising out of the bottom edge ── */
+.rise {
+  align-items: stretch;
+}
+
+.risePhone {
+  bottom: 0;
+  left: 50%;
+  width: min(74vw, 22rem);
+  transform: translate(-50%, 34%);
+}
+
+/* ── Tilt: a large iPhone at an angle, running off the right edge ── */
+.tiltStage {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  perspective: 90rem;
+}
+
+.tiltPhone {
+  right: -4vw;
+  bottom: -26vh;
+  width: 76vw;
+  transform: rotateX(22deg) rotateY(-14deg) rotateZ(14deg);
+  transform-origin: 50% 100%;
+}
+
+/* ── Type: glass and type only, set low like a title card ── */
+.type {
+  justify-content: flex-end;
+  padding-bottom: 3rem;
+}
+
+.typeHeadline {
+  font-size: 4.5rem;
+}
+
+.lede {
+  max-width: 22em;
+  margin: 1.25rem 0 0;
+  font-size: 1.375rem;
+  line-height: 1.45;
+  color: rgb(255 255 255 / 72%);
+  text-shadow: 0 0 1.5rem rgb(0 0 0 / 60%);
+}
+
+/* ── Duo: both products, at a size you can read ── */
+.duoMedia {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 50%;
+}
+
+.duoWindow {
+  position: absolute;
+  top: 8%;
+  left: 24vw;
+  width: 44rem;
+  overflow: hidden;
+  border-radius: 0.875rem;
+  box-shadow: 0 3rem 4rem 1rem rgb(0 0 0 / 50%);
+
+  img {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+
+  &::after {
+    position: absolute;
+    inset: 0;
+    content: "";
+    pointer-events: none;
+
+    @include card-border(0.875rem);
+  }
+}
+
+.duoPhone {
+  bottom: -26%;
+  left: 2rem;
+  z-index: 1;
+  width: 46vw;
+}
