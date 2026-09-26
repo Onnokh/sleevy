@@ -1,392 +1,306 @@
 @use "../shared" as *;
 
-/* ═══ Hero scroll animation — the model ═══
-   The hero animates between exactly two POSES, rest and end, each defined as
-   a *-rest / *-end custom-property pair. The JS in hero.tsx does nothing
-   but lerp: value = rest · (1 − t) + end · t, per property. Media queries
-   override the pairs per breakpoint, so the browser resolves the right pose
-   with no JS branching. Every pose value derives from the viewport WIDTH
-   (vw/rem — the root font is vw-fluid), so a given width plays the identical
-   composition and animation at any window height.
+@include dotted-line-keyframes;
 
-   The end height (--hero-h-end) is also "the stage": the follow strip parks
-   with its top on this line while the animation plays, the phone centers
-   inside it, and the hero expands to exactly it (any taller would hide
-   behind the strip).
+/* The headline and buttons sit in the site's container, aligned with the nav
+   and the sections below; only the product escapes it on the right. Sizes
+   follow payloadcms.com's hero at 1440 (a 64px headline, 902px product
+   frames), converted at the marketing site's 16px-per-rem @ 1440 fluid root. */
 
-   Shared layout geometry lives in this mixin, applied to both top-level
-   siblings (.track and .follow) so each subtree resolves identical values;
-   hero-internal framing (radius, phone) lives on .hero. */
-@mixin hero-vars {
-  /* ── Design inputs (overridden per band) ── */
-  --hero-gutter: 4rem; /* viewport inset of the resting hero card */
-  --hero-aspect: 0.64; /* rest height/width; flatter than the phone so the full hero fits a wide screen */
-  --hero-margin: 2rem; /* gap between nav and hero */
-  --hero-gap: 4.5rem; /* gap between hero and the follow content */
-  --park: 60vh; /* how long the follow content stays parked while the animation plays */
-
-  /* ── Rest pose (derived) ── */
-  --hero-w-rest: min(100vw - var(--hero-gutter), 71rem);
-  --hero-h-rest: calc(var(--hero-w-rest) * var(--hero-aspect));
-
-  /* ── End pose (derived) ── */
-  /* 2px oversize: the 1px side borders ride just past the viewport edges at
-     full-bleed, so the border travels with the moving edges instead of fading
-     out. Needs the animated margin-left in hero.tsx to center (auto
-     margins clamp to 0 once the box outgrows its container). */
-  --hero-w-end: calc(100vw + 2px);
-  --hero-h-end: calc(var(--hero-h-rest) + var(--hero-gap));
-
-  /* ── Scroll mechanics ── */
-  /* Pin runway; sized so the hero un-pins exactly when the strip's park range
-     runs out. The 110vh floor keeps the scrub range positive on extreme
-     portrait windows (stage ≪ viewport), where the strip covers the
-     still-pinned hero instead of releasing in sync — degraded, not broken. */
-  --track-h: max(calc(var(--hero-h-end) + var(--park) + var(--hero-margin)), 110vh);
-
-  /* Mobile runs the same pinned scroll animation, framed portrait: taller rest
-     aspect, tighter gutters, a bigger phone. Only the pose vars change — statics
-     and derived values follow automatically. */
-  @media (max-width: 768px) {
-    --hero-gutter: 1.5rem;
-    --hero-aspect: 1.34;
-    --hero-margin: 1.5rem;
-  }
-}
-
-/* Track gives the pinned hero its scroll runway: while the hero is stuck to the
-   top of the viewport, this extra height is what the scroll animation scrubs
-   through. */
-.track {
-  @include hero-vars;
-
+.stage {
   position: relative;
-  /* Sized so the hero un-pins at the exact moment the follow strip's park range
-     runs out: after the animation + hold, hero and strip release together and the
-     whole arrangement scrolls off like a normal page — no curtain sliding over a
-     frozen hero. The follow wrapper's negative margin pulls the content up over
-     this runway, so none of it exists as visible whitespace. */
-  height: var(--track-h);
-}
-
-/* Everything after the hero. The negative margin pulls it up over the track's
-   runway so it rests right beneath the aspect-sized hero (page continues, no
-   whitespace — also in the static layout). Derivation: the strip's doc top must be
-   hero-margin + stage into the track, so pull = that − track height (= −park in
-   the normal case where the track's max() guard doesn't bite). */
-.follow {
-  @include hero-vars;
-
-  display: flow-root;
-  margin-top: calc(var(--hero-margin) + var(--hero-h-end) - var(--track-h));
-}
-
-/* Parks for --park of scroll while the hero animation plays, then releases in
-   sync with the hero's un-pin. The offset is the strip's natural position at the
-   moment the hero pins (pinned hero bottom + gap): before the pin, strip and hero
-   scroll in lockstep (constant gap); at the pin both freeze together. Solid
-   background + z-index above the hero keep it opaque over the expanded hero's
-   lower region. */
-.followInner {
-  position: sticky;
-  top: var(--hero-h-end);
-  z-index: 1;
-}
-
-/* The park range MUST be a sibling spacer: sticky containment uses the element's
-   own margin box, so giving the inner a margin-bottom would consume the very slack
-   it needs (range 0 → sticky inert). */
-.spacer {
-  height: var(--park);
-}
-
-.hero {
-  /* Hero-internal framing poses — landscape defaults (desktop/tablet),
-     overridden for portrait on mobile. Same *-rest / *-end pair convention as
-     hero-vars; the motion templates read them via var(). */
-
-  /* ── Design inputs (overridden per band) ── */
-  --hero-radius-rest: 0.75rem; /* matches the marketing card frames */
-  --hero-radius-end: 0px; /* full-bleed = square corners */
-  --phone-w-frac: 0.42; /* phone width as a fraction of the hero width */
-  --phone-aspect: calc(1252 / 613); /* the hero-phone image's height/width */
-  --phone-y-rest: 37%; /* rest slice: how far the phone hangs down, % of its own height */
-  --phone-scale-rest: 1;
-  --phone-scale-end: 0.42;
-
-  /* ── Derived (do not override) ── */
-  /* End-state phone height: at the end the hero is 100vw wide, so the phone is
-     frac · scale · aspect · 100vw tall. */
-  --phone-h-end: calc(var(--phone-w-frac) * var(--phone-scale-end) * var(--phone-aspect) * 100vw);
-  /* End-state phone top: centered in the stage. Width-derived, so a given width
-     composes identically at any window height (centering on 50vh instead would
-     sink the phone behind the parked strip on tall windows). */
-  --phone-y-end: calc((var(--hero-h-end) - var(--phone-h-end)) / 2);
-
-  position: sticky;
-  top: 0;
-  /* Contain the hero's z-indexed children so the follow content can slide over
-     the whole hero (phone included) with a single z-index. */
-  z-index: 0;
-  display: block;
-  /* Statics below double as the reduced-motion fallback; they read the same
-     pose vars so the static hero always matches the animated rest pose. */
-  width: var(--hero-w-rest);
-  aspect-ratio: calc(1 / var(--hero-aspect));
-  margin: var(--hero-margin) auto 0;
+  height: max(100svh, 50rem);
+  /* Start at the very top, under the floating nav: the layout pads the page for it. */
+  margin-top: calc(-1 * var(--navbar-total-spacing));
   overflow: hidden;
-  background: #0a0b12;
+  /* A row of its own, like the footer's glass: a hard edge on a hairline, not
+     a fade into the page. */
+  border-bottom: 1px solid rgb(255 255 255 / 8%);
+  /* What shows until the glass's still has loaded. */
+  background:
+    linear-gradient(118deg, transparent 38%, rgb(40 90 220 / 16%) 47%, transparent 56%),
+    linear-gradient(118deg, transparent 62%, rgb(20 50 160 / 12%) 70%, transparent 78%),
+    #000;
 
-  @include card-border(var(--hero-radius-rest), 0 8px 24px rgba(0, 0, 0, 0.4));
-
-  /* The tablet band's 15px@1024 anchor makes the rem content stack proportionally
-     larger vs the vw hero than on desktop — drop the phone's rest slice so it
-     clears the CTA (band-wide, since the band is a pure zoom). */
-  @media (min-width: 769px) and (max-width: 1024px) {
-    --phone-y-rest: 41%;
+  /* A portrait tablet gets the desktop layout on a screen far taller than it
+     is designed for: there the hero is as tall as a 16:10 screen that wide
+     would make it, not the whole screen. */
+  @media (min-width: 769px) and (orientation: portrait) {
+    height: max(62.5vw, 56.25rem);
   }
 
+  /* Phones: 1rem is 1/30 of the width here, so these heights follow the
+     width. The cap keeps a tall, narrow screen from opening a gap between the
+     copy and the iPhone. */
   @media (max-width: 768px) {
-    --phone-w-frac: 0.84;
-    --phone-y-rest: 44%;
-    --phone-scale-end: 0.72;
+    height: min(max(100svh, 40rem), 68rem);
+    margin-bottom: 4.5rem;
   }
 }
 
-/* The grid sits over a procedural blue mesh canvas. The canvas is deliberately
-   self-contained in blue-mesh-gradient.tsx, so this layer stays resolution-independent
-   as the hero expands from card to full bleed. */
-.bg {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-}
-
-/* Grain dither over the whole hero: the blurred mesh spans huge near-dark
-   gradients that band in 8-bit; low-opacity tiling noise breaks the bands up
-   (Figma hides the same banding by dithering its renders). Fixed 256px tile so
-   the grain stays pixel-scale while the hero itself scales/animates. Same z as
-   the phone/over-blobs but later in the DOM, so it dithers everything below
-   the content layer. */
-.grain {
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  pointer-events: none;
-  background: url("/hero-grain.svg") repeat;
-  mix-blend-mode: overlay;
-  opacity: 0.5;
-}
-
-.bgGrid {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-}
-
-.glowLeft {
-  top: -11.25rem;
-  left: -37.8125rem;
-}
-
-.glowLeft,
-.glowRight {
-  /* Same recipe as page-glow in _shared.scss: gradient-baked softness, no
-     filter: blur() — the giant blurs stalled Safari for seconds on load. */
-  @include page-glow;
-}
-
-.glowRight {
-
-  /* Inside .followInner (a stacking context): -1 keeps it above the
-     strip's background but under the section content. -18.75rem is exactly the
-     image's blur pad, so the ellipse starts fading right at the strip top. */
-  top: -18.75rem;
-  right: -34.1875rem;
-  z-index: -1;
-}
-
+/* Vertically centred between 141px from the top and 84px from the bottom. */
 .content {
+  @include container;
+
   position: absolute;
-  top: 8%;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 3;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  width: min(53rem, 90%);
-  text-align: center;
-}
-
-.title {
-  margin: 0;
-  color: #fff;
-  font-size: clamp(2.5rem, 5.2vw, 4rem);
-  font-weight: 700;
-  line-height: 1.02;
-  letter-spacing: -0.04em;
-
-  span {
-    display: block;
-  }
-
-  @media (max-width: 768px) {
-    font-size: clamp(1.75rem, 8vw, 2.25rem);
-    line-height: 1.06;
-  }
-}
-
-.sub {
-  margin: 1.75rem 0 0;
-  color: #fff;
-  font-size: 1.25rem;
-  font-weight: 400;
-  line-height: 1.2;
-
-  strong {
-    font-weight: 700;
-  }
-
-  @media (max-width: 768px) {
-    margin-top: 1.25rem;
-    font-size: 1rem;
-  }
-}
-
-.ctaRow {
-  --cta-w: 9.5rem;
-
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  margin-top: 2.5rem;
-
-  @media (max-width: 768px) {
-    --cta-w: 7.5rem;
-
-    gap: 0.75rem;
-    margin-top: 1.5rem;
-  }
-}
-
-.cta {
-  display: block;
-  width: var(--cta-w);
-
-  img {
-    display: block;
-    width: 100%;
-    height: auto;
-  }
-}
-
-.glow {
-  position: absolute;
-  top: 0;
+  top: 8.8125rem;
+  right: 0;
+  bottom: 5.25rem;
   left: 0;
-  z-index: 1;
-  width: 42rem;
-  height: 42rem;
-  margin: -21rem 0 0 -21rem;
-  pointer-events: none;
-  opacity: 0;
-  will-change: transform, opacity;
+  z-index: 2;
+  display: flex;
+  align-items: center;
 
-  /* No filter: blur() here — the softness is baked into the gradient stops.
-     A blur(60px) on this element (blurred box overhanging the hero's top-left
-     corner) corrupts WebKit's tile rasterization on load: iOS/macOS Safari
-     paints a ~1024×1024 garbage square over the hero even though the glow
-     itself is at opacity 0. */
-  background: radial-gradient(
-    circle at center,
-    rgba(255, 255, 255, 0.22) 0%,
-    rgba(255, 255, 255, 0.12) 30%,
-    rgba(255, 255, 255, 0.04) 55%,
-    transparent 72%
-  );
+  /* Phones: the copy at the top, under the floating nav and in line with its
+     logo, and the iPhone rising out of the bottom edge. */
+  @media (max-width: 768px) {
+    top: 0;
+    bottom: 0;
+    width: auto;
+    margin: 0;
+    flex-direction: column;
+    align-items: stretch;
+    padding: calc(var(--navbar-total-spacing) + 2.5rem) $phone-gutter 0;
+  }
 }
 
-/* The glow is a pointer-follow spotlight; without a hover pointer it can never
-   become visible, so don't ship the layer to touch devices at all. */
-@media (hover: none) {
-  .glow {
+.copy {
+  position: relative;
+  z-index: 2;
+  width: 40%;
+
+  /* The scroll cue: a dotted line that rises out of the dark under the
+     buttons and runs off the bottom of the hero, where the intro picks it
+     up, so a full-screen hero shows there is more under it. Clipped at the
+     hero's edge. */
+  &::after {
+    position: absolute;
+    top: calc(100% + 3rem);
+    left: 0;
+    height: 100vh;
+    content: "";
+    mask-image: linear-gradient(to bottom, transparent, #000 4rem);
+
+    @include dotted-line;
+  }
+
+  @media (max-width: 768px) {
+    width: 100%;
+
+    &::after {
+      display: none;
+    }
+  }
+}
+
+.headline {
+  width: 7.7em;
+  margin: 0;
+  font-size: 4rem;
+  font-weight: 500;
+  line-height: 1;
+  letter-spacing: -0.05em;
+  text-wrap: balance;
+  /* A soft dark halo keeps the headline readable over lit ribbons. */
+  text-shadow: 0 0 2rem rgb(0 0 0 / 70%), 0 0 0.5rem rgb(0 0 0 / 50%);
+
+  @media (max-width: 768px) {
+    width: auto;
+    font-size: 3.5rem;
+  }
+}
+
+/* Two flat buttons, one white and one dark glass. On a phone the App Store
+   is the way in: it fills the width, and the Web Companion becomes a text
+   link under it. */
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.625rem;
+  width: max-content;
+  margin-top: 2.25rem;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+    width: auto;
+    margin-top: 2rem;
+  }
+}
+
+.primary {
+  @include glass-button;
+
+  color: #000;
+  background: #fff;
+  border-color: #fff;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+
+  &:hover {
+    background: #e4e5e8;
+    border-color: #e4e5e8;
+  }
+
+  @media (max-width: 768px) {
+    justify-content: center;
+    height: 3.5rem;
+    font-size: 1.25rem;
+  }
+}
+
+.secondary {
+  @include glass-button;
+
+  svg {
+    transition: transform 0.2s ease-out;
+  }
+
+  &:hover svg {
+    transform: translateX(0.15rem);
+  }
+
+  @media (max-width: 768px) {
+    align-self: center;
+    gap: 0.4rem;
+    height: auto;
+    padding: 0.5rem;
+    font-size: 1.125rem;
+    color: rgb(255 255 255 / 72%);
+    background: none;
+    border: 0;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+
+    svg {
+      width: 1rem;
+    }
+  }
+}
+
+/* The secondary button's label: "Get started" beside the App Store button,
+   the longer aside under it on a phone. */
+.wideLabel {
+  @media (max-width: 768px) {
     display: none;
   }
 }
 
-.phoneWrap {
-  position: absolute;
-  top: 0;
-  left: 50%;
-  z-index: 2;
-  width: calc(var(--phone-w-frac) * 100%);
-  transform-origin: top center;
-  /* Static rest position (reduced-motion / no-JS). The animated path overrides
-     transform inline via the motion template. */
-  transform: translateX(-50%) translateY(var(--phone-y-rest));
-}
+.narrowLabel {
+  display: none;
 
-/* Carries the entrance so the still and the loop rise together as one object;
-   animating them separately drifts the loop off the screen area mid-flight. */
-.phoneFrame {
-  position: relative;
-  display: block;
-
-  @media (prefers-reduced-motion: no-preference) {
-    animation: phone-enter 1.7s cubic-bezier(0.22, 1, 0.36, 1) 0.45s backwards;
+  @media (max-width: 768px) {
+    display: inline;
   }
 }
 
-.phone {
+/* ── The product: the Web Companion behind, the iPhone in front ── */
+.media {
+  position: absolute;
+  top: 50%;
+  left: 46%;
+  width: 71.75rem;
+  height: 41rem; /* 656px */
+  transform: translateY(-50%);
+
+  @media (max-width: 1024px) {
+    left: 50%;
+  }
+
+  /* Phones show the iPhone alone, placed against the content box. */
+  @media (max-width: 768px) {
+    position: static;
+    width: auto;
+    height: auto;
+    transform: none;
+  }
+}
+
+/* The Web Companion as a window of our own, like the agent demo's below:
+   the site's card border (a hairline with a lit top edge) on rounded
+   corners, over a deep shadow. The border is drawn over the screenshot, or
+   the image would cover its inset highlight. */
+.frame {
+  position: absolute;
+  top: 0;
+  left: 9rem;
+  width: 56.375rem; /* 902px */
+  overflow: hidden;
+  border-radius: 0.875rem;
+  box-shadow: 0 3rem 4rem 1rem rgb(0 0 0 / 50%);
+
+  &::after {
+    position: absolute;
+    inset: 0;
+    content: "";
+    pointer-events: none;
+
+    @include card-border(0.875rem);
+  }
+
+  @media (max-width: 768px) {
+    display: none;
+  }
+}
+
+.webCompanion {
   display: block;
   width: 100%;
   height: auto;
-  /* Above the absolutely-positioned screen, so the bezel, buttons and Dynamic
-     Island composite over it. */
-  position: relative;
+}
+
+/* The iPhone stands in front of the frame's lower-left corner and runs past
+   its bottom edge, so the two read as layers rather than side by side. */
+.phone {
+  position: absolute;
+  bottom: 0;
+  left: 0;
   z-index: 1;
+  width: 15rem;
+  aspect-ratio: 1300 / 2650;
+
+  /* The shadow sits on a rounded plate behind the phone: the frame image is
+     transparent around its corners, so a box-shadow on it would be square. */
+  &::before {
+    position: absolute;
+    inset: 1% 2%;
+    border-radius: 15% / 7.4%;
+    box-shadow: 0 3rem 4rem 1rem rgb(0 0 0 / 55%);
+    content: "";
+  }
+
+  /* On a phone it stands alone, large, rising out of the bottom edge: its
+     top two thirds (30rem) show, the rest runs off the hero. On a screen that
+     is wide for its height, like a small tablet, it stops just under the copy
+     (which ends near 24rem) and shows less. */
+  @media (max-width: 768px) {
+    top: max(28.5rem, 100% - 30rem);
+    bottom: auto;
+    left: 50%;
+    width: 22rem;
+    transform: translateX(-50%);
+  }
 }
 
 /* The display aperture of hero-phone-frame.webp, measured from its alpha
    channel: x 28-1271 and y 26-2631 of a 1300x2650 canvas, corner radius 179px.
-   The radius is reproduced here rather than left to the frame: the frame is
-   transparent OUTSIDE the phone as well as inside the display, so it masks
-   nothing — square video corners poked out past the rounded rim.
-   The frame draws no Dynamic Island, on purpose: iOS bakes one into the
-   capture, and two islands never line up. */
+   `fill`, not `cover`: the aperture is 0.4774 where a 19.5:9 capture is 0.460,
+   so cover would crop the floating tab bar off the bottom. */
 .phoneScreen {
   position: absolute;
   top: 0.9811%;
   left: 2.1538%;
   width: 95.6923%;
   height: 98.3396%;
-  border-radius: 14.39% / 6.87%;
-  /* `fill`, not `cover`: this aperture is 0.4774 where a 19.5:9 capture is
-     0.460, so cover would scale the capture to the aperture's width and crop
-     ~3.6% off the bottom — taking the floating tab bar with it. Stretching by
-     that 3.6% keeps the whole screen. Once the aperture matches the capture's
-     aspect this can go back to cover. */
   object-fit: fill;
-  overflow: hidden;
-  pointer-events: none;
+  border-radius: 14.39% / 6.87%;
 }
 
-@keyframes phone-enter {
-  from {
-    transform: translateY(40%) scale(1.3);
-    filter: blur(18px);
-    opacity: 0;
-  }
-}
-
-/* Progressive blur anchored to the hero bottom (shared blur-fade mixins).
-   Sits above the phone by design. */
-.fade {
-  @include blur-fade-bottom;
-}
-
-.fadeLayer {
-  @include blur-fade-layers;
+.phoneFrame {
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: 100%;
+  height: auto;
 }

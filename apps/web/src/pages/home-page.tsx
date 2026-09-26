@@ -1,8 +1,7 @@
 import { Hero } from "../components/marketing/hero/hero"
-import { UspSection } from "../components/marketing/usp-section/usp-section"
+import { IntroSection } from "../components/marketing/intro-section/intro-section"
 import { HighlightSection } from "../components/marketing/highlight-section/highlight-section"
 import { ExtendSection } from "../components/marketing/extend-section/extend-section"
-import { BrowserSection } from "../components/marketing/browser-section/browser-section"
 import { StructuredData } from "../components/marketing/structured-data"
 import { appStoreUrl } from "../components/marketing/store-links"
 
@@ -168,12 +167,10 @@ export function HomePage() {
   return (
     <>
       <StructuredData data={homePageStructuredData} />
-      <Hero>
-        <UspSection />
-        <HighlightSection />
-        <ExtendSection />
-        <BrowserSection />
-      </Hero>
+      <Hero />
+      <IntroSection />
+      <HighlightSection />
+      <ExtendSection />
     </>
   )
 }
