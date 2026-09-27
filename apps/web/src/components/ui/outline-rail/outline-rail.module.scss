@@ -14,6 +14,13 @@
 }
 
 .rail {
+  /* The rail's vertical rhythm, declared once and read by both the marks that
+     set it and the card that has to land on one of them. The card is placed by
+     arithmetic over these two numbers rather than by measuring the mark it
+     belongs to: a measurement would mean a layout read between the pointer
+     arriving and the card following it. */
+  --mark-height: 0.9rem;
+  --mark-gap: 0.45rem;
   position: absolute;
   /* Out past the article's own measure, into the gutter. The article keeps its
      44rem and the rail never narrows it. */
@@ -27,14 +34,13 @@
   /* The marks grow to the right from one left edge, so the taper reads as a
      shape rather than as marks of random length. */
   align-items: flex-start;
-  gap: 0.45rem;
+  gap: var(--mark-gap);
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
 .item {
-  position: relative;
   display: flex;
 }
 
@@ -46,7 +52,7 @@
   align-items: center;
   justify-content: flex-start;
   width: 2.25rem;
-  height: 0.9rem;
+  height: var(--mark-height);
   padding: 0;
   border: 0;
   border-radius: 2px;
@@ -82,17 +88,66 @@
   outline-offset: 3px;
 }
 
-/* What the mark stands for, on hover and on focus alike: the keyboard has to
-   be able to read the rail, not only walk it. */
+/* The deck: a box of no height parked on the centre of the mark the pointer
+   is on, with the cards placed around that origin.
+
+   No height on purpose. Centring the deck itself would put the card in front
+   off its own mark whenever a neighbour was missing — at the first and the
+   last section of every article — and the card would jump as the reader
+   reached either end. With the origin fixed, the front card is on its mark
+   whatever is stacked behind it. */
+.deck {
+  /* Stated rather than left to the content, because the cards behind are
+     placed from these numbers. A card that grew with its excerpt would take
+     its neighbours with it and the deck would breathe as the reader moved. */
+  --card-height: 6rem;
+  --peek-height: 2rem;
+  /* How much of a neighbour the card in front covers: half of it. */
+  --peek-overlap: 1rem;
+  --deck-y: calc(
+    (var(--mark-height) + var(--mark-gap)) * var(--pointed-index, 0) +
+      var(--mark-height) / 2
+  );
+  position: absolute;
+  top: 0;
+  left: calc(100% + 0.25rem);
+  width: 17rem;
+  height: 0;
+  opacity: 0;
+  pointer-events: none;
+  /* Arrives from behind the rail rather than over the article. */
+  translate: -0.35rem var(--deck-y);
+  transition: opacity 140ms ease-out;
+}
+
+.deck[data-shown] {
+  opacity: 1;
+  translate: 0 var(--deck-y);
+}
+
+/* The slide, and only between two marks the deck is already standing on. The
+   position and the fade are set on the same render, so a deck that always
+   transitioned its place crossed the whole rail as it appeared — measured at
+   281px of travel on the way in, which read as the card being thrown at the
+   mark rather than waiting there. */
+.deck[data-travelling] {
+  transition:
+    opacity 140ms ease-out,
+    translate 200ms cubic-bezier(0.22, 0.61, 0.36, 1);
+}
+
+/* The section the pointer is on, in front and on its mark. */
 .card {
   position: absolute;
-  top: 50%;
-  left: calc(100% + 0.25rem);
-  z-index: 1;
+  top: calc(var(--card-height) / -2);
+  right: 0;
+  left: 0;
+  z-index: 2;
   display: flex;
+  overflow: hidden;
   flex-direction: column;
   gap: 0.3rem;
-  width: 17rem;
+  height: var(--card-height);
   padding: 0.7rem 0.85rem;
   border: 1px solid var(--border);
   border-radius: 0.75rem;
@@ -103,19 +158,49 @@
      words on it. */
   background: var(--panel-muted);
   box-shadow: 0 12px 32px var(--shadow);
-  opacity: 0;
-  pointer-events: none;
-  /* Arrives from behind its mark rather than appearing over the article. */
-  translate: -0.35rem -50%;
-  transition:
-    opacity 140ms ease-out,
-    translate 140ms ease-out;
 }
 
-.item:hover .card,
-.mark:focus-visible ~ .card {
-  opacity: 1;
-  translate: 0 -50%;
+/* A neighbouring section: its name, and nothing else. Half of it is behind the
+   card in front, so an excerpt would be cut through the middle of a sentence —
+   and all the reader wants from it is which section lies that way.
+
+   Inset from the card rather than scaled down: a transform would resample the
+   text on it, and a name that has gone soft reads as out of focus rather than
+   as further back. */
+.peek {
+  position: absolute;
+  right: 0.45rem;
+  left: 0.45rem;
+  z-index: 1;
+  display: flex;
+  overflow: hidden;
+  height: var(--peek-height);
+  padding: 0 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: 0.65rem;
+  background: var(--panel-muted);
+  color: var(--muted);
+  font-size: 0.8125rem;
+}
+
+/* Each neighbour keeps its name in the strip of itself that shows, which is
+   the top of the one above and the bottom of the one below. */
+.peekBefore {
+  top: calc(var(--card-height) / -2 - var(--peek-height) + var(--peek-overlap));
+  align-items: flex-start;
+  padding-top: 0.15rem;
+}
+
+.peekAfter {
+  top: calc(var(--card-height) / 2 - var(--peek-overlap));
+  align-items: flex-end;
+  padding-bottom: 0.15rem;
+}
+
+.peekLabel {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 .cardTitle {
@@ -136,20 +221,53 @@
   font-size: 0.8125rem;
   line-height: 1.45;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
+  -webkit-line-clamp: 2;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .tick,
-  .card {
+  .deck,
+  .deck[data-travelling] {
     transition: none;
   }
 }
 
-/* The rail lives in a gutter, so it needs one. Below this the article has the
-   pane to itself and there is nowhere to stand that is not over the words, so
-   the rail leaves rather than narrowing the column it is there to serve. */
-@container reader-pane (max-width: 52rem) {
+/* The rail needs a gutter to stand in, and beside a 44rem article there is
+   one only on a very wide window: in the three-pane layout the pane is the
+   viewport less 47rem of sidebar and article list, so a 1440px window leaves
+   43rem — narrower than the article's own measure, with no gutter at all. The
+   rail was therefore absent from the widths most people read at.
+
+   The gutter is made rather than found, by holding the article to `100% - 8rem`
+   (see reader-page.module.scss). Room has to come from somewhere, and 44rem is
+   the generous end of a comfortable measure: 1440px gives 35rem of prose,
+   about seventy characters, with 4rem of margin either side. The rail stands
+   in the left one at its full size. Squeezing it into the pane's 2rem inset
+   instead was tried and put two-pixel marks four pixels from the first letter
+   of every line, where they read as something broken rather than as a rail.
+
+   Below this the article cannot give up 8rem and still be worth reading, so
+   the rail goes and the prose takes the width back. */
+@container reader-pane (max-width: 38rem) {
+  .anchor {
+    display: none;
+  }
+}
+
+/* The inset itself drops to 1.25rem here and the sidebar becomes a sheet, so
+   there is no longer a margin to stand in. Matches the breakpoint in
+   styles.css that moves it. */
+@media (max-width: 768px) {
+  .anchor {
+    display: none;
+  }
+}
+
+/* A mark is two pixels of ink in a 14px target, which is a pointer's business
+   and not a finger's. Touch needs its own way into an Article Outline — a
+   sheet of sections rather than a rail — and half a rail is worse than none
+   while that does not exist. */
+@media (pointer: coarse) {
   .anchor {
     display: none;
   }
