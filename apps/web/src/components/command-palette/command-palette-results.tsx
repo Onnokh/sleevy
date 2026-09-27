@@ -5,7 +5,7 @@ import { Folder as FolderIcon, Hash, Inbox, Keyboard, Library, ListChecks, Monit
 import type { Folder } from "../../sleevy/folders"
 import type { SavedItem } from "../../sleevy/saved-items"
 
-type ModifierKey = "Ctrl" | "Cmd"
+type ModifierKey = string
 type FilterCount = readonly [string, number]
 
 const ICON_SIZE = 14

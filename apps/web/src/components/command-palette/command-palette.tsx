@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { detectPlatform } from "@tanstack/react-hotkeys"
 import { CommandDialog, CommandGroup, CommandInput, CommandList, useCommandState } from "cmdk"
 import { useRouter } from "@tanstack/react-router"
 import { Description as DialogDescription, Title as DialogTitle } from "@radix-ui/react-dialog"
@@ -7,6 +8,7 @@ import { Search } from "lucide-react"
 import { CaptureCommandItem } from "../capture-command-item/capture-command-item"
 import { CommandPaletteResults } from "./command-palette-results"
 import { useKeyboardNav } from "../../contexts/keyboard-nav-context"
+import { hotkeyLabel } from "../../hooks/use-hotkey-label"
 import { useTheme } from "../../contexts/theme-context"
 import { useCapture, useSavedItems } from "../../sleevy/saved-items"
 import { useFolders } from "../../sleevy/folders"
@@ -15,7 +17,8 @@ import { useSourceFilter } from "../source-filter/source-filter"
 import { getSourceGroup } from "../source-filter/source-filter-utils"
 import "./command-palette.scss"
 
-type ModifierKey = "Ctrl" | "Cmd"
+/** The held modifier, named as this keyboard names it: `⌘` on a Mac, `Ctrl` on Windows. */
+type ModifierKey = string
 const EMPTY_ITEMS: never[] = []
 
 function isUrl(value: string): boolean {
@@ -66,9 +69,10 @@ function useHeldModifier(paletteOpen: boolean): ModifierKey | null {
       setModifierKey((currentModifier) => currentModifier === nextModifier ? currentModifier : nextModifier)
     }
 
+    const platform = detectPlatform()
     const modifierFromEvent = (event: KeyboardEvent) => {
-      if (event.metaKey) return "Cmd"
-      if (event.ctrlKey) return "Ctrl"
+      if (event.metaKey) return hotkeyLabel("Meta", platform)
+      if (event.ctrlKey) return hotkeyLabel("Control", platform)
       return null
     }
 

@@ -3,6 +3,7 @@ import clsx from "clsx"
 import { Check, QrCode, X } from "lucide-react"
 import { m } from "motion/react"
 
+import { useHotkeyLabel } from "../../hooks/use-hotkey-label"
 import type { GettingStartedStep, GettingStartedStepKey } from "../../sleevy/onboarding"
 import { IphoneHandOff } from "./iphone-hand-off"
 import styles from "./getting-started-card.module.scss"
@@ -17,6 +18,8 @@ type StepCopy = {
 const kbd = (...keys: string[]) => (
   <span className={styles.keys}>{keys.map((key) => <kbd key={key}>{key}</kbd>)}</span>
 )
+
+const PaletteKeys = () => kbd(useHotkeyLabel("Mod+K"))
 
 const STEP_COPY: Record<GettingStartedStepKey, StepCopy> = {
   save: {
@@ -35,7 +38,7 @@ const STEP_COPY: Record<GettingStartedStepKey, StepCopy> = {
     title: "Find anything",
     todo: "Search, jump, and save from one place.",
     done: "The Command Palette is always one key away.",
-    marker: kbd("⌘K"),
+    marker: <PaletteKeys />,
   },
   iphone: {
     title: "Get Sleevy on your iPhone",
