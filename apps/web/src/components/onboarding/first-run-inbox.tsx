@@ -2,6 +2,7 @@ import { type FormEvent, useEffect, useRef } from "react"
 import { Link2 } from "lucide-react"
 import { m } from "motion/react"
 
+import { useHotkeyLabel } from "../../hooks/use-hotkey-label"
 import { type SavedItem, useCapture } from "../../sleevy/saved-items"
 import styles from "./first-run-inbox.module.scss"
 
@@ -16,6 +17,8 @@ const GHOST_TITLE_WIDTHS = ["46%", "58%", "38%", "50%"] as const
  */
 export function FirstRunInbox({ onCaptured }: { readonly onCaptured: (savedItem: SavedItem) => void }) {
   const capture = useCapture()
+  const pasteKeys = useHotkeyLabel("Mod+V")
+  const paletteKeys = useHotkeyLabel("Mod+K")
   const inputRef = useRef<HTMLInputElement>(null)
   const hasUrl = capture.url.trim().length > 0
 
@@ -58,7 +61,7 @@ export function FirstRunInbox({ onCaptured }: { readonly onCaptured: (savedItem:
             {capture.isPending ? "Saving..." : <>Save <kbd>↵</kbd></>}
           </button>
         ) : (
-          <kbd className={styles.key}>⌘V</kbd>
+          <kbd className={styles.key}>{pasteKeys}</kbd>
         )}
       </m.form>
 
@@ -70,7 +73,7 @@ export function FirstRunInbox({ onCaptured }: { readonly onCaptured: (savedItem:
         </p>
         <span className={styles.keys}>
           <span><kbd className={styles.key}>n</kbd> capture</span>
-          <span><kbd className={styles.key}>⌘K</kbd> search and commands</span>
+          <span><kbd className={styles.key}>{paletteKeys}</kbd> search and commands</span>
         </span>
       </div>
 
