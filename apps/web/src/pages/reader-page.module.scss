@@ -1,7 +1,39 @@
 .page {
-  max-width: 44rem;
+  /* The measure, and the margin the Outline Rail stands in.
+
+     44rem is the article's width wherever the pane can hold it with room to
+     spare. Where it cannot, the article gives up the difference rather than
+     running edge to edge: 8rem held back is 4rem of margin either side, which
+     is what the rail needs on the left and what keeps the column centred on
+     the right. A 1440px window lands at 35rem of prose — about seventy
+     characters, and a better measure than the 44rem it replaces.
+
+     Held back at every width the rail appears at, whether or not this article
+     has an outline. Reserving it only for articles that do would move the
+     column from one article to the next, and a reader stepping down the list
+     would watch the text change width under them. */
+  max-width: min(44rem, 100% - 8rem);
   margin: 0 auto;
   padding-bottom: 6rem;
+}
+
+/* No rail below this, so nothing to hold room for. */
+@container reader-pane (max-width: 38rem) {
+  .page {
+    max-width: 44rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .page {
+    max-width: 44rem;
+  }
+}
+
+@media (pointer: coarse) {
+  .page {
+    max-width: 44rem;
+  }
 }
 
 /* The navigation line: the way back on the left, the way out on the right. */
@@ -88,6 +120,17 @@
   h5,
   h6 {
     margin: 2.5rem 0 0.85rem;
+    /* Clearance for the Outline Rail, which brings a heading to the top of the
+       pane. `block: "start"` parks it flush against that edge, under the
+       pinned title bar travelling over it and half dissolved by the bar's
+       fade — the reader jumps to a section and lands on the paragraph above
+       its name.
+
+       It has to stay under READING_LINE in use-outline-position.ts. A heading
+       that comes to rest below the reading line has not reached its own
+       section yet, so the rail would send the reader to a section and then
+       leave the mark for the previous one lit. */
+    scroll-margin-top: 5.5rem;
     color: var(--text);
     font-weight: 600;
     letter-spacing: -0.02em;
