@@ -477,6 +477,31 @@ export namespace ProfileVisibilityPayload {
   export type Encoded = Schema.Codec.Encoded<typeof ProfileVisibilityPayload>
 }
 
+// What one Account has done with the Web Companion's first-run help: the
+// Getting Started Card and the iPhone Card. Kept on the Account, so putting a
+// card away on one computer puts it away on every other one too. Every flag
+// starts false and records only that the thing happened.
+export class OnboardingDto extends Schema.Class<OnboardingDto>("OnboardingDto")({
+  gettingStartedDismissed: Schema.Boolean,
+  commandPaletteOpened: Schema.Boolean,
+  iphoneHandOffSeen: Schema.Boolean,
+  iphoneCardDismissed: Schema.Boolean,
+}) {}
+export namespace OnboardingDto {
+  export type Encoded = Schema.Codec.Encoded<typeof OnboardingDto>
+}
+
+// A change to some of those flags. A flag that is left out keeps its value.
+export class OnboardingPayload extends Schema.Class<OnboardingPayload>("OnboardingPayload")({
+  gettingStartedDismissed: Schema.optional(Schema.Boolean),
+  commandPaletteOpened: Schema.optional(Schema.Boolean),
+  iphoneHandOffSeen: Schema.optional(Schema.Boolean),
+  iphoneCardDismissed: Schema.optional(Schema.Boolean),
+}) {}
+export namespace OnboardingPayload {
+  export type Encoded = Schema.Codec.Encoded<typeof OnboardingPayload>
+}
+
 export class HandleAvailabilityQuery extends Schema.Class<HandleAvailabilityQuery>(
   "HandleAvailabilityQuery",
 )({

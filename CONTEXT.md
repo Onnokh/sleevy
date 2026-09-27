@@ -380,8 +380,28 @@ The native iOS tab label for the Inbox.
 _Avoid_: Queue Tab, Library Tab
 
 **All Caught Up**:
-The empty Inbox state shown when there are no unread Saved Items.
+The empty Inbox state shown when an Account has Saved Items but none of them is unread.
 _Avoid_: Empty library, no saved items
+
+**First-Run Inbox**:
+The Inbox of an Account that has no Saved Items at all, which asks for the first link with Manual URL Capture as its first row instead of showing All Caught Up.
+_Avoid_: Empty state, welcome screen, onboarding screen
+
+**Enrichment Reveal**:
+The first Saved Item made from the First-Run Inbox, shown large while it is enriched: a timed reveal of its real fields — the page fetched, then read, then its Preview Summary and Tags — that then folds into its Inbox row.
+_Avoid_: Enrichment progress, Enrichment Job stages, loading animation
+
+**Getting Started Card**:
+A four-step card above the Web Companion Inbox for a new Account: save a link, open it, open the Command Palette, and save from the iPhone. Each step checks itself off from what the person did, and the card can be put away and brought back from the Command Palette.
+_Avoid_: Checklist, onboarding wizard, product tour
+
+**iPhone Hand-off**:
+The Web Companion dialog that sends a desktop reader to the Native iOS App: a QR code to the App Store listing, how saving from the share sheet works, and a reminder to sign in with the same Account.
+_Avoid_: Download modal, app promo, install prompt
+
+**iPhone Card**:
+A small card at the foot of the Web Companion sidebar that invites an Account with no Saved Items from the iPhone to get the Native iOS App. It opens the iPhone Hand-off, and its close button hides it for good.
+_Avoid_: Banner, upsell, app promo
 
 **Unread-Only Inbox**:
 An Inbox behavior where read Saved Items leave the Home Tab and remain available in the Library.
@@ -559,6 +579,13 @@ _Avoid_: Deep link, route argument, UI test step
 - The **Home Tab** shows the full **Unread Backlog**, not a capped preview.
 - The **Home Tab** surfaces the **Unread Backlog** count as lightweight navigation context.
 - The **Home Tab** shows **All Caught Up** when the **Unread Backlog** is empty.
+- The **Web Companion** Inbox shows the **First-Run Inbox** instead of **All Caught Up** while the Account has no **Saved Items** at all.
+- An **Enrichment Reveal** chooses its stage from the fields the **Saved Item** has, never from **Enrichment Job** stages, and holds each stage long enough to be seen, because shared **Enrichment** can arrive already finished for a **Link** saved before.
+- An **Enrichment Reveal** that ends with no **Preview Summary** and no **Tags** ends quietly on "Saved", as a failed **Enrichment** shows no error.
+- The **Getting Started Card** is shown only to an **Account** less than 14 days old, after its first **Saved Item**. Saving, opening, and saving from the iPhone are read from the **Saved Items** and their **Capture Channel**.
+- What no **Saved Item** can tell — the **Getting Started Card** put away, the **Command Palette** opened, the **iPhone Hand-off** seen, the **iPhone Card** hidden — is kept on the **Account** through the session-only `/v1/onboarding` endpoint, so it holds on every computer the person signs in on.
+- Closing the **iPhone Hand-off**, or checking its step off by hand, finishes the iPhone step of the **Getting Started Card**, because seeing the code is as far as a computer can take it; a save from the iPhone finishes it too.
+- The **iPhone Card** stays hidden while a new **Account** still has the iPhone step open on its **Getting Started Card**, so one screen never asks twice.
 - The **Unread Widget** shows the **Unread Backlog** count and its newest **Saved Items**, for the whole **Inbox** or one **Folder**, from the **Unread Backlog Snapshot**, which the **Native iOS App** publishes each time the **Inbox** or the **Folder** list changes and clears on sign-out.
 - A **Widget Row Tap** marks the **Saved Item** read through the shared read-state queue and opens its **Original URL** directly; the **Native iOS App** sends the **Read State** to the REST API on its next sync. A tap on the widget's count panel is a **Deep Link** to the **Inbox** or the **Folder View**.
 - The **Home Tab** keeps **Clipboard Capture** in v1 because new captures enter the unread triage flow.

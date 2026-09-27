@@ -1,6 +1,6 @@
 import type { ComponentProps } from "react"
 import { CommandGroup, CommandItem, useCommandState } from "cmdk"
-import { Folder as FolderIcon, Hash, Inbox, Keyboard, Library, Monitor, Plus, RotateCcw, Rss, Settings } from "lucide-react"
+import { Folder as FolderIcon, Hash, Inbox, Keyboard, Library, ListChecks, Monitor, Plus, RotateCcw, Rss, Settings } from "lucide-react"
 
 import type { Folder } from "../../sleevy/folders"
 import type { SavedItem } from "../../sleevy/saved-items"
@@ -15,6 +15,7 @@ const COMMAND_VALUES = {
   settings: "nav:settings",
   captureUrl: "action:capture-url",
   keyboardShortcuts: "action:keyboard-shortcuts",
+  gettingStarted: "action:getting-started",
   themeToggle: "theme:toggle",
 } as const
 
@@ -82,6 +83,8 @@ type Props = {
   readonly onToggleTheme: () => void
   readonly onOpenCapture: () => void
   readonly onOpenKeyboardHelp: () => void
+  /** Present while the Account is new enough for the Getting Started Card. */
+  readonly onShowGettingStarted?: (() => void) | undefined
   readonly onApplyTag: (tag: string) => void
   readonly onApplySource: (source: string) => void
   readonly onResetFilters: () => void
@@ -102,6 +105,7 @@ export function CommandPaletteResults({
   onToggleTheme,
   onOpenCapture,
   onOpenKeyboardHelp,
+  onShowGettingStarted,
   onApplyTag,
   onApplySource,
   onResetFilters,
@@ -168,6 +172,13 @@ export function CommandPaletteResults({
         <div className="cmdk-item-text"><span className="cmdk-item-title">Keyboard Shortcuts</span></div>
         <CommandItemMeta action="Action" modifierKey={modifierKey} shortcut={shortcutForValue(COMMAND_VALUES.keyboardShortcuts, modifierKey ?? "Ctrl")} />
         </CommandItem>
+        {onShowGettingStarted ? (
+          <CommandItem value={COMMAND_VALUES.gettingStarted} keywords={["getting started", "onboarding", "checklist", "help"]} onSelect={onShowGettingStarted}>
+          <ListChecks size={ICON_SIZE} className="cmdk-icon" />
+          <div className="cmdk-item-text"><span className="cmdk-item-title">Getting started</span></div>
+          <CommandItemMeta action="Action" modifierKey={modifierKey} shortcut={null} />
+          </CommandItem>
+        ) : null}
       </CommandGroup>
 
       <CommandGroup heading="Filters">
