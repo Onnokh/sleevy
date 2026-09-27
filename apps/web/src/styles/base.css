@@ -17,6 +17,11 @@
   --danger-panel: #fff1f1;
   --overlay: rgba(0, 0, 0, 0.42);
   --shadow: rgba(20, 20, 20, 0.16);
+  /* The one accent: Sleevy blue, from the brand mesh. Kept for the moments
+     that show Sleevy doing something for the reader, so it keeps meaning. */
+  --highlight: #2f67d8;
+  --highlight-soft: rgba(47, 103, 216, 0.1);
+  --highlight-line: rgba(47, 103, 216, 0.32);
 }
 
 [data-theme="dark"] {
@@ -38,6 +43,9 @@
   --danger-panel: #170e0f;
   --overlay: rgba(0, 0, 0, 0.5);
   --shadow: rgba(0, 0, 0, 0.4);
+  --highlight: #6ea0ff;
+  --highlight-soft: rgba(110, 160, 255, 0.08);
+  --highlight-line: rgba(110, 160, 255, 0.3);
 }
 
 * { box-sizing: border-box; }

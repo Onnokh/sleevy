@@ -245,7 +245,7 @@ struct LibraryView: View {
         // One shared distance between the large title and the first content,
         // matched with Settings so the screens share a rhythm.
         .contentMargins(.top, ScreenLayout.contentTopSpacing, for: .scrollContent)
-        .background(Color(uiColor: .systemBackground))
+        .background(Color(.appBackground))
     }
 
 }

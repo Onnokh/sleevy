@@ -1,0 +1,137 @@
+@use "../marketing/shared" as *;
+
+/* A small piece of the homepage: its glass, still, behind a dark shade, with
+   the homepage card edge. Always dark, like the glass it shows. */
+.card {
+  @include card-border(0.75rem);
+
+  position: relative;
+  overflow: hidden;
+  background: #08090c;
+  color: #fff;
+  color-scheme: dark;
+}
+
+/* The still of the hero's glass, not the live shader: a sidebar is always on
+   screen, and a GPU loop in it would never stop. Its lit end is on the right,
+   under the shade's light side; the screen-door grid is the hero's. */
+.glass {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(to right, rgb(0 0 0 / 25%) 1px, transparent 1px) 0 0 / 4px 4px,
+    linear-gradient(to bottom, rgb(0 0 0 / 25%) 1px, transparent 1px) 0 0 / 4px 4px,
+    linear-gradient(90deg, rgb(8 9 12 / 80%) 0%, rgb(8 9 12 / 45%) 60%, rgb(8 9 12 / 15%) 100%),
+    url("/glass-still-wide.webp") 70% 50% / auto 260% no-repeat;
+  transition: opacity 200ms ease;
+  pointer-events: none;
+}
+
+.open {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.625rem 2rem 0.625rem 0.625rem;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid rgb(255 255 255 / 60%);
+    outline-offset: -2px;
+    border-radius: 0.75rem;
+  }
+}
+
+.card:hover .glass {
+  opacity: 0.85;
+}
+
+/* The app's own icon, the one it has on the Home Screen, with the corner an
+   iOS icon has at this size and the image outline every picture gets. */
+.icon {
+  display: block;
+  flex-shrink: 0;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 0.5rem;
+  outline: 1px solid oklch(1 0 0 / 0.1);
+  outline-offset: -1px;
+}
+
+.text {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1875rem;
+  min-width: 0;
+}
+
+.eyebrow {
+  color: rgb(255 255 255 / 62%);
+  font-size: 0.6875rem;
+  font-weight: 500;
+}
+
+.title {
+  overflow: hidden;
+  font-size: 0.875rem;
+  font-weight: 500;
+  letter-spacing: -0.015em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Shown on hover, and to the keyboard, so the card reads as an invitation
+   rather than as something to put away. */
+.close {
+  position: absolute;
+  top: 0.375rem;
+  right: 0.375rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  padding: 0;
+  border: 1px solid rgb(255 255 255 / 14%);
+  border-radius: 999px;
+  background: rgb(8 10 16 / 70%);
+  color: rgb(255 255 255 / 75%);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 140ms ease, background-color 140ms ease;
+
+  /* A target larger than the mark. */
+  &::before {
+    position: absolute;
+    inset: -0.5rem;
+    content: "";
+  }
+
+  &:hover {
+    background: rgb(40 42 50 / 90%);
+    color: #fff;
+  }
+
+  &:focus-visible {
+    opacity: 1;
+    outline: 2px solid rgb(255 255 255 / 60%);
+    outline-offset: 1px;
+  }
+}
+
+.card:hover .close,
+.card:focus-within .close {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .close {
+    opacity: 1;
+  }
+}

@@ -32,7 +32,7 @@ struct FolderLibraryView: View {
             )
         }
         // Outside the header-card background, so the card paints on top of it.
-        .background(Color(uiColor: .systemBackground))
+        .background(Color(.appBackground))
         .navigationTitle(currentFolder.name)
         .navigationBarTitleDisplayMode(.large)
         .toolbar {

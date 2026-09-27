@@ -1,0 +1,342 @@
+$ease: cubic-bezier(0.2, 0, 0, 1);
+$fold: 600ms;
+
+.reveal {
+  display: flex;
+  flex-direction: column;
+}
+
+.card {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 1.25rem;
+  margin: 0;
+  padding: 1.25rem 1.375rem;
+  /* A frame drawn inside the box, so it takes no room: the folded card has to
+     measure exactly what the row it becomes measures. */
+  box-shadow: inset 0 0 0 1px var(--highlight-line);
+  background: var(--highlight-soft);
+  overflow: hidden;
+  transition-property: margin, padding, gap, background-color, box-shadow;
+  transition-duration: $fold;
+  transition-timing-function: $ease;
+
+  /* Folding into the Inbox row it becomes: the row's inset, padding and
+     spacing, with no fill and no frame. */
+  &[data-folding] {
+    align-items: center;
+    gap: 0.625rem;
+    margin: 0 -0.5rem;
+    padding: 0.625rem 0.5rem;
+    box-shadow: inset 0 0 0 1px transparent;
+    background: transparent;
+
+    .body {
+      gap: 0.0625rem;
+    }
+
+    .titleStack {
+      min-height: 1.125rem;
+    }
+
+    .title {
+      font-size: 0.875rem;
+      line-height: 1.125rem;
+    }
+
+    .meta {
+      color: var(--faint);
+      font-size: 0.75rem;
+      line-height: 0.9375rem;
+    }
+  }
+}
+
+/* Old content and new share one cell, so a crossfade never moves anything. */
+.stack {
+  display: grid;
+  align-items: center;
+
+  > * {
+    grid-area: 1 / 1;
+  }
+}
+
+.favicon {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border-radius: 6px;
+  background: var(--panel-muted);
+  object-fit: contain;
+}
+
+.body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.375rem;
+  min-width: 0;
+  transition: gap $fold $ease;
+}
+
+.titleStack {
+  composes: stack;
+  min-height: 1.375rem;
+  transition: min-height $fold $ease;
+}
+
+.title {
+  overflow: hidden;
+  color: var(--text);
+  font-size: 1.0625rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.375rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition-property: font-size, line-height;
+  transition-duration: $fold;
+  transition-timing-function: $ease;
+}
+
+.meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--muted);
+  font-size: 0.8125rem;
+  line-height: 1.125rem;
+  white-space: nowrap;
+  transition-property: color, font-size, line-height;
+  transition-duration: $fold;
+  transition-timing-function: $ease;
+}
+
+.type {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+}
+
+/* The summary and the Tags, in a box that can give its height back. */
+.details {
+  overflow: hidden;
+}
+
+.summary,
+.summaryBars {
+  min-height: 2.75rem;
+  margin: 0;
+  padding-top: 0.625rem;
+}
+
+.summary {
+  color: var(--text);
+  font-size: 0.9375rem;
+  line-height: 1.45;
+  opacity: 0.86;
+  text-wrap: pretty;
+}
+
+.word {
+  display: inline-block;
+  white-space: pre;
+}
+
+.summaryBars {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.625rem;
+
+  .bar:last-child {
+    width: 64%;
+  }
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  min-height: 1.625rem;
+  margin: 0;
+  padding: 0.625rem 0 0;
+  list-style: none;
+}
+
+.tag {
+  padding: 0.1875rem 0.6875rem;
+  border-radius: 999px;
+  background: var(--highlight-soft);
+  box-shadow: inset 0 0 0 1px var(--highlight-line);
+  color: var(--highlight);
+  font-size: 0.8125rem;
+  line-height: 1.25rem;
+}
+
+/* A soft light sweeping across, rather than a blink: the placeholder reads as
+   something being worked on. The light is a moving layer, so the sweep stays
+   on the compositor instead of repainting the bar every frame. */
+@mixin shimmer {
+  position: relative;
+  overflow: hidden;
+  background: var(--panel-muted);
+
+  &::after {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      100deg,
+      transparent 20%,
+      color-mix(in srgb, var(--text) 7%, transparent) 50%,
+      transparent 80%
+    );
+    transform: translateX(-100%);
+    animation: sweep 1.6s ease-in-out infinite;
+    content: "";
+  }
+}
+
+.titleBar {
+  display: block;
+  width: 62%;
+  max-width: 22rem;
+  height: 0.875rem;
+  border-radius: 999px;
+  @include shimmer;
+}
+
+.bar {
+  display: block;
+  width: 92%;
+  height: 0.625rem;
+  border-radius: 999px;
+  @include shimmer;
+}
+
+.imageSlot {
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.image,
+.imagePlaceholder {
+  display: block;
+  width: 10.5rem;
+  height: 6.875rem;
+  border-radius: 0.625rem;
+}
+
+.image {
+  object-fit: cover;
+  outline: 1px solid oklch(0 0 0 / 0.1);
+  outline-offset: -1px;
+
+  :global([data-theme="dark"]) & {
+    outline-color: oklch(1 0 0 / 0.1);
+  }
+}
+
+.imagePlaceholder {
+  @include shimmer;
+}
+
+/* The date the row it folds into shows, with the same unread mark. */
+.date {
+  flex-shrink: 0;
+  color: var(--faint);
+  font-size: 0.75rem;
+  white-space: nowrap;
+
+  &::before {
+    display: inline-block;
+    width: 5px;
+    height: 5px;
+    margin-right: 0.375rem;
+    border-radius: 999px;
+    background: color-mix(in srgb, var(--faint) 55%, transparent);
+    vertical-align: 0.0625rem;
+    content: "";
+  }
+}
+
+/* The progress line along the bottom edge of the card. It runs on through
+   every stage, so the reveal reads as one piece of work, not four screens. */
+.progress {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 2px;
+  background: var(--highlight);
+  transform-origin: left center;
+}
+
+.statusSlot {
+  overflow: hidden;
+}
+
+.status {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.875rem 0.375rem 0;
+  font-size: 0.8125rem;
+  line-height: 1.25rem;
+}
+
+.statusIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1rem;
+  height: 1rem;
+  color: var(--highlight);
+}
+
+.statusLabel {
+  color: var(--text);
+  font-weight: 500;
+  white-space: nowrap;
+
+  &[data-done] {
+    color: var(--highlight);
+  }
+}
+
+.working {
+  animation: spin 2.4s linear infinite;
+}
+
+@keyframes sweep {
+  to { transform: translateX(100%); }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .titleBar::after,
+  .bar::after,
+  .imagePlaceholder::after,
+  .working {
+    animation: none;
+  }
+
+  .card,
+  .body,
+  .titleStack,
+  .title,
+  .meta {
+    transition: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .imageSlot {
+    display: none;
+  }
+}

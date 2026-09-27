@@ -49,6 +49,20 @@ const updateSavedItemsCaches = (
   }
 }
 
+// While a save from the last minute is still being enriched, the list asks
+// again every so often, so its row gains its title and summary in place
+// (Hydration) without a reload. Only recent saves count: a Link can stay
+// pending for a long time, and a list must not poll forever because of one.
+const HYDRATION_POLL_MS = 1500
+const HYDRATION_WINDOW_MS = 60_000
+
+const isHydrating = (response: SavedItemsResponseJson | undefined): boolean => {
+  const now = Date.now()
+  return (response?.savedItems ?? []).some((item) =>
+    item.enrichmentStatus === "pending" && now - Date.parse(item.lastSavedAt) < HYDRATION_WINDOW_MS,
+  )
+}
+
 export function useSavedItems(
   sort: SavedItemSort = "newest",
   folder?: FolderSelector,
@@ -62,6 +76,7 @@ export function useSavedItems(
     enabled,
     queryFn: () => apiFetch<SavedItemsResponseJson>(`/v1/saved-items?${params.toString()}`),
     staleTime: 30_000,
+    refetchInterval: (query) => isHydrating(query.state.data) ? HYDRATION_POLL_MS : false,
   })
 }
 
@@ -90,7 +105,7 @@ export function useCapture(initialUrl = "") {
     },
   })
 
-  const captureUrl = (inputUrl: string, onCaptured?: () => void) => {
+  const captureUrl = (inputUrl: string, onCaptured?: (response: CaptureResponseJson) => void) => {
     const trimmed = inputUrl.trim()
     if (!trimmed) {
       setFormError("Paste a URL first.")

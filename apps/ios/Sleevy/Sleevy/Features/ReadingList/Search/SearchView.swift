@@ -82,7 +82,7 @@ struct SearchView: View {
                 }
                 .listStyle(.plain)
                 .scrollContentBackground(.hidden)
-                .background(Color(uiColor: .systemBackground))
+                .background(Color(.appBackground))
             }
         }
         .navigationTitle("Search")

@@ -33,6 +33,8 @@ import {
   InvalidFolderNameError,
   InvalidHandleError,
   InvalidUrlError,
+  OnboardingDto,
+  OnboardingPayload,
   ProfileDto,
   ProfileNotFoundError,
   ProfileVisibilityPayload,
@@ -98,6 +100,8 @@ export {
   InvalidFolderNameError,
   InvalidHandleError,
   InvalidUrlError,
+  OnboardingDto,
+  OnboardingPayload,
   ProfileDto,
   ProfileNotFoundError,
   ProfileVisibilityPayload,
@@ -479,6 +483,29 @@ const profileGroup = HttpApiGroup.make("profile")
   )
   .middleware(SessionOnlyAuth)
 
+// The Web Companion's first-run help, kept on the Account so a card put away
+// on one computer stays away on the others. Session-only: it is the state of
+// the product apps, not something an API client acts on.
+const onboardingGroup = HttpApiGroup.make("onboarding")
+  .add(
+    HttpApiEndpoint.get("get", "/v1/onboarding", {
+      success: OnboardingDto,
+      error: [RateLimitExceeded],
+    })
+      .annotate(OpenApi.Summary, "Get the first-run help state")
+      .annotate(OpenApi.Description, "Read what the authenticated account has done with the Web Companion's Getting Started Card and iPhone Card. An account that has done nothing yet reads as all false. Requires an App Session."),
+  )
+  .add(
+    HttpApiEndpoint.patch("update", "/v1/onboarding", {
+      payload: OnboardingPayload,
+      success: OnboardingDto,
+      error: [RateLimitExceeded],
+    })
+      .annotate(OpenApi.Summary, "Update the first-run help state")
+      .annotate(OpenApi.Description, "Record what the account has done with the first-run help. A flag that is left out keeps its value; setting `gettingStartedDismissed` back to false brings the Getting Started Card back."),
+  )
+  .middleware(SessionOnlyAuth)
+
 // The public half of Public Profiles. This group takes no middleware on
 // purpose: a visitor reads a Public Profile without an App Session and without
 // an API Key, so it is bucketed on the client address instead (see
@@ -650,6 +677,7 @@ export const sleevyApi = HttpApi.make("SleevyApi")
   .add(savedItemsGroup)
   .add(foldersGroup)
   .add(profileGroup)
+  .add(onboardingGroup)
   .add(publicProfilesGroup)
   .add(connectAuthorizeGroup)
   .add(connectExchangeGroup)

@@ -69,7 +69,7 @@ struct FolderCardPlaygroundView: View {
             }
             .padding(16)
         }
-        .background(Color(uiColor: .systemBackground))
+        .background(Color(.appBackground))
         .navigationTitle("Folder Cards")
         .navigationBarTitleDisplayMode(.inline)
     }

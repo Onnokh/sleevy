@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Link } from "@tanstack/react-router"
 import clsx from "clsx"
 
@@ -6,14 +6,28 @@ import { authClient } from "../../../auth"
 import { appStoreUrl } from "../store-links"
 import styles from "./marketing-nav.module.scss"
 
-export function MarketingNav() {
+/**
+ * The floating pill nav. With `bareAtTop`, the pill shows no background or
+ * border while the page is at the very top, so it sits directly on the hero,
+ * and its surface fades in as soon as the page scrolls.
+ */
+export function MarketingNav({ bareAtTop = false }: { bareAtTop?: boolean }) {
   const { data: session } = authClient.useSession()
   const [menuOpen, setMenuOpen] = useState(false)
+  const [atTop, setAtTop] = useState(true)
+
+  useEffect(() => {
+    if (!bareAtTop) return
+    const update = () => setAtTop(window.scrollY < 8)
+    update()
+    window.addEventListener("scroll", update, { passive: true })
+    return () => window.removeEventListener("scroll", update)
+  }, [bareAtTop])
   const closeMenu = () => setMenuOpen(false)
   const userInitial = session?.user.name.trim().charAt(0).toUpperCase() || session?.user.email.charAt(0).toUpperCase()
 
   return (
-    <div className={clsx(styles.container, menuOpen && styles.menuOpened)}>
+    <div className={clsx(styles.container, menuOpen && styles.menuOpened, bareAtTop && atTop && !menuOpen && styles.bare)}>
       <nav className={styles.navbar} aria-label="Primary">
         <div className={styles.logoRow}>
           <Link className={styles.brand} to="/" aria-label="Sleevy home" onClick={closeMenu}>

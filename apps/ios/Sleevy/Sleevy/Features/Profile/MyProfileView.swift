@@ -196,7 +196,7 @@ struct MyProfileView: View {
             }
         }
         // Outside the header-card background, so the card paints on top of it.
-        .background(Color(uiColor: .systemBackground))
+        .background(Color(.appBackground))
         // No navigation title: the hero card carries the identity, and only
         // the floating back button overlays it.
         .navigationTitle("")
@@ -536,7 +536,7 @@ private struct ProfileAvatar: View {
         .frame(width: profileAvatarSize, height: profileAvatarSize)
         .clipShape(Circle())
         .overlay(
-            Circle().strokeBorder(Color(uiColor: .systemBackground), lineWidth: 4)
+            Circle().strokeBorder(Color(.appBackground), lineWidth: 4)
         )
         .accessibilityHidden(true)
     }

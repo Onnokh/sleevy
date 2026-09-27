@@ -270,6 +270,22 @@ export const profilesTable = pgTable(
   ],
 )
 
+// What one Account has done with the Web Companion's first-run help, one row
+// per Account, created the first time anything is recorded. Each column is
+// when that thing happened, and null until it has: the API reports it as a
+// flag, and the time is there for the day someone asks when.
+export const onboardingTable = pgTable("onboarding", {
+  userId: text("user_id")
+    .$type<UserId>()
+    .primaryKey()
+    .references(() => user.id, { onDelete: "cascade" }),
+  gettingStartedDismissedAt: timestamp("getting_started_dismissed_at", { withTimezone: true }),
+  commandPaletteOpenedAt: timestamp("command_palette_opened_at", { withTimezone: true }),
+  iphoneHandOffSeenAt: timestamp("iphone_hand_off_seen_at", { withTimezone: true }),
+  iphoneCardDismissedAt: timestamp("iphone_card_dismissed_at", { withTimezone: true }),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+})
+
 export const savedItemsTable = pgTable(
   "saved_items",
   {
@@ -484,6 +500,7 @@ export const schema = {
   sourcesTable,
   foldersTable,
   profilesTable,
+  onboardingTable,
   savedItemsTable,
   enrichmentJobsTable,
   connectCodesTable,

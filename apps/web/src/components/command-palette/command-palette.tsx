@@ -10,6 +10,7 @@ import { useKeyboardNav } from "../../contexts/keyboard-nav-context"
 import { useTheme } from "../../contexts/theme-context"
 import { useCapture, useSavedItems } from "../../sleevy/saved-items"
 import { useFolders } from "../../sleevy/folders"
+import { useGettingStarted } from "../../sleevy/onboarding"
 import { useSourceFilter } from "../source-filter/source-filter"
 import { getSourceGroup } from "../source-filter/source-filter-utils"
 import "./command-palette.scss"
@@ -36,6 +37,7 @@ function footerActionForValue(value: string | undefined): string {
   if (value.startsWith("nav:")) return "Navigate"
   if (value === "action:capture-url") return "Focus"
   if (value === "action:keyboard-shortcuts") return "Open"
+  if (value === "action:getting-started") return "Open"
 
   return "Run"
 }
@@ -102,6 +104,14 @@ export function CommandPalette() {
   const { resolvedTheme, setTheme } = useTheme()
   const [search, setSearch] = useState("")
   const modifierKey = useHeldModifier(paletteOpen)
+  const gettingStarted = useGettingStarted()
+  const { markPaletteOpened } = gettingStarted
+
+  // Opening the palette is the Getting Started step, whether it was opened
+  // with the keys or from the card.
+  useEffect(() => {
+    if (paletteOpen) markPaletteOpened()
+  }, [paletteOpen, markPaletteOpened])
 
   const items = savedItemsQuery.data?.savedItems ?? EMPTY_ITEMS
   const shortcutItems = useMemo(() => items.slice(0, 9), [items])
@@ -273,6 +283,12 @@ export function CommandPalette() {
           onToggleTheme={() => runAndClose(toggleTheme)}
           onOpenCapture={() => openCapture()}
           onOpenKeyboardHelp={() => runAndClose(() => setHelpOpen(true))}
+          onShowGettingStarted={gettingStarted.isNewAccount
+            ? () => runAndClose(() => {
+                gettingStarted.reopen()
+                void router.navigate({ to: "/inbox" })
+              })
+            : undefined}
           onApplyTag={applyTagFilter}
           onApplySource={applySourceFilter}
           onResetFilters={resetFilters}
