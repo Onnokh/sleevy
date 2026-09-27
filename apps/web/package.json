@@ -45,6 +45,7 @@
     "shiki": "^4.3.1",
     "simple-liquid-glass": "^4.1.0",
     "typescript": "^6.0.3",
+    "uqr": "^0.1.3",
     "vite": "^8.0.10"
   },
   "devDependencies": {

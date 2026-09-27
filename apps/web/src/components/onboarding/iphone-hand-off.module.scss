@@ -1,0 +1,242 @@
+@use "../marketing/shared" as *;
+
+.overlay {
+  position: fixed;
+  z-index: 100;
+  inset: 0;
+  background: rgb(0 0 0 / 62%);
+  animation: fade 180ms ease-out both;
+}
+
+/* Always dark, whatever the app's theme: this is the homepage's glass, and
+   the glass has no light version. */
+.panel {
+  @include card-border(1.25rem, 0 40px 120px rgb(0 0 0 / 60%));
+
+  position: fixed;
+  z-index: 101;
+  top: 50%;
+  left: 50%;
+  display: flex;
+  width: min(54rem, calc(100vw - 2rem));
+  overflow: hidden;
+  background: #08090c;
+  color: #fff;
+  color-scheme: dark;
+  transform: translate(-50%, -50%);
+  animation: rise 260ms cubic-bezier(0.2, 0, 0, 1) both;
+
+  &:focus {
+    outline: none;
+  }
+}
+
+/* Darkens the glass behind the copy, and leaves it lit behind the code. */
+.shade {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgb(8 9 12 / 82%) 0%, rgb(8 9 12 / 55%) 50%, rgb(8 9 12 / 10%) 100%);
+  pointer-events: none;
+}
+
+.content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  padding: 2.75rem 1rem 2.25rem 2.75rem;
+}
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0 0 1rem;
+  color: rgb(255 255 255 / 62%);
+  font-size: 0.8125rem;
+  font-weight: 500;
+
+  svg {
+    width: 0.875rem;
+    height: 0.875rem;
+  }
+}
+
+/* The homepage headline, at the size of a dialog. */
+.title {
+  margin: 0;
+  font-size: 2.25rem;
+  font-weight: 500;
+  line-height: 1.04;
+  letter-spacing: -0.045em;
+  text-wrap: balance;
+  text-shadow: 0 0 2rem rgb(0 0 0 / 70%), 0 0 0.5rem rgb(0 0 0 / 50%);
+}
+
+.points {
+  display: flex;
+  flex-direction: column;
+  gap: 0.625rem;
+  margin: 1.5rem 0 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    color: rgb(255 255 255 / 78%);
+    font-size: 0.9375rem;
+    line-height: 1.35;
+  }
+}
+
+/* A small piece of the homepage's glass for each icon: the hairline and the
+   lit top edge. */
+.pointIcon {
+  @include card-border(0.5rem);
+
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 1.875rem;
+  height: 1.875rem;
+  background: rgb(255 255 255 / 5%);
+  color: #fff;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.625rem;
+  margin-top: auto;
+  padding-top: 1.75rem;
+}
+
+/* The hero's two buttons: one white, one dark glass. */
+.primary {
+  @include glass-button;
+
+  color: #000;
+  background: #fff;
+  border-color: #fff;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+
+  &:hover {
+    background: #e4e5e8;
+    border-color: #e4e5e8;
+  }
+
+  &:active {
+    scale: 0.96;
+  }
+}
+
+.secondary {
+  @include glass-button;
+
+  gap: 0.625rem;
+  font: inherit;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  cursor: pointer;
+
+  kbd {
+    padding: 0.0625rem 0.375rem;
+    border: 1px solid rgb(255 255 255 / 18%);
+    border-radius: 0.3125rem;
+    color: rgb(255 255 255 / 55%);
+    font-family: inherit;
+    font-size: 0.6875rem;
+    font-weight: 400;
+  }
+
+  &:active {
+    scale: 0.96;
+  }
+}
+
+/* The QR code's stage, on the lit side of the glass: the code in the middle
+   of a generous, equal margin above, beside and below it, so it has room to
+   breathe rather than filling its side. */
+.codeStage {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  /* Tall enough that the code, not the copy, sets the panel's height, which
+     is what keeps the margin equal on all three sides. */
+  padding: 4.5rem 4.5rem 4.5rem 2rem;
+}
+
+.code {
+  width: 16rem;
+  height: 16rem;
+  padding: 0.875rem;
+  border-radius: 1.25rem;
+  background: #fff;
+  /* The white App Store button's glow, at the size of the code: a dark ring
+     that sets it off the glass, then soft light around it. */
+  box-shadow:
+    0 0 0 2px rgb(0 0 0 / 50%),
+    0 0 48px 0 rgb(255 255 255 / 16%),
+    0 28px 60px -12px rgb(0 0 0 / 60%);
+  animation: code-in 420ms cubic-bezier(0.2, 0, 0, 1) 60ms both;
+
+  svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+}
+
+@keyframes fade {
+  from { opacity: 0; }
+}
+
+@keyframes rise {
+  from { opacity: 0; transform: translate(-50%, calc(-50% + 10px)); }
+}
+
+@keyframes code-in {
+  from { opacity: 0; scale: 0.96; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .overlay,
+  .panel,
+  .code {
+    animation: none;
+  }
+}
+
+/* Too narrow for the code beside the copy: the code goes first, above it. */
+@media (max-width: 720px) {
+  .panel {
+    flex-direction: column-reverse;
+  }
+
+  .content {
+    padding: 0.5rem 1.5rem 1.5rem;
+  }
+
+  .codeStage {
+    justify-content: center;
+    padding: 2rem 1.5rem 1rem;
+  }
+
+  .code {
+    width: 12rem;
+    height: 12rem;
+  }
+
+  .shade {
+    background: rgb(8 9 12 / 70%);
+  }
+}

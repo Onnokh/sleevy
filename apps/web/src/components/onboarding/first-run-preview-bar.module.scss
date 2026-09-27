@@ -1,0 +1,47 @@
+.bar {
+  position: fixed;
+  z-index: 50;
+  bottom: 1.25rem;
+  left: 50%;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  max-width: calc(100vw - 2rem);
+  padding: 0.5rem 0.5rem 0.5rem 1rem;
+  border: 1px dashed var(--highlight-line);
+  border-radius: 999px;
+  background: var(--panel);
+  box-shadow: 0 10px 30px var(--shadow);
+  font-size: 0.8125rem;
+  transform: translateX(-50%);
+}
+
+.label {
+  color: var(--highlight);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.note {
+  overflow: hidden;
+  color: var(--muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.exit {
+  flex-shrink: 0;
+  height: 1.75rem;
+  padding: 0 0.75rem;
+  border: 0;
+  border-radius: 999px;
+  background: var(--panel-muted);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.8125rem;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--hover);
+  }
+}
