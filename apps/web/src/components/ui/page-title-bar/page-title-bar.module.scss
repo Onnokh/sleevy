@@ -40,10 +40,24 @@
      travel and read as a hard edge. */
   height: 6.5rem;
   padding-top: 0.875rem;
+  /* The bar bleeds out to the column's edges to lay its fade over the full
+     width, so the inset it cancelled is put back for its contents. Without
+     this the title sat against both edges instead of over the column it
+     stands for. */
+  padding-inline: var(--title-bar-inset-inline, var(--content-padding, 2rem));
   @include page-fade(to bottom);
 }
 
 .title {
+  /* The article's own measure, so the pinned title sits over the text it
+     belongs to rather than spanning the whole column. */
+  max-width: 44rem;
+  /* One line, cut with an ellipsis. Only the top third of the surface is
+     title; the rest is fade. A long title wrapped onto a second line, which
+     left the band and printed over the article dissolving underneath it. */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   color: var(--text);
   font-size: 0.9375rem;
   font-weight: 600;

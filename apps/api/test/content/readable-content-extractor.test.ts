@@ -77,6 +77,34 @@ describe("ReadableContentExtractor", () => {
     }),
   )
 
+  it.effect("keeps a heading whole when the page breaks it across lines", () =>
+    Effect.gen(function* () {
+      const extractor = yield* ReadableContentExtractor
+      // A display heading broken where the designer wanted it to wrap, with
+      // each letter in its own span for a reveal animation. Both halves belong
+      // to the same heading.
+      const html = article(
+        [
+          "<h2><span>B</span><span>u</span><span>i</span><span>l</span><span>t</span>",
+          " <span>f</span><span>o</span><span>r</span> <br>",
+          "<span>h</span><span>u</span><span>m</span><span>a</span><span>n</span><span>s</span></h2>",
+          Array.from({ length: 6 }, (_, i) => prose(`Paragraph ${i}.`)).join(""),
+        ].join(""),
+      )
+
+      const result = yield* extractor.extract(html, url)
+      expect(Option.isSome(result)).toBe(true)
+      if (Option.isNone(result)) return
+
+      const markdown = result.value.markdown
+      expect(markdown).toContain("## Built for humans")
+      // The tail of the heading does not fall out of it and become prose, and
+      // the heading does not end on a Markdown hard break.
+      expect(markdown).not.toMatch(/^#{1,6} .*  $/m)
+      expect(markdown).not.toMatch(/^humans/m)
+    }),
+  )
+
   it.effect("keeps a table as a table, with its rows intact", () =>
     Effect.gen(function* () {
       const extractor = yield* ReadableContentExtractor
