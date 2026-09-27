@@ -299,4 +299,120 @@ describe("ReadableContentExtractor", () => {
       expect(markdown).toContain("Patrick Tyska")
     }),
   )
+
+  it.effect("fences a block of code the page wrote without a `code` element", () =>
+    Effect.gen(function* () {
+      const extractor = yield* ReadableContentExtractor
+      // Half the code in the corpus is marked up this way — GitHub, MDN,
+      // gists — and turndown fences a `pre` only when a `code` is inside it.
+      // These blocks reached the reader as prose.
+      const html = article(
+        [
+          Array.from({ length: 6 }, (_unused, i) => prose(`Paragraph ${i}.`)).join(""),
+          "<pre>make test\n# or\n./scripts/test</pre>",
+          "<pre><span>const</span> <span>x</span> <span>=</span> <span>1</span></pre>",
+        ].join(""),
+      )
+
+      const result = yield* extractor.extract(html, url)
+      expect(Option.isSome(result)).toBe(true)
+      if (Option.isNone(result)) return
+
+      const markdown = result.value.markdown
+      expect(markdown).toContain("```\nmake test\n# or\n./scripts/test\n```")
+      // A comment in a shell listing is a comment, not a heading: unfenced,
+      // "# or" was read as one everywhere the Markdown is.
+      const outsideCode = markdown.replace(/```[\s\S]*?```/g, "")
+      expect(outsideCode).not.toMatch(/^# or$/m)
+      // And an assignment is not escaped the way prose is.
+      expect(markdown).toContain("```\nconst x = 1\n```")
+    }),
+  )
+
+  it.effect("keeps the lines of a code block the page drew as elements", () =>
+    Effect.gen(function* () {
+      const extractor = yield* ReadableContentExtractor
+      const html = article(
+        [
+          Array.from({ length: 6 }, (_unused, i) => prose(`Paragraph ${i}.`)).join(""),
+          "<pre><div>first line</div><div>second line</div></pre>",
+        ].join(""),
+      )
+
+      const result = yield* extractor.extract(html, url)
+      expect(Option.isSome(result)).toBe(true)
+      if (Option.isNone(result)) return
+
+      // The newlines are in the markup rather than in the text, and reading
+      // the text alone ran the whole listing onto one line.
+      expect(result.value.markdown).toContain("```\nfirst line\nsecond line\n```")
+    }),
+  )
+
+  it.effect("fences code that quotes a fence, without ending on it", () =>
+    Effect.gen(function* () {
+      const extractor = yield* ReadableContentExtractor
+      const html = article(
+        [
+          Array.from({ length: 6 }, (_unused, i) => prose(`Paragraph ${i}.`)).join(""),
+          "<pre><code>```ts\nconst a = 1\n```</code></pre>",
+        ].join(""),
+      )
+
+      const result = yield* extractor.extract(html, url)
+      expect(Option.isSome(result)).toBe(true)
+      if (Option.isNone(result)) return
+
+      // A three-backtick fence would have closed on the code's own first line
+      // and let the rest of the block out into the prose.
+      expect(result.value.markdown).toContain("````\n```ts\nconst a = 1\n```\n````")
+    }),
+  )
+
+  it.effect("joins a heading the page broke across lines with its stylesheet", () =>
+    Effect.gen(function* () {
+      const extractor = yield* ReadableContentExtractor
+      const html = article(
+        [
+          "<h2><span>The first browser</span><span>for machines, not humans</span></h2>",
+          Array.from({ length: 6 }, (_unused, i) => prose(`Paragraph ${i}.`)).join(""),
+          // One word split by markup is not two lines, and a space would cut
+          // the word in half.
+          '<p>10 Usability Heuristics Applied to <strong>C</strong><a href="https://example.com/x">omplex Applications</a> and more besides.</p>',
+        ].join(""),
+      )
+
+      const result = yield* extractor.extract(html, url)
+      expect(Option.isSome(result)).toBe(true)
+      if (Option.isNone(result)) return
+
+      const markdown = result.value.markdown
+      expect(markdown).toContain("## The first browser for machines, not humans")
+      expect(markdown).not.toContain("browserfor")
+      // The word keeps the join it was written with.
+      expect(markdown).toContain("**C**[omplex Applications]")
+    }),
+  )
+
+  it.effect("drops an anchor with nothing to show", () =>
+    Effect.gen(function* () {
+      const extractor = yield* ReadableContentExtractor
+      const html = article(
+        [
+          Array.from({ length: 6 }, (_unused, i) => prose(`Paragraph ${i}.`)).join(""),
+          '<p><a href="https://example.com/x"></a></p>',
+          '<p><a href="https://example.com/y"><img src="/logo.png" alt=""></a></p>',
+        ].join(""),
+      )
+
+      const result = yield* extractor.extract(html, url)
+      expect(Option.isSome(result)).toBe(true)
+      if (Option.isNone(result)) return
+
+      // An icon link whose icon did not survive draws nothing at all.
+      expect(result.value.markdown).not.toContain("[](https://example.com/x)")
+      // An anchor around an image is not empty: the image is what it shows.
+      expect(result.value.markdown).toContain("https://example.com/logo.png")
+    }),
+  )
 })
