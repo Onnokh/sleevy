@@ -214,7 +214,7 @@ export function SavedItemReaderPage() {
           carry the last one's offset over — see scrollToTopSelectors in
           router.tsx, which is what reads this attribute. */}
       <div className={styles.pane} ref={paneRef} data-scroll-to-top>
-        <ReaderPage savedItemId={savedItemId} item={active} />
+        <ReaderPage savedItemId={savedItemId} item={active} scrollParent={paneRef} />
         <div
           className={styles.bottomFade}
           data-hidden={paneEdges.atEnd || undefined}

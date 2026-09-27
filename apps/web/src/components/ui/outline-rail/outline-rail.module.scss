@@ -1,0 +1,156 @@
+/* The rail stands in the reading pane's left gutter, pinned to the middle of
+   the pane rather than travelling with the article: it is a fixed thing the
+   article moves past, the way a scrollbar is.
+
+   Sticky rather than fixed, because fixed is measured against the window and
+   three panes are on screen — only this one scrolls. Zero height with the rail
+   absolutely positioned inside it, the same shape the title bar and the bottom
+   fade use, so the rail takes no room above the first paragraph. */
+.anchor {
+  position: sticky;
+  top: 50%;
+  z-index: 3;
+  height: 0;
+}
+
+.rail {
+  position: absolute;
+  /* Out past the article's own measure, into the gutter. The article keeps its
+     44rem and the rail never narrows it. */
+  right: calc(100% + 1.25rem);
+  translate: 0 -50%;
+}
+
+.marks {
+  display: flex;
+  flex-direction: column;
+  /* The marks grow to the right from one left edge, so the taper reads as a
+     shape rather than as marks of random length. */
+  align-items: flex-start;
+  gap: 0.45rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item {
+  position: relative;
+  display: flex;
+}
+
+/* A mark is two pixels of ink, and two pixels is not a target. The button is
+   the full height of the gap between marks and wider than the widest of them,
+   so the pointer can find it and the keyboard can stop on it. */
+.mark {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  width: 2.25rem;
+  height: 0.9rem;
+  padding: 0;
+  border: 0;
+  border-radius: 2px;
+  background: none;
+  cursor: pointer;
+}
+
+.tick {
+  --mark-width: 1.5rem;
+  width: calc(var(--mark-width) * var(--mark-scale, 1));
+  height: 2px;
+  border-radius: 999px;
+  background: var(--border);
+  transition:
+    width 180ms ease-out,
+    background-color 180ms ease-out;
+}
+
+/* The section being read. The one mark in full text colour, because the rail
+   answers one question first — where am I — and a second emphasis competing
+   with it makes the reader look twice. */
+.mark[data-current] .tick {
+  background: var(--text);
+}
+
+.item:hover .tick,
+.mark:focus-visible .tick {
+  background: var(--muted);
+}
+
+.mark:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 3px;
+}
+
+/* What the mark stands for, on hover and on focus alike: the keyboard has to
+   be able to read the rail, not only walk it. */
+.card {
+  position: absolute;
+  top: 50%;
+  left: calc(100% + 0.25rem);
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  width: 17rem;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+  /* The floating-menu surface, not the page's own. A card lies directly over
+     the article with nothing between them, and --panel is #ffffff on a pane
+     that is already #ffffff — on the light theme the card was its border and
+     nothing else, with the paragraph underneath reading straight through the
+     words on it. */
+  background: var(--panel-muted);
+  box-shadow: 0 12px 32px var(--shadow);
+  opacity: 0;
+  pointer-events: none;
+  /* Arrives from behind its mark rather than appearing over the article. */
+  translate: -0.35rem -50%;
+  transition:
+    opacity 140ms ease-out,
+    translate 140ms ease-out;
+}
+
+.item:hover .card,
+.mark:focus-visible ~ .card {
+  opacity: 1;
+  translate: 0 -50%;
+}
+
+.cardTitle {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--text);
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.35;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.cardExcerpt {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 0.8125rem;
+  line-height: 1.45;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tick,
+  .card {
+    transition: none;
+  }
+}
+
+/* The rail lives in a gutter, so it needs one. Below this the article has the
+   pane to itself and there is nowhere to stand that is not over the words, so
+   the rail leaves rather than narrowing the column it is there to serve. */
+@container reader-pane (max-width: 52rem) {
+  .anchor {
+    display: none;
+  }
+}

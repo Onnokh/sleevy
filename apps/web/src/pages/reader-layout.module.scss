@@ -123,6 +123,14 @@ $list-run-out: 4rem;
 }
 
 .pane {
+  /* The query container the article's Outline Rail asks. What decides whether
+     there is a gutter to stand a rail in is this pane's width, not the
+     window's: the app sidebar and the article list take a fixed 43rem of the
+     viewport between them, so a viewport breakpoint would answer for a
+     different column than the one the rail is in. Named, because the
+     dashboard's own container is an ancestor and an unnamed query would find
+     whichever of the two is nearer today. */
+  container: reader-pane / inline-size;
   overflow-y: auto;
   height: 100%;
   padding: var(--content-padding) var(--content-padding) 0;

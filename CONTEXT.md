@@ -223,6 +223,10 @@ _Avoid_: Archive, cached page, page copy, full text, Extracted Page Content
 The in-product surface that renders a Saved Item's Readable Content instead of sending the user to the Original URL.
 _Avoid_: In-app browser, web view, archive view, detail screen
 
+**Article Outline**:
+The sections of a Readable Content, read out of its Markdown: for each, the heading in plain words, the opening of the section, and an id the Reader View can send the reader to. It is derived, never stored, and the same on every client because the Markdown is.
+_Avoid_: Table of contents, index, navigation, breadcrumbs
+
 **Enrichment Job**:
 An asynchronous backend task that performs Enrichment for a Link after capture.
 _Avoid_: Save request, synchronous enrichment
@@ -736,6 +740,7 @@ _Avoid_: Deep link, route argument, UI test step
 - A **Saved Item** becomes read when the user opens it.
 - Opening a **Saved Item** that has **Readable Content** opens the **Reader View**; opening one without it sends the user to its **Original URL** in the browser.
 - The **Reader View** always offers the **Original URL**, because extraction loses tables, embeds, and figure captions.
+- The **Reader View** shows an **Article Outline** beside the article when one can be read from its Markdown, marking the section being read and offering a way into any of them. It is a reading aid rather than a second surface: an article with too few headings to outline simply has none, and the outline never narrows the column of prose it stands beside.
 - Clients may open the known **Original URL** immediately while asynchronously notifying the API to update **Read State**.
 - The **Open Action** is exposed as `POST /v1/saved-items/{id}/open`.
 - A **Delete Action** removes a **Saved Item** without archive or trash behavior in v1.

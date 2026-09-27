@@ -88,6 +88,17 @@
   h5,
   h6 {
     margin: 2.5rem 0 0.85rem;
+    /* Clearance for the Outline Rail, which brings a heading to the top of the
+       pane. `block: "start"` parks it flush against that edge, under the
+       pinned title bar travelling over it and half dissolved by the bar's
+       fade — the reader jumps to a section and lands on the paragraph above
+       its name.
+
+       It has to stay under READING_LINE in use-outline-position.ts. A heading
+       that comes to rest below the reading line has not reached its own
+       section yet, so the rail would send the reader to a section and then
+       leave the mark for the previous one lit. */
+    scroll-margin-top: 5.5rem;
     color: var(--text);
     font-weight: 600;
     letter-spacing: -0.02em;
