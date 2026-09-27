@@ -142,6 +142,22 @@ const createTurndown = () => {
     replacement: () => "",
   })
 
+  // A line break inside a heading. Sites break a display heading across lines to
+  // control where it wraps, and turndown answers a `br` with a Markdown hard
+  // break — two spaces and a newline. A Markdown heading is one line, so the
+  // break ended it: everything after it fell out of the heading and became a
+  // paragraph of its own. On one page that paragraph was the word "b.", which
+  // read as a typo in the prose rather than as the rest of "Built for
+  // humans. Readable by AI."
+  //
+  // Twenty-one headings across ten hosts in the stored corpus were cut this
+  // way. The break is where the line wrapped, not a sentence boundary, so the
+  // two halves are rejoined with a space.
+  turndown.addRule("lineBreakInsideHeading", {
+    filter: (node) => node.nodeName === "BR" && isInsideHeading(node),
+    replacement: () => " ",
+  })
+
   // An anchor into the original page's own table of contents. It cannot resolve
   // in a Reader View, so the words stay and the link does not.
   turndown.addRule("inPageAnchor", {
