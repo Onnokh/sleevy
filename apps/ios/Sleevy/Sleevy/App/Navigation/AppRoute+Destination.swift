@@ -19,6 +19,14 @@ extension AppRoute {
             }
         case .myProfile:
             MyProfileView(session: session)
+        case .reader(let id):
+            if let item = store.savedItem(id: id) {
+                ReaderView(item: item) { itemId throws(SyncFault) in
+                    try await store.readableContent(itemId: itemId)
+                }
+            } else {
+                ContentUnavailableView("Item Unavailable", systemImage: "doc.text.magnifyingglass")
+            }
         case .folderCardPlayground:
             FolderCardPlaygroundView()
         }

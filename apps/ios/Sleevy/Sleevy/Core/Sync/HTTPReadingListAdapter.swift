@@ -49,6 +49,10 @@ struct HTTPReadingListAdapter: ReadingListNetworkPort {
         do { return try await api.markOpened(id: itemId) } catch { throw Self.fault(from: error) }
     }
 
+    func readableContent(itemId: String) async throws(SyncFault) -> ReadableContent {
+        do { return try await api.readableContent(id: itemId) } catch { throw Self.fault(from: error) }
+    }
+
     func deleteItem(itemId: String) async throws(SyncFault) {
         do { try await api.deleteItem(id: itemId) } catch { throw Self.fault(from: error) }
     }

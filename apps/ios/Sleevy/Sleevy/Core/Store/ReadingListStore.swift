@@ -567,9 +567,29 @@ final class ReadingListStore {
         retrievalIndex.item(id: id)
     }
 
+    /// Records an Open for an item the reader is opening in the browser.
+    ///
+    /// Still the path for a Saved Item with no Reader View, and for a reader
+    /// who has turned the Reader View off.
     func markOpened(_ item: SavedItem) async {
         guard let url = URL(string: item.originalURL) else { return }
+        await UIApplication.shared.open(url)
+        await recordOpen(item)
+    }
 
+    /// The Readable Content behind a Saved Item, for the Reader View.
+    ///
+    /// Read on demand and never cached: ADR 0021 defers offline availability of
+    /// the body, so this is the one call that needs the network even though the
+    /// rest of the list does not.
+    func readableContent(itemId: String) async throws(SyncFault) -> ReadableContent {
+        try await network.readableContent(itemId: itemId)
+    }
+
+    /// Records that the item was opened and marks it read, without deciding
+    /// where the reader went. The Reader View calls this directly; the browser
+    /// path goes through ``markOpened(_:)``.
+    func recordOpen(_ item: SavedItem) async {
         // Queue the intent before anything suspends. A load already in flight
         // — the activation refresh a widget tap arrives together with —
         // replaces the index with server state when it lands, and
@@ -581,17 +601,15 @@ final class ReadingListStore {
             await persistItems()
         }
 
-        await UIApplication.shared.open(url)
-
         guard status.isOnline else {
             // Already queued; the next sync drains it.
             status.errorMessage = nil
             return
         }
 
-        // Fire-and-forget: the local read state is already applied and the link is
-        // open, so the server sync runs detached rather than making the caller
-        // await a network round-trip after the article has launched.
+        // Fire-and-forget: the local read state is already applied and the
+        // reader is already reading, so the server sync runs detached rather
+        // than making the caller await a round-trip after the article opened.
         Task { @MainActor [weak self] in
             guard let self else { return }
 

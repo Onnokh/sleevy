@@ -2,6 +2,7 @@ import SwiftUI
 import UIKit
 
 struct ReadingListView: View {
+    @Environment(\.openSavedItem) private var openSavedItem
     var store: ReadingListStore
     @State private var isCaptureCapsuleOpen = false
     @State private var captureDraft = ""
@@ -187,7 +188,7 @@ struct ReadingListView: View {
             store.prepareForAnimatedReadStateChange(item)
         }
 
-        await store.markOpened(item)
+        await openSavedItem(item)
     }
 
     private func setRead(_ item: SavedItem, isRead: Bool) async {

@@ -21,6 +21,15 @@ struct SettingsView: View {
                 .pickerStyle(.segmented)
             }
 
+            Section {
+                Toggle("Reader View", isOn: Binding(
+                    get: { !appSettings.isReaderViewDisabled },
+                    set: { appSettings.isReaderViewDisabled = !$0 }
+                ))
+            } footer: {
+                Text("Read articles in Sleevy. Turn this off to open every saved item in your browser instead.")
+            }
+
             Section("Account") {
                 LabeledContent("Name", value: session.displayName)
                 LabeledContent("Email", value: session.email)

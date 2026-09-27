@@ -497,6 +497,17 @@ final class InMemoryNetworkAdapter: ReadingListNetworkPort {
         return updated
     }
 
+    func readableContent(itemId: String) async throws(SyncFault) -> ReadableContent {
+        try record("readableContent")
+        return ReadableContent(
+            savedItemId: itemId,
+            originalURL: "https://example.com/\(itemId)",
+            title: "Fixture",
+            markdown: "# Fixture\n\nBody.",
+            extractedAt: Date(timeIntervalSince1970: 0)
+        )
+    }
+
     func deleteItem(itemId: String) async throws(SyncFault) {
         try record("deleteItem")
         items[itemId] = nil

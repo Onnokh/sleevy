@@ -210,12 +210,20 @@ private struct PendingSavedItemMonogram: View {
 }
 
 struct SavedItemRow: View {
+    @Environment(AppSettings.self) private var appSettings
     let item: SavedItem
     var showsUnreadIndicator = true
     let onOpen: () async -> Void
     let onToggleRead: () async -> Void
     let onDelete: () async -> Void
     var onMove: (() -> Void)? = nil
+
+    /// Whether opening this row leaves the app. Deliberately not just
+    /// `!hasReaderView(item)`: the badge is a difference between rows, so it
+    /// only means anything while some rows read here and others do not.
+    private var leaves: Bool {
+        !appSettings.isReaderViewDisabled && !hasReaderView(item)
+    }
 
     var body: some View {
         Button {
@@ -233,9 +241,24 @@ struct SavedItemRow: View {
                         .lineLimit(1)
                         .multilineTextAlignment(.leading)
 
-                    Text(item.displayDomain)
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(.secondary)
+                    HStack(spacing: 4) {
+                        Text(item.displayDomain)
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(.secondary)
+
+                        // This one leaves: no article was extracted, so opening
+                        // it goes to the site in the browser. Shown only while
+                        // the two destinations are mixed — with the Reader View
+                        // off they all leave, and the setting says so once
+                        // instead of every row saying it. Mirrors the Saved Card
+                        // in the Web Companion.
+                        if leaves {
+                            Image(systemName: "arrow.up.forward.square")
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundStyle(.tertiary)
+                                .accessibilityLabel("Opens at its original URL")
+                        }
+                    }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
 

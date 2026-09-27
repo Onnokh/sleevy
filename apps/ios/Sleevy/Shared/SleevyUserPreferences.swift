@@ -24,6 +24,7 @@ enum SleevyUserPreferences {
     nonisolated static let appGroupIdentifier = "group.app.sleevy"
     static let themeKey = "settings.theme"
     static let sourceNameKey = "settings.source-name"
+    static let readerViewDisabledKey = "settings.reader-view-disabled"
     static let profileHandleKey = "profile.handle"
 
     /// `UserDefaults` is thread-safe by contract but not annotated `Sendable`,
