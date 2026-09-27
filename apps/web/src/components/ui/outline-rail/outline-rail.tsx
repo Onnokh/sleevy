@@ -66,7 +66,8 @@ export function OutlineRail({ outline, activeIndex, onSelect }: OutlineRailProps
 
   const resting = outline[restingAt] ?? outline[0]!
   // The sections either side, where there is one. At the ends of an article
-  // there is not, and the deck shows an edge rather than an empty card.
+  // there is not, and that neighbour keeps its place in the deck without being
+  // drawn — see .peekEmpty.
   const before = outline[restingAt - 1]
   const after = outline[restingAt + 1]
 
@@ -132,11 +133,12 @@ export function OutlineRail({ outline, activeIndex, onSelect }: OutlineRailProps
           data-travelling={travelling || undefined}
           aria-hidden="true"
         >
-          {before ? (
-            <span className={`${styles.peek} ${styles.peekBefore}`}>
-              <span className={styles.peekLabel}>{before.title}</span>
-            </span>
-          ) : null}
+          <span
+            className={`${styles.peek} ${styles.peekBefore}`}
+            data-empty={!before || undefined}
+          >
+            <span className={styles.peekLabel}>{before?.title}</span>
+          </span>
 
           <span className={styles.card}>
             <span className={styles.cardTitle}>{resting.title}</span>
@@ -145,11 +147,12 @@ export function OutlineRail({ outline, activeIndex, onSelect }: OutlineRailProps
             ) : null}
           </span>
 
-          {after ? (
-            <span className={`${styles.peek} ${styles.peekAfter}`}>
-              <span className={styles.peekLabel}>{after.title}</span>
-            </span>
-          ) : null}
+          <span
+            className={`${styles.peek} ${styles.peekAfter}`}
+            data-empty={!after || undefined}
+          >
+            <span className={styles.peekLabel}>{after?.title}</span>
+          </span>
         </span>
       </nav>
     </div>

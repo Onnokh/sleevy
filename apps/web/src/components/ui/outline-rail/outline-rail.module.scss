@@ -88,21 +88,25 @@
   outline-offset: 3px;
 }
 
-/* The deck: a box of no height parked on the centre of the mark the pointer
-   is on, with the cards placed around that origin.
+/* The deck: the section in front with the ones either side behind it, centred
+   on the mark the pointer is on.
 
-   No height on purpose. Centring the deck itself would put the card in front
-   off its own mark whenever a neighbour was missing — at the first and the
-   last section of every article — and the card would jump as the reader
-   reached either end. With the origin fixed, the front card is on its mark
-   whatever is stacked behind it. */
+   Laid out in flow rather than placed by arithmetic. The card was a fixed 6rem
+   so the cards behind it could be positioned from a known number, and a
+   section with no opening line — one entry in sixteen — got a title sitting in
+   an inch of empty box that read as something failing to load. In flow the
+   card is as tall as what it holds, and the neighbours find their own place
+   against it.
+
+   Both neighbours are always in the layout, the absent ones merely invisible,
+   so the deck stays symmetrical and the card stays on its mark at the first
+   and last section of an article. */
 .deck {
-  /* Stated rather than left to the content, because the cards behind are
-     placed from these numbers. A card that grew with its excerpt would take
-     its neighbours with it and the deck would breathe as the reader moved. */
-  --card-height: 6rem;
-  --peek-height: 2rem;
-  /* How much of a neighbour the card in front covers: half of it. */
+  /* A neighbour, and how much of it the card in front covers. Nearer a third
+     than a half: tucked exactly halfway the names were legible but the cards
+     they sat on barely registered, and two thin strips read as edges of
+     something rather than as sections waiting either side. */
+  --peek-height: 2.75rem;
   --peek-overlap: 1rem;
   --deck-y: calc(
     (var(--mark-height) + var(--mark-gap)) * var(--pointed-index, 0) +
@@ -111,18 +115,19 @@
   position: absolute;
   top: 0;
   left: calc(100% + 0.25rem);
+  display: flex;
+  flex-direction: column;
   width: 17rem;
-  height: 0;
   opacity: 0;
   pointer-events: none;
   /* Arrives from behind the rail rather than over the article. */
-  translate: -0.35rem var(--deck-y);
+  translate: -0.35rem calc(var(--deck-y) - 50%);
   transition: opacity 140ms ease-out;
 }
 
 .deck[data-shown] {
   opacity: 1;
-  translate: 0 var(--deck-y);
+  translate: 0 calc(var(--deck-y) - 50%);
 }
 
 /* The slide, and only between two marks the deck is already standing on. The
@@ -136,49 +141,49 @@
     translate 200ms cubic-bezier(0.22, 0.61, 0.36, 1);
 }
 
-/* The section the pointer is on, in front and on its mark. */
+/* The section the pointer is on, in front and on its mark.
+
+   The page, a neighbour, and this card are three steps away from each other on
+   both themes — #ffffff, #f6f5f2, #eeece7 in the light one and #0f0f11,
+   #19191b, #272729 in the dark — so the card is always the surface furthest
+   from the article behind it. It was --panel-muted before, eleven levels off
+   the page on the dark theme, which left the whole deck reading as one flat
+   shape. */
 .card {
-  position: absolute;
-  top: calc(var(--card-height) / -2);
-  right: 0;
-  left: 0;
+  position: relative;
   z-index: 2;
   display: flex;
-  overflow: hidden;
   flex-direction: column;
   gap: 0.3rem;
-  height: var(--card-height);
   padding: 0.7rem 0.85rem;
   border: 1px solid var(--border);
   border-radius: 0.75rem;
-  /* The floating-menu surface, not the page's own. A card lies directly over
-     the article with nothing between them, and --panel is #ffffff on a pane
-     that is already #ffffff — on the light theme the card was its border and
-     nothing else, with the paragraph underneath reading straight through the
-     words on it. */
-  background: var(--panel-muted);
-  box-shadow: 0 12px 32px var(--shadow);
+  background: var(--surface-active);
+  /* Two shadows. The tight one draws the edge against the cards behind it, the
+     wide one lifts the deck off the article. */
+  box-shadow:
+    0 1px 2px var(--shadow),
+    0 10px 28px var(--shadow);
 }
 
 /* A neighbouring section: its name, and nothing else. Half of it is behind the
    card in front, so an excerpt would be cut through the middle of a sentence —
-   and all the reader wants from it is which section lies that way.
-
-   Inset from the card rather than scaled down: a transform would resample the
-   text on it, and a name that has gone soft reads as out of focus rather than
-   as further back. */
+   and all the reader wants from it is which section lies that way. */
 .peek {
-  position: absolute;
-  right: 0.45rem;
-  left: 0.45rem;
+  position: relative;
   z-index: 1;
   display: flex;
   overflow: hidden;
   height: var(--peek-height);
+  /* Short of the card on the right only. Inset on both sides, every name in
+     the deck started at a different place and the three of them read as
+     scattered rather than as one stack; flush left they are a column, and the
+     shortfall on the right is depth enough. */
+  margin: 0 0.9rem 0 0;
   padding: 0 0.85rem;
   border: 1px solid var(--border);
   border-radius: 0.65rem;
-  background: var(--panel-muted);
+  background: var(--surface);
   color: var(--muted);
   font-size: 0.8125rem;
 }
@@ -186,19 +191,28 @@
 /* Each neighbour keeps its name in the strip of itself that shows, which is
    the top of the one above and the bottom of the one below. */
 .peekBefore {
-  top: calc(var(--card-height) / -2 - var(--peek-height) + var(--peek-overlap));
   align-items: flex-start;
-  padding-top: 0.15rem;
+  margin-bottom: calc(var(--peek-overlap) * -1);
+  padding-top: 0.3rem;
 }
 
 .peekAfter {
-  top: calc(var(--card-height) / 2 - var(--peek-overlap));
   align-items: flex-end;
-  padding-bottom: 0.15rem;
+  margin-top: calc(var(--peek-overlap) * -1);
+  padding-bottom: 0.3rem;
+}
+
+/* No section that way. It keeps its place in the layout so the card does not
+   slide off its mark at either end of the article. */
+.peek[data-empty] {
+  visibility: hidden;
 }
 
 .peekLabel {
   overflow: hidden;
+  /* Stated, so the line box is a known height and the strip can be sized to
+     clear it rather than to whatever the inherited leading happens to be. */
+  line-height: 1.2;
   white-space: nowrap;
   text-overflow: ellipsis;
 }
@@ -221,8 +235,9 @@
   font-size: 0.8125rem;
   line-height: 1.45;
   -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 3;
 }
+
 
 @media (prefers-reduced-motion: reduce) {
   .tick,

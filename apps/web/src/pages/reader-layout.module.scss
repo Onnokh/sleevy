@@ -137,8 +137,16 @@ $list-run-out: 4rem;
 }
 
 /* Below this the list would squeeze the article, and the article is the point,
-   so the reader takes the whole width and the list is reached by going back. */
-@media (max-width: 1100px) {
+   so the reader takes the whole width and the list is reached by going back.
+
+   The number is set by the Outline Rail rather than by the list. Three panes
+   cost 47rem before the article gets any, so between 1100px and 1360px the
+   list was on screen and the pane behind it too narrow to carry a rail — a
+   band where the reader could see which articles they had, and not where they
+   were inside the one they were reading. The list is the lesser of the two
+   here: it is one keystroke away either way, while the outline of the article
+   being read has nowhere else to live. */
+@media (max-width: 1400px) {
   .split {
     grid-template-columns: minmax(0, 1fr);
   }
