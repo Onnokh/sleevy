@@ -13,6 +13,7 @@ import { EnrichmentWorkflow } from "../modules/enrichment/EnrichmentWorkflow.js"
 import { FolderRepository } from "../modules/folders/FolderRepository.js"
 import { IdempotencyStore } from "../modules/idempotency/IdempotencyStore.js"
 import { withIdempotency } from "../modules/idempotency/IdempotentWrites.js"
+import { OnboardingRepository } from "../modules/onboarding/OnboardingRepository.js"
 import { ProfileRepository } from "../modules/profiles/ProfileRepository.js"
 import { PublicProfileCachePurger } from "../modules/profiles/PublicProfileCachePurger.js"
 import { PublicProfileRepository } from "../modules/profiles/PublicProfileRepository.js"
@@ -198,7 +199,7 @@ const mcpServerCardResponse = (request: Request, input: {
 export const makeApiWebHandler = Effect.gen(function* () {
   const config = yield* AppConfig
   const context = yield* Effect.context<
-    Analytics | AuthHandler | BetterAuth | CaptureService | EnrichmentWorkflow | IdempotencyStore | LinkContentRepository | SavedItemRepository | FolderRepository | ProfileRepository | PublicProfileCachePurger | PublicProfileRepository | AnonymousRateLimiter | ApiKeyRateLimiter | BearerRateLimiter | ConnectCodeRepository | ConnectAuthorizeRateLimiter | ConnectExchangeRateLimiter | PublicProfileRateLimiter
+    Analytics | AuthHandler | BetterAuth | CaptureService | EnrichmentWorkflow | IdempotencyStore | LinkContentRepository | SavedItemRepository | FolderRepository | OnboardingRepository | ProfileRepository | PublicProfileCachePurger | PublicProfileRepository | AnonymousRateLimiter | ApiKeyRateLimiter | BearerRateLimiter | ConnectCodeRepository | ConnectAuthorizeRateLimiter | ConnectExchangeRateLimiter | PublicProfileRateLimiter
   >()
   const authHandler = yield* AuthHandler
   const { auth } = yield* BetterAuth

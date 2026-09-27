@@ -10,6 +10,7 @@ import { EnrichmentWorkflow } from "../modules/enrichment/EnrichmentWorkflow.js"
 import { FolderRepository } from "../modules/folders/FolderRepository.js";
 import { IdempotencyStore } from "../modules/idempotency/IdempotencyStore.js";
 import { McpTools } from "../modules/mcp/McpTools.js";
+import { OnboardingRepository } from "../modules/onboarding/OnboardingRepository.js";
 import { ProfileRepository } from "../modules/profiles/ProfileRepository.js";
 import { PublicProfileCachePurger } from "../modules/profiles/PublicProfileCachePurger.js";
 import { PublicProfileRepository } from "../modules/profiles/PublicProfileRepository.js";
@@ -49,6 +50,7 @@ export const appLayer = Layer.mergeAll(
   FolderRepository.defaultLayer,
   IdempotencyStore.defaultLayer,
   McpTools.defaultLayer,
+  OnboardingRepository.defaultLayer,
   ProfileRepository.defaultLayer,
   PublicProfileCachePurger.defaultLayer,
   PublicProfileRateLimiter.defaultLayer,
