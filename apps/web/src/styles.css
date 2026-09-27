@@ -368,6 +368,14 @@
   text-align: center;
 }
 
+/* Under the Getting Started Card: the card already fills the top of the
+   page, so the message stands near it rather than claiming a window of its
+   own, which pushed it out of view and made an empty Inbox scroll. */
+.empty-state.empty-state-compact {
+  min-height: 0;
+  padding: 2.5rem 0 1.5rem;
+}
+
 .empty-state-icon {
   display: inline-flex;
   align-items: center;

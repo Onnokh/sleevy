@@ -11,6 +11,7 @@ import { CaptureDialog } from "../capture-dialog/capture-dialog"
 import { CommandPalette } from "../command-palette/command-palette"
 import { FolderSidebar } from "../folders/folder-sidebar"
 import { KeyboardHelp } from "../keyboard-help/keyboard-help"
+import { IphoneCard } from "../onboarding/iphone-card"
 import { LibraryNav, SidebarActions, SourceFilterList, TagFilterList } from "../source-filter/source-filter"
 import { SidebarSheet } from "./sidebar-sheet"
 
@@ -84,6 +85,7 @@ function SidebarRows({ user }: { readonly user: User }): ReactNode {
         <SourceFilterList />
       </div>
       <div className="sidebar-bottom">
+        <IphoneCard />
         <AccountMenu user={user} />
       </div>
     </>
