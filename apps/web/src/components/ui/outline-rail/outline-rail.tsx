@@ -23,6 +23,11 @@ export const markScale = (distance: number): number =>
 /// Nothing under the pointer and nothing focused.
 const NONE = -1
 
+/// How many sections either side of the one in front the deck keeps. Only the
+/// immediate neighbours are drawn; the pair beyond them wait out of sight so
+/// that a card arriving at the deck has a place to arrive from.
+const DECK_REACH = 2
+
 type OutlineRailProps = {
   readonly outline: ArticleOutline
   /// The section being read, as an index into the outline. The first section
@@ -65,11 +70,6 @@ export function OutlineRail({ outline, activeIndex, onSelect }: OutlineRailProps
   if (outline.length === 0) return null
 
   const resting = outline[restingAt] ?? outline[0]!
-  // The sections either side, where there is one. At the ends of an article
-  // there is not, and that neighbour keeps its place in the deck without being
-  // drawn — see .peekEmpty.
-  const before = outline[restingAt - 1]
-  const after = outline[restingAt + 1]
 
   return (
     <div className={styles.anchor}>
@@ -122,38 +122,51 @@ export function OutlineRail({ outline, activeIndex, onSelect }: OutlineRailProps
             deck that travels reads as the reader moving along the article,
             which is what they are doing.
 
-            The sections either side sit half-hidden behind the one in front.
-            A reader looking for a section is looking for a place in an order,
+            The sections either side sit half-hidden behind the one in front. A
+            reader looking for a section is looking for a place in an order,
             and a lone card says only where the pointer is — not which way the
-            thing they want lies. Named, so the next step is a step and not a
-            guess. */}
+            thing they want lies.
+
+            Every card in the deck is one element per section, keyed by the
+            section, so moving along the rail changes what each card *is*
+            rather than what it says. The one below grows into the place in
+            front, brightens, and opens to show its first line, while the one
+            in front shrinks back into the place above. Swapping the text
+            inside three fixed cards would have been far less code and would
+            have read as three cards flickering, with nothing promoted and
+            nothing demoted. */}
         <span
           className={styles.deck}
           data-shown={pointed !== NONE || undefined}
           data-travelling={travelling || undefined}
+          data-brief={resting.excerpt.length === 0 || undefined}
           aria-hidden="true"
         >
-          <span
-            className={`${styles.peek} ${styles.peekBefore}`}
-            data-empty={!before || undefined}
-          >
-            <span className={styles.peekLabel}>{before?.title}</span>
-          </span>
+          {outline.map((entry, index) => {
+            const distance = index - restingAt
+            if (Math.abs(distance) > DECK_REACH) return null
 
-          <span className={styles.card}>
-            <span className={styles.cardTitle}>{resting.title}</span>
-            {resting.excerpt ? (
-              <span className={styles.cardExcerpt}>{resting.excerpt}</span>
-            ) : null}
-          </span>
-
-          <span
-            className={`${styles.peek} ${styles.peekAfter}`}
-            data-empty={!after || undefined}
-          >
-            <span className={styles.peekLabel}>{after?.title}</span>
-          </span>
+            return (
+              <span
+                key={entry.id}
+                className={styles.slot}
+                style={{ "--depth": Math.abs(distance) } as CSSProperties}
+                data-side={distance === 0 ? "front" : distance < 0 ? "before" : "after"}
+                // Held beyond the cards either side, where it is not drawn. A
+                // card entering the deck has somewhere to come from and one
+                // leaving has somewhere to go, so neither appears from nothing
+                // at the edge of the stack.
+                data-waiting={Math.abs(distance) > 1 || undefined}
+              >
+                <span className={styles.slotTitle}>{entry.title}</span>
+                {entry.excerpt ? (
+                  <span className={styles.slotExcerpt}>{entry.excerpt}</span>
+                ) : null}
+              </span>
+            )
+          })}
         </span>
+
       </nav>
     </div>
   )
