@@ -91,21 +91,42 @@
 /* The deck: the section in front with the ones either side behind it, centred
    on the mark the pointer is on.
 
-   Every card is one element per section, so the deck animates by changing what
-   each card is rather than what it says: the one below grows into the place in
-   front while the one in front shrinks back into the place above. That needs
-   known heights — a card as tall as its own content cannot be animated to the
-   height of another — so the two heights are stated here and everything else
-   is measured from them. */
+   Every card is one element per section, keyed by the section, so moving along
+   the rail changes what a card *is* rather than what it says: the one below
+   grows into the place in front while the one in front shrinks back into the
+   place above.
+
+   Nothing a card does ever reflows the words on it. Its padding and the number
+   of lines it prints are the same in every part it plays, and the width it
+   lays its text out at is fixed — so where it sits, how tall it is and where
+   its right edge falls can all move, and the name is still drawn once and
+   never drawn again. */
 .deck {
-  /* Title over two lines, its opening line under it, and room to breathe. */
-  --card-height: 5.5rem;
-  /* A neighbour, and how much of it the card in front covers. Nearer a third
-     than a half: tucked exactly halfway the names were legible but the cards
-     they sat on barely registered, and two thin strips read as edges of
-     something rather than as sections waiting either side. */
+  /* A card behind: its name and the room to print it. Short enough that the
+     opening line below never reaches the edge and shows as a row of cut
+     letters. */
   --peek-height: 2.75rem;
-  --peek-overlap: 1rem;
+  /* What the card in front covers of one behind. Little enough that a name
+     clears it in both directions — the strip that shows is the top of the card
+     above and the bottom of the card below, and the name sits in the same
+     place on both. */
+  --peek-overlap: 0.5rem;
+  /* The card in front: the same, opened to show two lines of the section. */
+  --card-height: 5.25rem;
+  /* How far short of the card in front the cards behind stop, on the right
+     only. They are flush with it on the left, so the names in the deck line up
+     as one column. */
+  --peek-shortfall: 0.9rem;
+  --card-inset: 0.85rem;
+  /* The width every card lays its text out at: the narrower of the two, so the
+     words are wrapped once and wrapped the same wherever the card goes. This
+     is what lets the right edge move at all — measured against the card's own
+     content box, a card widening as it came forward re-wrapped its own name
+     halfway through the move. The card in front simply carries the difference
+     as a little more room on its right. */
+  --card-text-width: calc(
+    17rem - var(--peek-shortfall) - var(--card-inset) * 2
+  );
   /* What one step along the rail moves a card that is already behind. */
   --peek-step: calc(var(--peek-height) - var(--peek-overlap));
   --deck-y: calc(
@@ -124,12 +145,11 @@
   transition: opacity 140ms ease-out;
 }
 
-/* A section with no opening line. The card holds its title and stops there,
-   rather than standing a single line in an inch of empty box — which is what
-   one entry in sixteen looked like while every card was the same height. The
-   cards behind follow it, because they are placed from this number. */
+/* A section with no opening line under it. There is nothing to open for, so
+   the card in front is the height of the cards behind it and is told apart by
+   its colour and its place alone. One entry in sixteen. */
 .deck[data-brief] {
-  --card-height: 3rem;
+  --card-height: var(--peek-height);
 }
 
 .deck[data-shown] {
@@ -148,19 +168,19 @@
     translate 200ms cubic-bezier(0.22, 0.61, 0.36, 1);
 }
 
-/* One card, whichever part it is currently playing. Everything that tells the
-   parts apart — where it sits, how tall it is, how far it falls short on the
-   right, where its title starts, what it is made of — is a property that can
-   be animated, so changing its part is the animation. */
+/* One card, whichever part it is currently playing. */
 .slot {
   position: absolute;
+  /* Short of the card in front, until it is the card in front. */
+  right: var(--peek-shortfall);
   left: 0;
   z-index: calc(3 - var(--depth));
   display: flex;
   overflow: hidden;
   flex-direction: column;
   gap: 0.3rem;
-  padding: 0.7rem 0.85rem 0;
+  height: var(--peek-height);
+  padding: 0.7rem var(--card-inset) 0;
   border: 1px solid var(--border);
   border-radius: 0.75rem;
   background: var(--surface);
@@ -168,10 +188,9 @@
     top 220ms cubic-bezier(0.22, 0.61, 0.36, 1),
     height 220ms cubic-bezier(0.22, 0.61, 0.36, 1),
     right 220ms cubic-bezier(0.22, 0.61, 0.36, 1),
-    padding-top 220ms cubic-bezier(0.22, 0.61, 0.36, 1),
     background-color 220ms ease-out,
     box-shadow 220ms ease-out,
-    opacity 160ms ease-out;
+    opacity 200ms ease-out;
 }
 
 /* The section the pointer is on, in front and on its mark.
@@ -193,33 +212,20 @@
     0 10px 28px var(--shadow);
 }
 
-/* The sections above. Each one is a step further back than the last, and falls
-   short of the card in front on the right only — inset on both sides, the
-   names in the deck started at three different places and read as scattered
-   boxes rather than one stack. */
+/* The sections above, each a step further back than the last. */
 .slot[data-side="before"] {
   top: calc(
     var(--card-height) / -2 - var(--peek-height) + var(--peek-overlap) -
       (var(--depth) - 1) * var(--peek-step)
   );
-  right: 0.9rem;
-  height: var(--peek-height);
-  padding-top: 0.3rem;
 }
 
-/* The sections below. Their top edge is behind the card in front, so their
-   titles are pushed down past it — the strip of themselves that shows is the
-   lower one. It is padding rather than an alignment because padding can be
-   animated: as this card becomes the one in front, its title rises into place
-   instead of jumping there. */
+/* The sections below. */
 .slot[data-side="after"] {
   top: calc(
     var(--card-height) / 2 - var(--peek-overlap) +
       (var(--depth) - 1) * var(--peek-step)
   );
-  right: 0.9rem;
-  height: var(--peek-height);
-  padding-top: calc(var(--peek-overlap) + 0.3rem);
 }
 
 /* Held a step beyond the cards that are drawn, where it waits its turn. */
@@ -227,13 +233,14 @@
   opacity: 0;
 }
 
-/* One line behind, two in front. A card behind shows a strip of itself, and a
-   strip is not two lines tall: clamped at two everywhere, a long name put its
-   second line half outside the strip and left a band of cut letter-tops
-   along the edge of the card in front. */
+/* One line in every part. Clamped at one behind and two in front, a long name
+   re-wrapped as the card came forward and the words moved while the card was
+   still moving. The full name is on the mark itself, as the name a screen
+   reader reads. */
 .slotTitle {
   display: -webkit-box;
   overflow: hidden;
+  width: var(--card-text-width);
   /* Keeps its own height inside a card of a fixed one. A flex item shrinks to
      fit its container by default, and a card behind has room for a fraction of
      what is written on it: the name was squeezed from nineteen pixels to eight
@@ -251,34 +258,32 @@
 
 .slot[data-side="front"] .slotTitle {
   color: var(--text);
-  -webkit-line-clamp: 2;
 }
 
-/* Written on every card so the card in front does not have to be a different
-   card, but carried only by the one in front.
+/* Written on every card and in the same place on every card, so it is uncovered
+   by the card opening rather than put there afterwards. Hidden rather than
+   merely clipped: a card behind ends partway through this line, and left to the
+   height alone it showed a row of severed letters under its own name.
 
-   Hidden rather than merely clipped. Left to the height alone, a card behind
-   cut its opening line through the middle and showed a row of severed letters
-   under its own name — the height is what marks a card as behind, and it lands
-   wherever the text happens to be. */
+   It fades over the same time the card takes to open, with no wait in front of
+   it. Delayed, it read as the words arriving late to a card that had already
+   finished moving. */
 .slotExcerpt {
   display: -webkit-box;
   overflow: hidden;
+  width: var(--card-text-width);
   flex: none;
   color: var(--muted);
   font-size: 0.8125rem;
   line-height: 1.45;
   opacity: 0;
-  transition: opacity 120ms ease-out;
+  transition: opacity 200ms ease-out;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
 }
 
-/* Waits for the card to be most of the way open before it arrives, so the
-   words are not read through a moving edge. */
 .slot[data-side="front"] .slotExcerpt {
   opacity: 1;
-  transition: opacity 140ms ease-out 110ms;
 }
 
 
