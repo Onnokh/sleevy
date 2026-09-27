@@ -69,12 +69,14 @@ export function Hero() {
 
           <div className={styles.phone} role="img" aria-label="The Sleevy inbox on iPhone">
             {/* The screen sits BEHIND the frame: hero-phone-frame.webp has a
-                transparent display aperture, so the bezel draws over the app. */}
+                transparent display aperture, so the bezel draws over the app.
+                The capture's files carry its date: Cloudflare keeps a public
+                file by name for days, so a new capture needs a new name. */}
             <video
               ref={videoRef}
               className={styles.phoneScreen}
-              src="/hero-phone-loop.mp4"
-              poster="/hero-phone-screen.webp"
+              src="/hero-phone-loop-2026-09.mp4"
+              poster="/hero-phone-screen-2026-09.webp"
               loop
               muted
               playsInline
