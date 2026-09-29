@@ -5,7 +5,21 @@ import WidgetKit
 @MainActor
 @Observable
 final class AuthStore {
-    private(set) var session: AppSession?
+    private(set) var session: AppSession? {
+        didSet {
+            if let session {
+                prepareReadingList(for: session)
+                scheduleWidgetRefresh()
+            } else {
+                readingListStore?.stop()
+                readingListStore = nil
+                readingListAccountID = nil
+                WidgetBackgroundRefresh.cancel()
+            }
+        }
+    }
+    private(set) var readingListStore: ReadingListStore?
+    private var readingListAccountID: String?
     private(set) var googleUserProfile: GoogleUserProfile?
     private(set) var isRestoringSession = false
     private(set) var isSigningIn = false
@@ -51,6 +65,42 @@ final class AuthStore {
             encoder: encoder,
             decoder: decoder
         )
+    }
+
+    /// The foreground and background share one store, so their sync cycles
+    /// cannot drain the same queues or overwrite each other's widget snapshot.
+    private func prepareReadingList(for session: AppSession) {
+        guard readingListAccountID != session.userId else { return }
+        readingListStore?.stop()
+        let store = ReadingListStore(
+            session: session,
+            tokenStore: tokenStore,
+            network: DemoMode.isEnabled ? DemoReadingListAdapter() : nil
+        )
+        store.onAuthenticationInvalid = { [weak self] message in
+            self?.invalidateSession(message: message)
+        }
+        readingListStore = store
+        readingListAccountID = session.userId
+    }
+
+    func scheduleWidgetRefresh() {
+        guard !DemoMode.isEnabled, session != nil || readCachedSession() != nil else {
+            WidgetBackgroundRefresh.cancel()
+            return
+        }
+        WidgetBackgroundRefresh.schedule()
+    }
+
+    func refreshWidgetsInBackground() async {
+        // Rearm even after an offline attempt or expiry. A background launch
+        // can restore the cached Account without starting interactive sign-in.
+        scheduleWidgetRefresh()
+        guard !DemoMode.isEnabled, !Task.isCancelled,
+              !tokenStore.current.isEmpty,
+              let session = session ?? readCachedSession() else { return }
+        prepareReadingList(for: session)
+        await readingListStore?.refreshInBackground()
     }
 
     func restoreSession() async {

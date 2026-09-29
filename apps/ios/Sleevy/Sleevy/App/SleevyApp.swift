@@ -13,9 +13,11 @@ import GoogleSignIn
 
 @main
 struct SleevyApp: App {
+    @Environment(\.scenePhase) private var scenePhase
     @State private var authStore = AuthStore()
     @State private var appSettings = AppSettings()
     @State private var deepLinks = DeepLinkStore()
+    @State private var didRestoreSession = false
     private static let logger = Logger(subsystem: "app.sleevy", category: "deep-link")
 
     var body: some Scene {
@@ -37,10 +39,20 @@ struct SleevyApp: App {
                     GIDSignIn.sharedInstance.handle(url)
 #endif
                 }
-                .task {
+                .task(id: scenePhase) {
+                    guard scenePhase == .active, !didRestoreSession else { return }
                     DemoMode.publishSharedFlag()
                     await authStore.restoreSession()
+                    if !Task.isCancelled { didRestoreSession = true }
                 }
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .background {
+                authStore.scheduleWidgetRefresh()
+            }
+        }
+        .backgroundTask(.appRefresh(WidgetBackgroundRefresh.identifier)) {
+            await authStore.refreshWidgetsInBackground()
         }
     }
 }
