@@ -191,29 +191,22 @@
   &:hover { background: transparent; }
 }
 
+/* Every placeholder breathes on the same beat, rather than each sweeping at
+   the speed its own width gives it, so the list reads as one thing loading.
+   Opacity only, so the beat stays on the compositor. */
 .skeleton {
-  position: relative;
-  overflow: hidden;
-  background: var(--panel-muted);
   border-radius: 0.25rem;
+  background: var(--skeleton);
+  animation: skeleton-breathe 1.8s ease-in-out infinite;
 }
 
-.skeleton::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  transform: translateX(-100%);
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    color-mix(in srgb, var(--hover) 65%, transparent) 50%,
-    transparent 100%
-  );
-  animation: skeleton-shimmer 1.4s ease-in-out infinite;
+/* The same rows standing for a list that is empty rather than loading. */
+.still .skeleton {
+  animation: none;
 }
 
-@keyframes skeleton-shimmer {
-  100% { transform: translateX(100%); }
+@keyframes skeleton-breathe {
+  50% { opacity: 0.45; }
 }
 
 .skeletonFavicon {
@@ -243,5 +236,5 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .skeleton::after { animation: none; }
+  .skeleton { animation: none; }
 }

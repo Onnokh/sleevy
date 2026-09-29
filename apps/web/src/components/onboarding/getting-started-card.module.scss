@@ -117,14 +117,21 @@
   flex-direction: column;
   gap: 0.25rem;
   padding: 0.875rem 1rem 1rem;
-  border: 1px solid var(--border);
+  /* On the white card a tint of the page is enough to set a tile apart; a
+     border as well turns the four into a heavy grid. */
+  border: 1px solid transparent;
   border-radius: 0.75rem;
-  background: var(--panel-muted);
+  background: var(--page);
   color: inherit;
   font: inherit;
   text-align: left;
   cursor: pointer;
   transition: border-color 140ms ease, background-color 140ms ease;
+
+  :global([data-theme="dark"]) & {
+    border-color: var(--border);
+    background: var(--panel-muted);
+  }
 
   &:hover:not(:disabled) {
     border-color: var(--highlight-line);
@@ -135,7 +142,9 @@
   }
 }
 
-.done {
+/* As specific as the dark theme's tile, and after it, so a finished tile
+   keeps its tint in both themes. */
+.step.done {
   border-color: transparent;
   background: var(--highlight-soft);
 

@@ -221,6 +221,9 @@ export function EnrichmentReveal({ item, onSettled }: {
   // The summary and Tags keep their place while there may be something to put
   // in it, and give it back when there is not, or when the card folds.
   const keepsDetails = !folding && (stage !== "done" || hasSummaryOrTags(item))
+  // The image comes with the title, so a fetched page with no image has none
+  // on the way, and an empty frame would only stand for nothing.
+  const keepsImage = !folding && !(fetched && !item.imageUrl)
   const TypeIcon = TYPE_ICONS[item.type]
   const label = statusLabel(stage, item)
   const fold = { duration: FOLD_MS / 1000, ease: EASE }
@@ -306,7 +309,7 @@ export function EnrichmentReveal({ item, onSettled }: {
         <m.div
           className={styles.imageSlot}
           initial={false}
-          animate={folding ? { width: 0, height: 0, opacity: 0 } : { width: 168, height: 110, opacity: 1 }}
+          animate={keepsImage ? { width: 168, height: 110, opacity: 1 } : { width: 0, height: 0, opacity: 0 }}
           transition={fold}
         >
           <div className={styles.stack}>
