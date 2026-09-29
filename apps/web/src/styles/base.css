@@ -22,6 +22,9 @@
   --highlight: #2f67d8;
   --highlight-soft: rgba(47, 103, 216, 0.1);
   --highlight-line: rgba(47, 103, 216, 0.32);
+  /* A placeholder for what is still on its way: a tint of the text rather
+     than a grey of its own, so it sits on any surface without muddying it. */
+  --skeleton: rgba(23, 23, 23, 0.06);
 }
 
 [data-theme="dark"] {
@@ -46,6 +49,7 @@
   --highlight: #6ea0ff;
   --highlight-soft: rgba(110, 160, 255, 0.08);
   --highlight-line: rgba(110, 160, 255, 0.3);
+  --skeleton: rgba(255, 255, 255, 0.06);
 }
 
 * { box-sizing: border-box; }
