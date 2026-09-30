@@ -1,4 +1,4 @@
-import { Effect } from "effect"
+import { Effect, Schema } from "effect"
 import { HttpApiBuilder } from "effect/unstable/httpapi"
 
 import { Organizer, type OrganizeRun } from "../modules/organize/Organizer.js"
@@ -12,7 +12,9 @@ import {
   sleevyApi,
 } from "./ApiContract.js"
 
-const toRunDto = (run: OrganizeRun) => OrganizeRunDto.make(run)
+// The run carries its plan as plain data; decoding builds the nested plan,
+// move and Folder classes the response encoder insists on.
+export const toRunDto = (run: OrganizeRun) => Schema.decodeUnknownSync(OrganizeRunDto)(run)
 
 export const settingsGroupLive = HttpApiBuilder.group(sleevyApi, "settings", (handlers) =>
   handlers

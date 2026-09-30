@@ -123,7 +123,7 @@ export function OrganizeLibrary() {
         {intro}
         <div className={styles.progress} role="status">
           <div className={styles.progressLabel}>
-            <span>{phase === "proposing" ? "Looking for new folders" : "Sorting saves"}</span>
+            <span>{phase === "proposing" ? "Looking for new folders" : phase === "filing" ? "Sorting saves" : "Getting started"}</span>
             {total > 0 ? <span className={styles.count}>{done} of {total}</span> : null}
           </div>
           <div className={styles.track}>

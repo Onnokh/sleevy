@@ -85,7 +85,7 @@ struct OrganizeView: View {
         Section {
             if let run, run.total > 0 {
                 ProgressView(value: Double(run.done), total: Double(run.total)) {
-                    Text(run.phase == .proposing ? "Looking for new folders" : "Sorting saves")
+                    Text(run.phase == .proposing ? "Looking for new folders" : run.phase == .filing ? "Sorting saves" : "Getting started")
                 } currentValueLabel: {
                     Text("\(run.done) of \(run.total)")
                 }
