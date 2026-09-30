@@ -18,6 +18,9 @@ import { Analytics } from "../../src/modules/analytics/Analytics.js"
 import { CaptureService } from "../../src/modules/capture/CaptureService.js"
 import { InvalidUrl } from "../../src/modules/capture/CaptureError.js"
 import { EnrichmentWorkflow } from "../../src/modules/enrichment/EnrichmentWorkflow.js"
+import { AutoFiling } from "../../src/modules/auto-filing/AutoFiling.js"
+import { Organizer } from "../../src/modules/organize/Organizer.js"
+import { AccountSettingsRepository } from "../../src/modules/settings/AccountSettingsRepository.js"
 import { FolderRepository } from "../../src/modules/folders/FolderRepository.js"
 import { McpTools, MCP_TOOL_CATALOG } from "../../src/modules/mcp/McpTools.js"
 import { RESERVED_HANDLES } from "../../src/modules/profiles/Handle.js"
@@ -89,7 +92,8 @@ const configLayer = Layer.succeed(AppConfig, AppConfig.of({
     provider: undefined,
     model: undefined,
     apiKey: undefined,
-  },
+  },  typesafe: { apiKey: "", model: "jev-1.13.0" },
+
   search: {
     semanticEnabled: false,
     embeddingBaseUrl: "http://localhost:11434",
@@ -317,6 +321,18 @@ const routeLayer = (input: {
     })),
     Layer.succeed(EnrichmentWorkflow, EnrichmentWorkflow.of({
       enrich: () => Effect.void as never,
+    } as never)),
+    Layer.succeed(AutoFiling, AutoFiling.of({
+      file: () => Effect.succeed({ _tag: "skipped", reason: "off" }) as never,
+    } as never)),
+    Layer.succeed(Organizer, Organizer.of({
+      available: false,
+      get: () => Effect.succeed({ status: "idle", phase: null, done: 0, total: 0, plan: null }),
+    } as never)),
+    Layer.succeed(AccountSettingsRepository, AccountSettingsRepository.of({
+      findByUser: () => Effect.succeed({ autoFiling: true }),
+      update: (_userId: UserId, change: { readonly autoFiling?: boolean | undefined }) =>
+        Effect.succeed({ autoFiling: change.autoFiling ?? true }),
     } as never)),
     Layer.succeed(FolderRepository, FolderRepository.of({
       listByUser: () => Effect.succeed([]),

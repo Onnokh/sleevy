@@ -6,6 +6,10 @@ struct SettingsView: View {
     @State private var isShowingDeleteConfirmation = false
     @State private var isDeletingAccount = false
     @State private var deleteAccountErrorMessage: String?
+    /// `nil` until the Account's value is known, so the toggle never shows a
+    /// state and then flips.
+    @State private var accountSettings: AccountSettings?
+    @State private var isShowingOrganize = false
 
     let session: AppSession
 
@@ -34,6 +38,24 @@ struct SettingsView: View {
                     }
                 } label: {
                     Label("Sign Out", systemImage: "rectangle.portrait.and.arrow.right")
+                }
+            }
+
+            if let accountSettings {
+                Section {
+                    Toggle("Sort New Saves into Folders", isOn: Binding(
+                        get: { accountSettings.autoFiling },
+                        set: { isOn in Task { await setAutoFiling(isOn) } }
+                    ))
+                    if api != nil {
+                        Button("Organize Unfiled Saves…") {
+                            isShowingOrganize = true
+                        }
+                    }
+                } header: {
+                    Text("Organizing")
+                } footer: {
+                    Text("A new save goes into one of your folders when it clearly fits. This never makes new folders, and a save that fits none stays unfiled. Organize sorts the saves that are already unfiled, and may suggest new folders.")
                 }
             }
 
@@ -85,6 +107,12 @@ struct SettingsView: View {
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.large)
         .onDisappear(perform: appSettings.normalizeSourceName)
+        .task { await loadAccountSettings() }
+        .sheet(isPresented: $isShowingOrganize) {
+            if let api {
+                OrganizeView(api: api)
+            }
+        }
         .alert("Delete Account?", isPresented: $isShowingDeleteConfirmation) {
             Button("Cancel", role: .cancel) {}
             Button("Delete Account", role: .destructive) {
@@ -109,6 +137,28 @@ struct SettingsView: View {
             Button("OK", role: .cancel) {}
         } message: {
             Text(deleteAccountErrorMessage ?? "Please try again.")
+        }
+    }
+
+    // Demo mode has no real Account behind it, so the section stays hidden.
+    private var api: SleevyAPIClient? {
+        DemoMode.isEnabled ? nil : .live(tokenStore: authStore.tokenStore)
+    }
+
+    private func loadAccountSettings() async {
+        guard let api else { return }
+        // A failed read leaves the section hidden rather than guessing a value.
+        accountSettings = try? await api.loadAccountSettings()
+    }
+
+    /// Shows the change at once and puts it back if the API refuses it.
+    private func setAutoFiling(_ isOn: Bool) async {
+        guard let api, let previous = accountSettings else { return }
+        accountSettings?.autoFiling = isOn
+        do {
+            accountSettings = try await api.setAutoFiling(isOn)
+        } catch {
+            accountSettings = previous
         }
     }
 }

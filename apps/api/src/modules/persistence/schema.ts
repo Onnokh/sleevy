@@ -314,6 +314,40 @@ export const onboardingTable = pgTable("onboarding", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 })
 
+// The Account settings that travel with the Account rather than staying on one
+// device, one row per Account. A missing row reads as the defaults, which are
+// what a new Account gets.
+//
+// Auto-Filing is on by default for new Accounts. The migration that added it
+// wrote a row with it off for every Account that already existed, so nobody's
+// Library started changing under them without asking.
+export const accountSettingsTable = pgTable("account_settings", {
+  userId: text("user_id")
+    .$type<UserId>()
+    .primaryKey()
+    .references(() => user.id, { onDelete: "cascade" }),
+  autoFiling: boolean("auto_filing").notNull().default(true),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+})
+
+// The one Organize run an Account may have: it works through every unfiled
+// Saved Item in batches in the background, and keeps the finished plan until
+// the person applies or discards it. A run that stops updating (the process
+// restarted under it) counts as failed and may be started again.
+export const organizeRunsTable = pgTable("organize_runs", {
+  userId: text("user_id")
+    .$type<UserId>()
+    .primaryKey()
+    .references(() => user.id, { onDelete: "cascade" }),
+  status: text("status").$type<"running" | "ready" | "failed">().notNull(),
+  phase: text("phase").$type<"proposing" | "filing">(),
+  done: integer("done").notNull().default(0),
+  total: integer("total").notNull().default(0),
+  plan: jsonb("plan"),
+  startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+})
+
 export const savedItemsTable = pgTable(
   "saved_items",
   {

@@ -4,6 +4,7 @@ import { HttpApiBuilder } from "effect/unstable/httpapi"
 import { CaptureService } from "../modules/capture/CaptureService.js"
 import { Analytics } from "../modules/analytics/Analytics.js"
 import type { CaptureChannel, FolderId } from "../domain/SavedItem.js"
+import { AutoFiling } from "../modules/auto-filing/AutoFiling.js"
 import { EnrichmentWorkflow } from "../modules/enrichment/EnrichmentWorkflow.js"
 import type { Topic } from "@sleevy/contract"
 import {
@@ -21,7 +22,8 @@ import { gated } from "./AuthMiddleware.js"
 
 /**
  * Saves one URL and does everything that follows from it: the analytics event,
- * and the background enrichment of a Link that has not been enriched yet.
+ * the background enrichment of a Link that has not been enriched yet, and then
+ * Auto-Filing of a Saved Item that arrived without a Folder.
  *
  * Both the single-capture endpoint and each entry of a batch go through here,
  * so a URL saved in a batch is saved exactly the way a URL saved on its own is.
@@ -36,6 +38,7 @@ const saveOne = (payload: {
   Effect.gen(function* () {
     const capture = yield* CaptureService
     const enrichment = yield* EnrichmentWorkflow
+    const autoFiling = yield* AutoFiling
     const analytics = yield* Analytics
     const userId = yield* CurrentUser
     const result = yield* capture.save({
@@ -81,14 +84,22 @@ const saveOne = (payload: {
       })
       .pipe(Effect.forkDetach)
     if (result.enrichment._tag === "start") {
+      const { savedItem } = result.savedItem
+      // Auto-Filing waits for Enrichment, so it files on the title, summary and
+      // Tags the person will see, and runs even when Enrichment failed.
       yield* enrichment
         .enrich(result.enrichment.linkId)
         .pipe(
+          Effect.ignore({ log: true }),
+          Effect.andThen(
+            savedItem.folderId == null
+              ? autoFiling.file(userId, savedItem.id).pipe(Effect.ignore({ log: true }))
+              : Effect.void,
+          ),
           Effect.annotateLogs({
-            savedItemId: result.savedItem.savedItem.id,
+            savedItemId: savedItem.id,
             linkId: result.enrichment.linkId,
           }),
-          Effect.ignore({ log: true }),
           Effect.forkDetach,
         )
     }

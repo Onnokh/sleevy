@@ -40,6 +40,10 @@ type AppConfigShape = {
     readonly model: string | undefined;
     readonly apiKey: string | undefined;
   };
+  readonly typesafe: {
+    readonly apiKey: string;
+    readonly model: string;
+  };
   readonly search: {
     readonly semanticEnabled: boolean;
     readonly embeddingBaseUrl: string;
@@ -130,6 +134,15 @@ export class AppConfig extends Context.Service<AppConfig, AppConfigShape>()(
       const aiProvider = yield* Config.option(Config.string("AI_PROVIDER"));
       const aiModel = yield* Config.option(Config.string("AI_MODEL"));
       const aiApiKey = yield* Config.option(Config.string("OPENAI_API_KEY"));
+      // Jev answers the Tag and Auto-Filing questions. An empty key turns both
+      // off. The model is pinned to a version rather than `jev-latest`, because
+      // the confidence cut-offs were tuned against it and an alias can move.
+      const typesafeApiKey = yield* Config.string("TYPESAFE_API_KEY").pipe(
+        Config.withDefault(""),
+      );
+      const typesafeModel = yield* Config.string("TYPESAFE_MODEL").pipe(
+        Config.withDefault("jev-1.13.0"),
+      );
       const semanticSearchEnabled = yield* Config.boolean("SEMANTIC_SEARCH_ENABLED").pipe(
         Config.withDefault(false),
       );
@@ -222,6 +235,10 @@ export class AppConfig extends Context.Service<AppConfig, AppConfigShape>()(
           provider: Option.isSome(aiProvider) ? aiProvider.value : undefined,
           model: Option.isSome(aiModel) ? aiModel.value : undefined,
           apiKey: Option.isSome(aiApiKey) ? aiApiKey.value : undefined,
+        },
+        typesafe: {
+          apiKey: typesafeApiKey,
+          model: typesafeModel,
         },
         search: {
           semanticEnabled: semanticSearchEnabled,

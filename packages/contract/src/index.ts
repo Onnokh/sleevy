@@ -502,6 +502,115 @@ export namespace OnboardingPayload {
   export type Encoded = Schema.Codec.Encoded<typeof OnboardingPayload>
 }
 
+// The Account settings that follow the person to every device. Auto-Filing
+// puts a new Saved Item that arrives without a Folder into the one existing
+// Folder that clearly fits it, and leaves it unfiled when none does. It never
+// creates a Folder. On for new Accounts.
+export class AccountSettingsDto extends Schema.Class<AccountSettingsDto>("AccountSettingsDto")({
+  autoFiling: Schema.Boolean,
+}) {}
+export namespace AccountSettingsDto {
+  export type Encoded = Schema.Codec.Encoded<typeof AccountSettingsDto>
+}
+
+// A change to some of those settings. A setting that is left out keeps its value.
+export class AccountSettingsPayload extends Schema.Class<AccountSettingsPayload>("AccountSettingsPayload")({
+  autoFiling: Schema.optional(Schema.Boolean),
+}) {}
+export namespace AccountSettingsPayload {
+  export type Encoded = Schema.Codec.Encoded<typeof AccountSettingsPayload>
+}
+
+// Organize: every unfiled Saved Item, sorted into the Account's Folders and
+// into new Folders proposed in the style of those. It runs in the background in
+// batches and ends in a plan; the plan changes nothing until the person applies
+// the part they keep.
+
+// A Folder that Organize proposes and that does not exist yet. `key` only ties
+// the moves to it inside one plan.
+export class OrganizeNewFolder extends Schema.Class<OrganizeNewFolder>("OrganizeNewFolder")({
+  key: Schema.String,
+  name: Schema.String,
+  emoji: Schema.NullOr(Schema.String),
+  color: Schema.NullOr(Schema.String),
+}) {}
+export namespace OrganizeNewFolder {
+  export type Encoded = Schema.Codec.Encoded<typeof OrganizeNewFolder>
+}
+
+// One unfiled Saved Item and where it goes: an existing Folder (`folderId`) or
+// a proposed one (`newFolderKey`). Exactly one of the two is set.
+export class OrganizeMove extends Schema.Class<OrganizeMove>("OrganizeMove")({
+  savedItemId: Schema.String,
+  title: Schema.NullOr(Schema.String),
+  url: Schema.String,
+  folderId: Schema.NullOr(Schema.String),
+  newFolderKey: Schema.NullOr(Schema.String),
+}) {}
+export namespace OrganizeMove {
+  export type Encoded = Schema.Codec.Encoded<typeof OrganizeMove>
+}
+
+export class OrganizePlanDto extends Schema.Class<OrganizePlanDto>("OrganizePlanDto")({
+  newFolders: Schema.Array(OrganizeNewFolder),
+  moves: Schema.Array(OrganizeMove),
+  // How many unfiled Saved Items the run looked at. A Saved Item it looked at
+  // without a move fits no Folder, existing or proposed.
+  considered: Schema.Number,
+}) {}
+export namespace OrganizePlanDto {
+  export type Encoded = Schema.Codec.Encoded<typeof OrganizePlanDto>
+}
+
+// The Account's Organize run. `idle` when there is none. While `running`,
+// `phase` and `done`/`total` give the progress: first new Folders are proposed
+// batch by batch, then every Saved Item is filed. `plan` is set once `ready`.
+export class OrganizeRunDto extends Schema.Class<OrganizeRunDto>("OrganizeRunDto")({
+  status: Schema.Literals(["idle", "running", "ready", "failed"]),
+  phase: Schema.NullOr(Schema.Literals(["proposing", "filing"])),
+  done: Schema.Number,
+  total: Schema.Number,
+  plan: Schema.NullOr(OrganizePlanDto),
+}) {}
+export namespace OrganizeRunDto {
+  export type Encoded = Schema.Codec.Encoded<typeof OrganizeRunDto>
+}
+
+export class OrganizeApplyMove extends Schema.Class<OrganizeApplyMove>("OrganizeApplyMove")({
+  savedItemId: Schema.String,
+  folderId: Schema.NullOr(Schema.String),
+  newFolderKey: Schema.NullOr(Schema.String),
+}) {}
+export namespace OrganizeApplyMove {
+  export type Encoded = Schema.Codec.Encoded<typeof OrganizeApplyMove>
+}
+
+// The part of a plan the person kept. A new Folder is only made when at least
+// one kept move goes into it.
+export class OrganizeApplyPayload extends Schema.Class<OrganizeApplyPayload>("OrganizeApplyPayload")({
+  newFolders: Schema.Array(OrganizeNewFolder),
+  moves: Schema.Array(OrganizeApplyMove),
+}) {}
+export namespace OrganizeApplyPayload {
+  export type Encoded = Schema.Codec.Encoded<typeof OrganizeApplyPayload>
+}
+
+export class OrganizeResultDto extends Schema.Class<OrganizeResultDto>("OrganizeResultDto")({
+  filed: Schema.Number,
+  foldersCreated: Schema.Number,
+}) {}
+export namespace OrganizeResultDto {
+  export type Encoded = Schema.Codec.Encoded<typeof OrganizeResultDto>
+}
+
+export class OrganizeUnavailableError extends Schema.ErrorClass<OrganizeUnavailableError>("OrganizeUnavailableError")({
+  _tag: Schema.tag("OrganizeUnavailableError"),
+  message: Schema.String,
+}, { httpApiStatus: 503 }) {}
+export namespace OrganizeUnavailableError {
+  export type Encoded = Schema.Codec.Encoded<typeof OrganizeUnavailableError>
+}
+
 export class HandleAvailabilityQuery extends Schema.Class<HandleAvailabilityQuery>(
   "HandleAvailabilityQuery",
 )({

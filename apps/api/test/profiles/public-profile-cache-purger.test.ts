@@ -23,6 +23,7 @@ const config = (cache: {
   },
   cache,
   ai: { enabled: false, provider: undefined, model: undefined, apiKey: undefined },
+  typesafe: { apiKey: "", model: "jev-1.13.0" },
   search: {
     semanticEnabled: false,
     embeddingBaseUrl: "http://localhost:11434",
