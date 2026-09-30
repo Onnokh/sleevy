@@ -18,6 +18,8 @@ A background worker indexes one Link at a time. Readable Content updates mark th
 
 Search always scopes candidates by joining Content Passages through the requesting Account's Saved Items. It combines Postgres full-text rank and cosine similarity with reciprocal-rank fusion, returning at most two passages per Saved Item. If the local embedding service is unavailable, keyword retrieval still answers.
 
+Keyword candidates prefer phrase matches before applying their limit. Final ranking puts literal phrases found in titles, headings, or passage text ahead of loose matches, ignoring case, punctuation, and apostrophe style; other results keep reciprocal-rank ordering.
+
 The MCP server exposes this retrieval through `search_saved_content` under the existing `saved-items:read` scope. It returns excerpts and original URLs; the calling agent writes the answer and cites those sources, so Sleevy does not need another language model or a second question-answering endpoint.
 
 Postgres uses exact cosine scans initially. The expected passage count is small enough that an approximate vector index would add operational and filtered-query complexity without a useful latency gain.

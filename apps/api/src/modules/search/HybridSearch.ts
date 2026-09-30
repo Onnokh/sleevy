@@ -2,6 +2,7 @@ import { Context, Effect, Layer, Result } from "effect"
 
 import type { UserId } from "../../domain/SavedItem.js"
 import { EmbeddingProvider } from "./EmbeddingProvider.js"
+import { normalizeSearchPhrase } from "./SearchPhrase.js"
 import {
   HybridSearchRepository,
   type SearchCandidate,
@@ -57,7 +58,7 @@ export class HybridSearch extends Context.Service<HybridSearch>()(
             }
           }
 
-          return fuseSearchCandidates(keyword, semantic, limit)
+          return fuseSearchCandidates(keyword, semantic, limit, query)
         }),
       }
     }),
@@ -74,14 +75,17 @@ export const fuseSearchCandidates = (
   keyword: readonly SearchCandidate[],
   semantic: readonly SearchCandidate[],
   limit: number,
+  query: string,
 ): readonly HybridSearchResult[] => {
   type Accumulated = {
     readonly candidate: SearchCandidate
     score: number
     keyword: boolean
     semantic: boolean
+    phraseMatch: boolean
   }
   const accumulated = new Map<string, Accumulated>()
+  const phrase = normalizeSearchPhrase(query)
 
   const add = (candidates: readonly SearchCandidate[], kind: "keyword" | "semantic") => {
     candidates.forEach((candidate, index) => {
@@ -91,6 +95,8 @@ export const fuseSearchCandidates = (
         score: 0,
         keyword: false,
         semantic: false,
+        phraseMatch: phrase.includes(" ") && [candidate.title ?? "", candidate.headingPath, candidate.content]
+          .some((text) => ` ${normalizeSearchPhrase(text)} `.includes(` ${phrase} `)),
       }
       current.score += 1 / (RRF_K + index + 1)
       current[kind] = true
@@ -103,7 +109,9 @@ export const fuseSearchCandidates = (
 
   const perItem = new Map<string, number>()
   const results: HybridSearchResult[] = []
-  for (const value of [...accumulated.values()].sort((a, b) => b.score - a.score)) {
+  for (const value of [...accumulated.values()].sort((a, b) =>
+    Number(b.phraseMatch) - Number(a.phraseMatch) || b.score - a.score
+  )) {
     const itemCount = perItem.get(value.candidate.savedItemId) ?? 0
     if (itemCount >= MAX_RESULTS_PER_ITEM) continue
     perItem.set(value.candidate.savedItemId, itemCount + 1)

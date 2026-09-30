@@ -2,6 +2,7 @@ import { Context, Effect, Layer, Schema } from "effect"
 
 import type { LinkId, SavedItemId, UserId } from "../../domain/SavedItem.js"
 import { PostgresClient } from "../persistence/PostgresClient.js"
+import { normalizeSearchPhrase } from "./SearchPhrase.js"
 
 export type SearchCandidate = {
   readonly savedItemId: SavedItemId
@@ -35,6 +36,7 @@ export class HybridSearchRepository extends Context.Service<HybridSearchReposito
           query: string,
           limit: number,
         ) {
+          const phrase = normalizeSearchPhrase(query)
           return yield* Effect.tryPromise({
             try: async () => {
               const result = await pool.query<SearchCandidate>(`
@@ -48,7 +50,8 @@ export class HybridSearchRepository extends Context.Service<HybridSearchReposito
                   p.heading_path as "headingPath",
                   p.content,
                   ts_rank_cd(
-                    setweight(to_tsvector('english', coalesce(m.title, '')), 'A') || p.search,
+                    setweight(to_tsvector('english', coalesce(m.title, '')), 'A') ||
+                    setweight(to_tsvector('english', p.heading_path), 'B') || p.search,
                     websearch_to_tsquery('english', $2)
                   )::float8 as score
                 from saved_items si
@@ -59,10 +62,17 @@ export class HybridSearchRepository extends Context.Service<HybridSearchReposito
                   and (
                     p.search @@ websearch_to_tsquery('english', $2)
                     or to_tsvector('english', coalesce(m.title, '')) @@ websearch_to_tsquery('english', $2)
+                    or to_tsvector('english', p.heading_path) @@ websearch_to_tsquery('english', $2)
                   )
-                order by score desc, si.last_saved_at desc, p.ordinal asc
+                order by exists (
+                  select 1 from unnest(array[m.title, p.heading_path, p.content]) as fields(text)
+                  where position((' ' || $4 || ' ') in (' ' || trim(regexp_replace(
+                    translate(lower(fields.text), chr(39) || '‘’', ''),
+                    '[^[:alnum:]]+', ' ', 'g'
+                  )) || ' ')) > 0
+                ) desc, score desc, si.last_saved_at desc, p.ordinal asc
                 limit $3
-              `, [userId, query, limit])
+              `, [userId, query, limit, phrase.includes(" ") ? phrase : null])
               return result.rows
             },
             catch: (cause) => new HybridSearchRepositoryError({
