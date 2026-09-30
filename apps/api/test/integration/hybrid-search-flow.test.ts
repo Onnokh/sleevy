@@ -25,7 +25,7 @@ const seedPassage = async (input: {
   try {
     await pool.query(
       `insert into "user" (id, name, email, email_verified, created_at, updated_at)
-       values ($1, $1, $2, true, now(), now())`,
+       values ($1, $1, $2, true, now(), now()) on conflict (id) do nothing`,
       [input.userId, `${input.userId}@example.com`],
     )
     await pool.query(
@@ -62,6 +62,32 @@ const seedPassage = async (input: {
 }
 
 describe("hybrid search integration flow", () => {
+  test("keeps a phrase match ahead of repeated loose terms when candidates are limited", async () => {
+    const embedding = [1, ...Array<number>(1023).fill(0)]
+    await seedPassage({
+      userId: "search-user-a",
+      linkId: "search-loose",
+      savedItemId: "search-saved-loose",
+      content: "Parse input and validate output. ".repeat(30),
+      embedding,
+    })
+    await seedPassage({
+      userId: "search-user-a",
+      linkId: "search-exact",
+      savedItemId: "search-saved-exact",
+      content: "Read [Parse, Don't Validate](https://example.com/guide).",
+      embedding,
+    })
+
+    await withTestDatabaseUrl(() => Effect.runPromise(
+      Effect.gen(function* () {
+        const repository = yield* HybridSearchRepository
+        const results = yield* repository.keyword("search-user-a" as UserId, "Parse, Don’t Validate", 1)
+        expect(results.map((result) => String(result.linkId))).toEqual(["search-exact"])
+      }).pipe(Effect.provide(HybridSearchRepository.defaultLayer)),
+    ))
+  })
+
   test("scopes keyword and semantic candidates through the Account's Saved Items", async () => {
     const firstVector = [1, ...Array<number>(1023).fill(0)]
     const secondVector = [0, 1, ...Array<number>(1022).fill(0)]
