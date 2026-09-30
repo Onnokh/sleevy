@@ -17,6 +17,7 @@ const OllamaEmbedResponse = Schema.Struct({
 const OllamaEmbedRequestJson = Schema.fromJsonString(Schema.Struct({
   model: Schema.String,
   input: Schema.Array(Schema.String),
+  options: Schema.Struct({ num_batch: Schema.Number, num_ctx: Schema.Number }),
 }))
 const OllamaEmbedResponseJson = Schema.fromJsonString(OllamaEmbedResponse)
 const encodeRequest = Schema.encodeUnknownSync(OllamaEmbedRequestJson)
@@ -49,8 +50,15 @@ export class EmbeddingProvider extends Context.Service<EmbeddingProvider>()(
             const response = await fetch(`${search.embeddingBaseUrl.replace(/\/$/, "")}/api/embed`, {
               method: "POST",
               headers: { "content-type": "application/json" },
-              body: encodeRequest({ model: search.embeddingModel, input: [text] }),
-              signal: AbortSignal.timeout(search.embeddingTimeoutMs),
+              // Ollama's default batch exceeds our CPU service's memory budget.
+              body: encodeRequest({
+                model: search.embeddingModel,
+                input: [text],
+                options: { num_batch: 512, num_ctx: 1024 },
+              }),
+              signal: AbortSignal.timeout(operation === "passage"
+                ? Math.max(search.embeddingTimeoutMs, 60_000)
+                : search.embeddingTimeoutMs),
             })
             if (!response.ok) throw new Error(`Ollama answered HTTP ${response.status}`)
             return response.text()

@@ -9,8 +9,8 @@ export type PassageSplitOptions = {
   readonly maximumCharacters?: number
 }
 
-const DEFAULT_TARGET_CHARACTERS = 2_400
-const DEFAULT_MAXIMUM_CHARACTERS = 3_200
+const DEFAULT_TARGET_CHARACTERS = 1_200
+const DEFAULT_MAXIMUM_CHARACTERS = 1_600
 
 type Block = {
   readonly headingPath: string

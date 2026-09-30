@@ -27,3 +27,5 @@ Postgres uses exact cosine scans initially. The expected passage count is small 
 The deployment adds one local Ollama service and builds pgvector 0.8.1 into the existing Postgres 17 Alpine base. Keeping Alpine preserves the production database's musl locale behavior and avoids changing text index ordering by switching to Debian. The existing Postgres data volume remains the source of truth. Content Passages are disposable derived data and can be rebuilt with the backfill command.
 
 Changing embedding dimensions requires a migration and full rebuild. Changing only the model requires a rebuild so queries and passages use the same model.
+
+Content Passages target 1200 characters with a hard limit of 1600. Embedding requests explicitly set Ollama's batch size to 512 and context to 1024 tokens. The default batch of 2048 causes the model process to exceed the 1.5 GiB limit on production, even for ordinary passages; limiting only parallel requests does not bound that memory allocation. Background passage requests allow at least 60 seconds for CPU processing; query requests retain the configured timeout.
