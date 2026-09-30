@@ -1,9 +1,11 @@
+/* Organize overlay. It borrows the Library's parts: the page title and its
+   muted subline, the shader Folder cards, and the saved-item rows. */
+
 .overlay {
   position: fixed;
   inset: 0;
   z-index: 50;
-  background: rgba(0, 0, 0, 0.55);
-  animation: fade-in 160ms ease-out;
+  background: var(--overlay);
 }
 
 .content {
@@ -13,160 +15,108 @@
   z-index: 51;
   display: flex;
   flex-direction: column;
-  width: min(38rem, calc(100vw - 2rem));
-  max-height: min(46rem, calc(100dvh - max(1rem, 10vh) - 1rem));
+  width: min(40rem, calc(100vw - 2rem));
+  max-height: calc(100dvh - max(1rem, 10vh) - 1rem);
   transform: translateX(-50%);
   overflow: hidden;
   border: 1px solid var(--border);
-  border-radius: 1rem;
+  border-radius: 0.75rem;
   background: var(--panel);
-  box-shadow:
-    0 0 0 1px rgba(0, 0, 0, 0.2),
-    0 32px 80px var(--shadow);
-  animation: rise-in 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  box-shadow: 0 16px 48px var(--shadow);
 
   &:focus {
     outline: none;
   }
 }
 
-@keyframes fade-in {
-  from { opacity: 0; }
-}
-
-@keyframes rise-in {
-  from {
-    opacity: 0;
-    transform: translate(-50%, 10px) scale(0.98);
-  }
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-.srOnly {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
-}
-
-/* Header and stepper */
-
 .header {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   gap: 1rem;
-  padding: 1.25rem 1.5rem 0;
+  padding: 1.5rem 1.5rem 0;
 }
 
-.headerText {
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
-}
-
-.eyebrow {
-  color: var(--faint);
-  font-size: 0.75rem;
-  font-weight: 500;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-}
-
+/* Same as the Library page title and its "14 saves · 2 unread" line. */
 .title {
   margin: 0;
   color: var(--text);
-  font-size: 1.25rem;
-  font-weight: 600;
-  letter-spacing: -0.01em;
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1.2;
+}
+
+.summary {
+  margin: 0.2rem 0 0;
+  color: var(--faint);
+  font-size: 0.8125rem;
 }
 
 .close {
   display: inline-flex;
-  flex-shrink: 0;
   align-items: center;
   justify-content: center;
-  width: 2rem;
-  height: 2rem;
-  margin: -0.25rem -0.5rem 0 0;
+  width: 1.75rem;
+  height: 1.75rem;
+  margin-right: -0.375rem;
   border: 0;
-  border-radius: 0.5rem;
+  border-radius: 0.375rem;
   background: transparent;
-  color: var(--muted);
+  color: var(--faint);
   cursor: pointer;
 
   &:hover {
-    background: var(--panel-muted);
+    background: var(--hover);
     color: var(--text);
   }
 }
 
-.stepper {
+.steps {
   display: flex;
+  align-items: center;
   gap: 0.5rem;
   margin: 0;
-  padding: 1.1rem 1.5rem 1.25rem;
+  padding: 1rem 1.5rem 0;
   list-style: none;
 }
 
-.stepItem {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  gap: 0.5rem;
-  min-width: 0;
-}
-
-.stepBar {
-  position: relative;
-  height: 3px;
-  overflow: hidden;
-  border-radius: 999px;
-  background: var(--panel-muted);
-}
-
-.stepBarFill {
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  background: var(--text);
-  transform-origin: left center;
-}
-
-.stepLabel {
+.step {
   display: inline-flex;
   align-items: center;
-  gap: 0.3rem;
+  gap: 0.25rem;
   color: var(--faint);
-  font-size: 0.8125rem;
+  font-size: 0.75rem;
   white-space: nowrap;
 }
 
-.stepCurrent .stepLabel {
-  color: var(--text);
-  font-weight: 500;
+.stepPast {
+  color: var(--muted);
 }
 
-.stepDone .stepLabel {
-  color: var(--muted);
+.stepNow {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.stepRule {
+  flex: 1;
+  max-width: 2rem;
+  height: 1px;
+  background: var(--border);
 }
 
 .body {
   flex: 1;
-  min-height: 12rem;
+  min-height: 9rem;
   overflow-y: auto;
-  padding: 0 1.5rem 1.5rem;
+  padding: 1.25rem 1.5rem 1.5rem;
 }
 
 .stepBody {
   display: flex;
   flex-direction: column;
-  gap: 1.1rem;
+  gap: 1rem;
 }
 
 .footer {
@@ -174,35 +124,25 @@
   align-items: center;
   justify-content: flex-end;
   gap: 0.5rem;
-  padding: 0.9rem 1.5rem;
+  padding: 0.875rem 1.5rem;
   border-top: 1px solid var(--border);
-  background: color-mix(in srgb, var(--panel-muted) 45%, var(--panel));
 }
 
 .spacer {
   flex: 1;
 }
 
-.footerNote {
-  flex: 1;
-  color: var(--faint);
-  font-size: 0.8125rem;
-}
-
-/* Shared text */
-
-.lead {
+.text {
   margin: 0;
   color: var(--muted);
-  font-size: 0.9375rem;
+  font-size: 0.875rem;
   line-height: 1.55;
 }
 
-.note {
+.hint {
   margin: 0;
-  color: var(--muted);
-  font-size: 0.8125rem;
-  line-height: 1.5;
+  color: var(--faint);
+  font-size: 0.75rem;
 }
 
 .error {
@@ -211,519 +151,271 @@
   font-size: 0.875rem;
 }
 
-.count {
-  color: var(--muted);
-  font-size: 0.8125rem;
-  font-variant-numeric: tabular-nums;
-}
-
-/* Tick: the round check used in place of browser checkboxes */
-
-.tick {
-  display: inline-flex;
-  flex-shrink: 0;
-  align-items: center;
-  justify-content: center;
-  width: 1.25rem;
-  height: 1.25rem;
-  border: 1.5px solid color-mix(in srgb, var(--muted) 55%, transparent);
-  border-radius: 999px;
-  color: var(--panel);
-  transition: background 140ms, border-color 140ms, transform 140ms;
-}
-
-.tickOn {
-  border-color: var(--text);
-  background: var(--text);
-}
-
-label:active .tick,
-button:active .tick {
-  transform: scale(0.9);
-}
-
-label:has(input:focus-visible) .tick {
-  outline: 2px solid var(--highlight);
-  outline-offset: 2px;
-}
-
-/* Folder tile */
-
-.folderTile {
-  display: inline-flex;
-  flex-shrink: 0;
-  align-items: center;
-  justify-content: center;
-  width: 1.9rem;
-  height: 1.9rem;
-  border-radius: 0.5rem;
-  background: color-mix(in srgb, var(--folder-swatch) 20%, transparent);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--folder-swatch) 40%, transparent);
-  color: var(--folder-swatch);
-  font-size: 0.95rem;
-}
-
-.folderTileLarge {
-  width: 2.6rem;
-  height: 2.6rem;
-  border-radius: 0.65rem;
-  font-size: 1.25rem;
-}
-
-/* Start */
-
-.explainer {
-  display: flex;
-  flex-direction: column;
-  margin: 0;
-  padding: 0;
-  overflow: hidden;
-  border: 1px solid var(--border);
-  border-radius: 0.75rem;
-  list-style: none;
-}
-
-.explainerItem {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.85rem;
-  padding: 0.9rem 1rem;
-
-  & + & {
-    border-top: 1px solid var(--border);
-  }
-}
-
-.explainerIcon {
-  display: inline-flex;
-  flex-shrink: 0;
-  align-items: center;
-  justify-content: center;
-  width: 2rem;
-  height: 2rem;
-  border-radius: 0.5rem;
-  background: var(--panel-muted);
-  color: var(--text);
-}
-
-.explainerTitle {
-  display: block;
-  color: var(--text);
-  font-size: 0.9rem;
-  font-weight: 500;
-}
-
-.explainerText {
-  display: block;
-  margin-top: 0.1rem;
-  color: var(--muted);
-  font-size: 0.85rem;
-  line-height: 1.45;
-}
-
 /* Scan */
 
 .scan {
   display: flex;
   flex-direction: column;
-  gap: 0.9rem;
-  padding: 0.75rem 0 0;
+  gap: 0.625rem;
+  padding-top: 0.5rem;
 }
 
-.scanFigure {
+.scanLine {
   display: flex;
-  align-items: baseline;
   justify-content: space-between;
+  color: var(--text);
+  font-size: 0.875rem;
+  font-weight: 600;
 }
 
-.scanPercent {
-  color: var(--text);
-  font-size: 2.5rem;
-  font-weight: 600;
+.scanCount {
+  color: var(--faint);
+  font-weight: 400;
   font-variant-numeric: tabular-nums;
-  letter-spacing: -0.03em;
-  line-height: 1;
-
-  small {
-    margin-left: 0.1rem;
-    color: var(--muted);
-    font-size: 1.1rem;
-    font-weight: 500;
-  }
 }
 
 .track {
-  height: 0.4rem;
+  height: 2px;
   overflow: hidden;
-  border-radius: 999px;
-  background: var(--panel-muted);
+  background: var(--border);
 }
 
 .fill {
-  width: 0;
   height: 100%;
-  border-radius: inherit;
-  background: linear-gradient(90deg, color-mix(in srgb, var(--text) 60%, transparent), var(--text));
+  background: var(--text);
+  transform: scaleX(0);
+  transform-origin: left center;
 }
 
-.phases {
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
-  margin: 0.4rem 0 0;
-  padding: 0;
-  list-style: none;
-}
+/* Folder cards: the Library's card, with a shader background. */
 
-.phase {
-  display: flex;
-  align-items: center;
-  gap: 0.65rem;
-  color: var(--faint);
-  font-size: 0.875rem;
-}
-
-.phase-on {
-  color: var(--muted);
-}
-
-.phase-busy {
-  color: var(--text);
-  font-weight: 500;
-}
-
-.spinner {
-  width: 1.25rem;
-  height: 1.25rem;
-  flex-shrink: 0;
-  border: 2px solid var(--panel-muted);
-  border-top-color: var(--text);
-  border-radius: 999px;
-  animation: spin 800ms linear infinite;
-}
-
-/* New folders */
-
-.folderList {
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
+.cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem 0.75rem;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.folderCard {
+.card {
+  position: relative;
+  isolation: isolate;
   display: flex;
-  align-items: flex-start;
-  gap: 0.85rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
   width: 100%;
-  padding: 0.9rem 1rem;
-  border: 1px solid var(--border);
-  border-radius: 0.75rem;
-  background: linear-gradient(
-    135deg,
-    color-mix(in srgb, var(--folder-swatch) 10%, transparent),
-    transparent 60%
-  );
-  color: inherit;
+  height: 5.5rem;
+  padding: 0 1.125rem;
+  overflow: hidden;
+  border: 0.75px solid oklch(1 0 0 / 0.12);
+  border-radius: 1.25rem;
+  background: transparent;
+  color: #fff;
   font: inherit;
   text-align: left;
+  transition: opacity 150ms ease-out, filter 150ms ease-out, border-color 120ms ease-out;
+}
+
+button.card {
   cursor: pointer;
-  transition: opacity 150ms, border-color 150ms;
 
   &:hover {
-    border-color: color-mix(in srgb, var(--folder-swatch) 45%, var(--border));
+    border-color: oklch(1 0 0 / 0.24);
   }
 
-  .tick {
-    margin-top: 0.1rem;
-  }
-}
-
-.folderDropped {
-  opacity: 0.45;
-  background: transparent;
-
-  .folderName {
-    text-decoration: line-through;
+  &:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
   }
 }
 
-.folderText {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  gap: 0.15rem;
+.cardSmall {
+  height: 3.25rem;
+  border-radius: 0.875rem;
+}
+
+.cardOff {
+  opacity: 0.35;
+  filter: grayscale(1);
+}
+
+.cardName {
+  position: relative;
+  z-index: 1;
   min-width: 0;
-}
-
-.folderName {
-  color: var(--text);
-  font-size: 0.975rem;
-  font-weight: 600;
-}
-
-.folderSample {
-  color: var(--muted);
-  font-size: 0.8125rem;
-}
-
-.favicons {
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
-  margin-top: 0.5rem;
-}
-
-.sample {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  min-width: 0;
-}
-
-.faviconSmall {
-  width: 14px;
-  height: 14px;
-  flex-shrink: 0;
-  border-radius: 3px;
-  background: var(--panel-muted);
-}
-
-.sampleTitle {
   overflow: hidden;
-  color: var(--muted);
-  font-size: 0.8125rem;
+  font-size: 1.125rem;
+  font-weight: 700;
+  letter-spacing: -0.025em;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-/* Review */
+.cardSmall .cardName {
+  font-size: 0.9375rem;
+  letter-spacing: -0.015em;
+}
 
-.stats {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
+.cardMeta {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
   gap: 0.5rem;
-  margin: 0;
+  color: rgb(255 255 255 / 0.7);
+  font-size: 0.875rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
 
-.stat {
-  display: flex;
-  flex-direction: column-reverse;
-  gap: 0.15rem;
-  padding: 0.7rem 0.9rem;
-  border: 1px solid var(--border);
-  border-radius: 0.65rem;
+.cardNew {
+  color: rgb(255 255 255 / 0.55);
+  font-size: 0.75rem;
+  font-weight: 500;
 
-  dt {
-    color: var(--muted);
+  &::after {
+    display: inline-block;
+    width: 1px;
+    height: 0.75rem;
+    margin-left: 0.5rem;
+    background: currentColor;
+    opacity: 0.5;
+    content: "";
+    vertical-align: -0.1rem;
+  }
+}
+
+.peek {
+  margin: 0.5rem 0 0;
+  padding: 0 0.25rem;
+  list-style: none;
+
+  li {
+    overflow: hidden;
+    color: var(--faint);
     font-size: 0.75rem;
-  }
-
-  dd {
-    margin: 0;
-    color: var(--text);
-    font-size: 1.35rem;
-    font-weight: 600;
-    font-variant-numeric: tabular-nums;
-    letter-spacing: -0.02em;
-  }
-
-  &:last-child dd {
-    color: var(--muted);
+    line-height: 1.5;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 }
 
-.groups {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-}
+/* Review: a folder card, then its saves as Library rows. */
 
 .group {
-  overflow: hidden;
-  border: 1px solid var(--border);
-  border-radius: 0.75rem;
-  transition: opacity 150ms;
-}
-
-.groupOff {
-  opacity: 0.55;
-}
-
-.groupHeader {
   display: flex;
-  align-items: center;
-  gap: 0.65rem;
-  padding: 0.7rem 0.85rem;
-  border-bottom: 1px solid var(--border);
-  background: linear-gradient(
-    90deg,
-    color-mix(in srgb, var(--folder-swatch) 12%, transparent),
-    transparent 70%
-  );
-  cursor: pointer;
+  flex-direction: column;
+  gap: 0.25rem;
+
+  & + & {
+    margin-top: 0.5rem;
+  }
 }
 
-.groupName {
-  overflow: hidden;
-  color: var(--text);
-  font-size: 0.925rem;
-  font-weight: 600;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.badge {
-  flex-shrink: 0;
-  padding: 0.1rem 0.45rem;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--folder-swatch) 18%, transparent);
-  color: color-mix(in srgb, var(--folder-swatch) 70%, var(--text));
-  font-size: 0.6875rem;
-  font-weight: 600;
-}
-
-.groupCount {
-  margin-left: auto;
-  color: var(--muted);
-  font-size: 0.8rem;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-
-.items {
+.rows {
   margin: 0;
-  padding: 0.3rem;
+  padding: 0;
   list-style: none;
 }
 
-.item {
+.row {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 0.7rem;
-  min-width: 0;
-  padding: 0.5rem 0.55rem;
+  gap: 0.625rem;
+  margin: 0 -0.5rem;
+  padding: 0.625rem 0.5rem;
   border-radius: 0.5rem;
   cursor: pointer;
-  transition: background 120ms, opacity 150ms;
+  transition: opacity 120ms ease-out;
+
+  &::after {
+    position: absolute;
+    right: 0.5rem;
+    bottom: 0;
+    left: 0.5rem;
+    height: 1px;
+    background: var(--border);
+    content: "";
+    pointer-events: none;
+  }
 
   &:hover {
     background: var(--hover);
   }
 }
 
-.itemOff {
-  opacity: 0.45;
+li:last-child > .row::after {
+  display: none;
+}
+
+.rowOff {
+  opacity: 0.4;
 }
 
 .favicon {
-  width: 20px;
-  height: 20px;
+  width: 28px;
+  height: 28px;
   flex-shrink: 0;
-  border-radius: 5px;
+  border-radius: 6px;
   background: var(--panel-muted);
   object-fit: contain;
 }
 
-.itemText {
+.rowBody {
   display: flex;
   flex: 1;
   flex-direction: column;
+  gap: 0.0625rem;
   min-width: 0;
 }
 
-.itemTitle,
-.itemHost {
+.rowTitle,
+.rowHost {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.itemTitle {
+.rowTitle {
   color: var(--text);
   font-size: 0.875rem;
+  font-weight: 600;
+  line-height: 1.125rem;
 }
 
-.itemHost {
+.rowHost {
   color: var(--faint);
   font-size: 0.75rem;
+  line-height: 0.9375rem;
 }
 
-/* Empty and done */
-
-.empty,
-.done {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 1.5rem 1rem 0.5rem;
-  text-align: center;
-}
-
-.emptyMark {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 3rem;
-  height: 3rem;
-  border-radius: 999px;
-  background: var(--panel-muted);
-  color: var(--muted);
-}
-
-.savingMark {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 3.5rem;
-  height: 3.5rem;
-  border-radius: 999px;
-  background: var(--panel-muted);
-
-  .spinner {
-    width: 1.6rem;
-    height: 1.6rem;
-  }
-}
-
-.doneMark {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 3.5rem;
-  height: 3.5rem;
-  border-radius: 999px;
-  background: var(--text);
-  color: var(--panel);
-}
-
-.doneTitle {
+.check {
+  flex-shrink: 0;
+  width: 1rem;
+  height: 1rem;
   margin: 0;
-  color: var(--text);
-  font-size: 1.125rem;
-  font-weight: 600;
+  accent-color: var(--text);
+  cursor: pointer;
 }
 
-@media (max-width: 30rem) {
-  .footerNote {
-    display: none;
+:global([data-theme="light"]) {
+  .card {
+    border-color: oklch(0 0 0 / 0.1);
+    color: var(--text);
   }
 
-  .stepLabel {
-    font-size: 0.75rem;
+  .cardMeta,
+  .cardNew {
+    color: color-mix(in srgb, var(--text) 60%, transparent);
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .overlay,
-  .content {
-    animation: none;
-  }
-
-  .spinner {
-    animation-duration: 2.4s;
+@media (max-width: 36rem) {
+  .cards {
+    grid-template-columns: 1fr;
   }
 }
