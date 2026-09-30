@@ -7,7 +7,7 @@ import { InputField } from "../ui/input-field/input-field"
 import { folderCardColorOptions, type FolderCardColor } from "./folder-card-shader"
 import styles from "./folder-dialog.module.scss"
 
-const colorSwatches: Record<FolderCardColor, string> = {
+export const colorSwatches: Record<FolderCardColor, string> = {
   red: "#c95757",
   orange: "#d9823b",
   yellow: "#c9a747",

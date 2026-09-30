@@ -17,11 +17,14 @@ type OrganizeResult = OrganizeResultDto.Encoded
 const organizeRunQueryKey = ["organize-run"] as const
 
 /// Polls while the run works through its batches, and stops once it settles.
+/// The poll ignores window focus: the scan is short and the person is waiting
+/// on it, and a focus check left the progress frozen after the start.
 export function useOrganizeRun() {
   return useQuery({
     queryKey: organizeRunQueryKey,
     queryFn: () => apiFetch<OrganizeRun>("/v1/settings/organize"),
     refetchInterval: (query) => (query.state.data?.status === "running" ? 1500 : false),
+    refetchIntervalInBackground: true,
   })
 }
 

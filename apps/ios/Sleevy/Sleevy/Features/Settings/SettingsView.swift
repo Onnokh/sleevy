@@ -9,6 +9,7 @@ struct SettingsView: View {
     /// `nil` until the Account's value is known, so the toggle never shows a
     /// state and then flips.
     @State private var accountSettings: AccountSettings?
+    @State private var isShowingOrganize = false
 
     let session: AppSession
 
@@ -46,9 +47,9 @@ struct SettingsView: View {
                         get: { accountSettings.autoFiling },
                         set: { isOn in Task { await setAutoFiling(isOn) } }
                     ))
-                    if let api {
-                        NavigationLink("Organize Unfiled Saves") {
-                            OrganizeView(api: api)
+                    if api != nil {
+                        Button("Organize Unfiled Saves…") {
+                            isShowingOrganize = true
                         }
                     }
                 } header: {
@@ -107,6 +108,11 @@ struct SettingsView: View {
         .navigationBarTitleDisplayMode(.large)
         .onDisappear(perform: appSettings.normalizeSourceName)
         .task { await loadAccountSettings() }
+        .sheet(isPresented: $isShowingOrganize) {
+            if let api {
+                OrganizeView(api: api)
+            }
+        }
         .alert("Delete Account?", isPresented: $isShowingDeleteConfirmation) {
             Button("Cancel", role: .cancel) {}
             Button("Delete Account", role: .destructive) {
