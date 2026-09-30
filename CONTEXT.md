@@ -208,8 +208,12 @@ Deterministic metadata collected without AI, such as title, host, image URL, fav
 _Avoid_: AI enrichment, manual categorization
 
 **AI Enrichment**:
-Server-side Enrichment that uses an AI provider to generate a Preview Summary and Tag.
+Server-side Enrichment that uses AI to add a Preview Summary and Enrichment Tags: a language model writes the Preview Summary, and the Jev Classifier chooses the Tags.
 _Avoid_: On-device AI, manual categorization
+
+**Jev Classifier**:
+TypeSafe's Jev model, which answers typed questions (yes/no or a choice among options) about a Link instead of writing text. Sleevy asks it which Tags fit a Link and which Folder fits a Saved Item.
+_Avoid_: LLM tagging, AI provider, Luna
 
 **Extracted Page Content**:
 The opening slice of a page's prose, without the site chrome, given to AI Enrichment so a Preview Summary and Tag can rest on what the page says. Taken from the head of the Readable Content when a Link has any.
@@ -268,7 +272,7 @@ Hard user-owned Tags stored on the Saved Item relationship between an Account an
 _Avoid_: AI tags, Link tags, folder
 
 **Enrichment Tags**:
-AI-generated Tags stored on Link Enrichment as shared derived metadata.
+Tags chosen by the Jev Classifier and stored on Link Enrichment as shared derived metadata.
 _Avoid_: Saved Item Tags, manual tags, folder
 
 **Effective Tags**:
@@ -282,6 +286,22 @@ _Avoid_: None tag, generated tag value
 **Folder**:
 A user-created flat container with an Account-unique normalized name for intentionally organizing Saved Items, where each Saved Item may be in at most one Folder, independently of subject-based Tags.
 _Avoid_: Tag, category, AI classification
+
+**Auto-Filing**:
+An Account Setting, on by default for new Accounts, that puts a Saved Item which arrived without a Folder into the one existing Folder of that Account that clearly fits it. Shown to people as "Sort new saves into folders".
+_Avoid_: Auto-folders, AI folders, smart folders, auto-categorization
+
+**Organize**:
+A Settings action that sorts every unfiled Saved Item of an Account into Folders, in the background and in batches. It files into existing Folders and may propose new Folders named in the style of the Account's own Folders. It ends in an **Organize Plan**.
+_Avoid_: Auto-organize, cleanup, bulk filing, AI sort
+
+**Organize Plan**:
+The result of an **Organize** run: the proposed new Folders and one move per Saved Item that has a clear place. Nothing changes until the person applies the part of it they keep.
+_Avoid_: Preview, suggestion list, proposal
+
+**Account Settings**:
+Preferences stored per Account on the server, so every device an Account saves from follows them. Read and changed through `GET /v1/settings` and `PATCH /v1/settings`.
+_Avoid_: Device settings, client preferences
 
 **Folder Read Access**:
 The `folders:read` API Key Scope that permits a client to list existing Folder identifiers and names for capture-time assignment without creating or changing them.
@@ -723,7 +743,8 @@ _Avoid_: Deep link, route argument, UI test step
 - **Enrichment** may assign a **Type** and **Enrichment Tags** to a **Link**.
 - **Type** is assigned by hard rules in v1, not by **AI Enrichment**.
 - **Enrichment Tags** are chosen by **AI Enrichment** in v1 without hard-rule hints.
-- **AI Enrichment** asks for **Enrichment Tags** and the **Preview Summary** in one request, so the **Extracted Page Content** is sent once. The tagging and preview-summary stages of the **Enrichment Job** report on that one request: they fail together, and each is skipped on its own when the provider returns nothing for it.
+- **AI Enrichment** asks the **Jev Classifier** for **Enrichment Tags** and a language model for the **Preview Summary** in parallel. The tagging and preview-summary stages of the **Enrichment Job** fail and skip independently.
+- The **Jev Classifier** answers one yes/no question per **Tag**, so a **Link** can get several **Enrichment Tags** or none.
 - **Type** is assigned with **Hard Metadata** during capture rather than waiting for an **Enrichment Job**.
 - Saved Item list rows may show a calm **Type Icon** for the **Type**.
 - A newly captured **Saved Item** appears immediately and later receives **Hydration** as **Enrichment** completes.
@@ -736,7 +757,17 @@ _Avoid_: Deep link, route argument, UI test step
 - **Website** is the fallback **Type** when hard rules do not identify a more specific content kind.
 - The v1 **Type** hard rules are intentionally simple: GitHub or GitLab URLs are Repository, YouTube, youtu.be, or Vimeo URLs are Video, URLs containing "blog" or "article" are Article, and everything else is Website.
 - A **Link** may have no **Enrichment Tags** when none are confidently extracted.
-- A **Link** has no **Enrichment Tags** when **AI Enrichment** is unavailable or disabled.
+- A **Link** has no **Enrichment Tags** when the **Jev Classifier** is unavailable or not configured.
+- **Auto-Filing** runs per **Saved Item** after **Enrichment**, because a **Folder** belongs to one **Account** while **Link Enrichment** is shared.
+- **Auto-Filing** only chooses among the **Account**'s existing **Folders** and never creates a **Folder**.
+- **Auto-Filing** leaves a **Saved Item** unfiled when no **Folder** is a clear fit, and never moves a **Saved Item** that already has a **Folder**, including one the person set while **Auto-Filing** was deciding.
+- **Auto-Filing** does not run when the save already names a **Folder**.
+- Existing **Accounts** kept **Auto-Filing** off when it was introduced; only new **Accounts** start with it on.
+- **Organize** is the only feature that may create a **Folder** without the person naming it, and it does so only when the person applies an **Organize Plan**.
+- **Organize** proposes new **Folders** with a language model, because the **Jev Classifier** cannot write text, and the **Jev Classifier** then decides which **Folder** each **Saved Item** goes into.
+- A proposed **Folder** stays out of the **Organize Plan** unless the **Jev Classifier** files at least two **Saved Items** into it.
+- An **Account** has at most one **Organize** run at a time; the **Organize Plan** is kept until it is applied or discarded.
+- Applying an **Organize Plan** never moves a **Saved Item** that was filed after the plan was made.
 - **Tags** must come from a closed app-defined vocabulary in v1.
 - The v1 **Tag** vocabulary is developer-oriented because the first Library use case is saving development-heavy material.
 - The v1 **Tag** vocabulary is: AI, Tools, TypeScript, Security, Design, Backend, and Front-end.

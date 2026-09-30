@@ -17,6 +17,8 @@ import {
   AiEnricherError,
   type AiEnrichmentInput,
 } from "../../src/modules/ai/AiEnricher.js"
+import { JevClassifier } from "../../src/modules/ai/JevClassifier.js"
+import { TypeSafeError } from "../../src/modules/ai/TypeSafeClient.js"
 import { LinkContentRepository } from "../../src/modules/content/LinkContentRepository.js"
 import {
   ReadableContentExtractor,
@@ -204,10 +206,22 @@ const workflowLayer = (input: {
                   new AiEnricherError({ operation: "enrich", cause: "upstream is down" }),
                 )
                 : Effect.succeed({
-                  tags: input.aiTags ? Option.some(input.aiTags) : Option.none(),
                   summary: input.aiPreview ? Option.some(input.aiPreview) : Option.none(),
                 })
             }),
+        }),
+      ),
+    ),
+    Layer.provideMerge(
+      Layer.succeed(
+        JevClassifier,
+        JevClassifier.of({
+          enabled: true,
+          tags: () =>
+            input.aiFails
+              ? Effect.fail(new TypeSafeError({ cause: "upstream is down" }))
+              : Effect.succeed(input.aiTags ? Option.some(input.aiTags) : Option.none()),
+          folder: () => Effect.succeed(Option.none()),
         }),
       ),
     ),

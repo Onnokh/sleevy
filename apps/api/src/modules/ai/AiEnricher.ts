@@ -1,8 +1,7 @@
 import { OpenAiStructuredOutput } from "effect/unstable/ai"
 import { Context, Data, Effect, Layer, Option, Schema } from "effect"
 
-import { topics } from "@sleevy/contract"
-import type { Link, Topic } from "../../domain/SavedItem.js"
+import type { Link } from "../../domain/SavedItem.js"
 import type { Metadata } from "../metadata/MetadataFetcher.js"
 import { AppConfig } from "../../runtime/Config.js"
 
@@ -19,37 +18,25 @@ export type AiEnrichmentInput = {
 }
 
 export type AiEnrichmentResult = {
-  readonly tags: Option.Option<readonly Topic[]>
   readonly summary: Option.Option<string>
 }
 
-/** Tags and Preview Summary come back together, so the page is sent once. */
 const enrichmentSchema = Schema.Struct({
-  tags: Schema.NullOr(Schema.Array(Schema.Literals(topics))),
   summary: Schema.NullOr(Schema.String),
 })
 
 /**
- * One prompt for both AI Enrichment outputs, so the Extracted Page Content is
- * paid for once per link.
+ * The Preview Summary prompt. Tags are not asked here: Jev answers them as
+ * typed questions (see JevClassifier), so this model only writes text.
  *
- * The Preview Summary rules carry most of the weight: it sits under the title
+ * The rules carry most of the weight: it sits under the title
  * in a Saved Item row, and without them the model narrates the page as an
  * object ("This page documents...") and repeats the title.
  */
 export const enrichmentSystemPrompt = [
-  "You prepare the AI Enrichment of a link saved to a read-later app: its tags, and the preview line shown under the title.",
+  "You write the preview line shown under the title of a link saved to a read-later app.",
   "",
   "You get the URL, whatever metadata the page published, and the page text where it could be read. The text is a rough extract, so stray labels and truncation at the end are normal. Work from the text first and from the metadata only when there is no text.",
-  "",
-  "Tags. Pick every tag that applies, or null when none fit well:",
-  "- ai: artificial intelligence, machine learning, LLMs, agents, prompts, AI tools and platforms",
-  "- tools: developer tooling, CLIs, SDKs, libraries, package managers, build tools",
-  "- typescript: TypeScript, JavaScript, Node.js, Deno, Bun, React, frontend frameworks",
-  "- security: security, authentication, encryption, vulnerabilities, CVEs, OAuth",
-  "- design: visual design, UI/UX, typography, color, layout, Figma, graphic design",
-  "- backend: databases, servers, infrastructure, APIs, queues, DevOps, cloud",
-  "- front-end: CSS, browser APIs, HTML, web components, accessibility, responsive design",
   "",
   "Summary. The reader uses it to decide whether to open the link, so it must say what the page tells them, not what the page is:",
   "- Write one or two plain sentences, 200 characters or fewer in total.",
@@ -83,10 +70,7 @@ export class AiEnricher extends Context.Service<AiEnricher>()(
       if (!config.ai.enabled || !config.ai.apiKey) {
         return {
           enrich: (_input: AiEnrichmentInput) =>
-            Effect.succeed<AiEnrichmentResult>({
-              tags: Option.none(),
-              summary: Option.none(),
-            }),
+            Effect.succeed<AiEnrichmentResult>({ summary: Option.none() }),
         }
       }
 
@@ -98,19 +82,14 @@ export class AiEnricher extends Context.Service<AiEnricher>()(
           const value = yield* generateOpenAiObject({
             apiKey,
             model,
-            objectName: "link_enrichment",
+            objectName: "preview_summary",
             schema: enrichmentSchema,
             system: enrichmentSystemPrompt,
             prompt: buildPromptText(input),
             operation: "enrich",
           })
 
-          const tags = value.tags
-
           return {
-            tags: tags && tags.length > 0
-              ? Option.some(tags as readonly Topic[])
-              : Option.none<readonly Topic[]>(),
             summary: value.summary ? Option.some(value.summary) : Option.none<string>(),
           } satisfies AiEnrichmentResult
         }),
@@ -147,7 +126,7 @@ const buildPromptText = (input: AiEnrichmentInput) => {
   return parts.join("\n")
 }
 
-const generateOpenAiObject = <S extends Schema.Top>({
+export const generateOpenAiObject = <S extends Schema.Top>({
   apiKey,
   model,
   objectName,

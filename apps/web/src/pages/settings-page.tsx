@@ -2,6 +2,7 @@ import { useState } from "react"
 
 import { AccountPanel, DeleteAccountControl } from "../components/account/account"
 import { ApiKeysPanel } from "../components/api-keys/api-keys"
+import { AutoFilingPanel } from "../components/auto-filing/auto-filing-setting"
 import { ConnectedAppsPanel } from "../components/connected-apps/connected-apps"
 import { PublicProfilePanel } from "../components/public-profile/public-profile"
 import { ReaderViewPanel } from "../components/reader-view/reader-view-setting"
@@ -36,6 +37,7 @@ export function SettingsPage() {
           <AccountPanel />
         </section>
         <ReaderViewPanel />
+        <AutoFilingPanel />
         <SourceNamePanel />
         <PublicProfilePanel />
         <ConnectedAppsPanel />

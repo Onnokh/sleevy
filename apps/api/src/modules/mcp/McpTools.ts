@@ -8,6 +8,7 @@ import { SavedItemId } from "../../domain/SavedItem.js"
 import { savedItemToDto } from "../../api/ApiContract.js"
 import type { Scope } from "../auth/Scopes.js"
 import { CaptureService } from "../capture/CaptureService.js"
+import { AutoFiling } from "../auto-filing/AutoFiling.js"
 import { EnrichmentWorkflow } from "../enrichment/EnrichmentWorkflow.js"
 import { FolderRepository } from "../folders/FolderRepository.js"
 import {
@@ -247,6 +248,7 @@ export class McpTools extends Context.Service<McpTools>()(
       const config = yield* AppConfig
       const capture = yield* CaptureService
       const enrichment = yield* EnrichmentWorkflow
+      const autoFiling = yield* AutoFiling
       const folders = yield* FolderRepository
       const savedItems = yield* SavedItemRepository
       const contentSearch = yield* HybridSearch
@@ -300,7 +302,10 @@ export class McpTools extends Context.Service<McpTools>()(
       const saveLink = Effect.fn("McpTools.saveLink")(function* (userId: UserId, url: string) {
         const result = yield* capture.save({ userId, url, captureChannel: "api" })
         if (result.enrichment._tag === "start") {
+          // An MCP save never names a Folder, so Auto-Filing always follows.
           yield* enrichment.enrich(result.enrichment.linkId).pipe(
+            Effect.ignore({ log: true }),
+            Effect.andThen(autoFiling.file(userId, result.savedItem.savedItem.id)),
             Effect.ignore({ log: true }),
             Effect.forkDetach,
           )
@@ -477,6 +482,7 @@ export class McpTools extends Context.Service<McpTools>()(
     Layer.provide(AppConfig.layer),
     Layer.provide(CaptureService.defaultLayer),
     Layer.provide(EnrichmentWorkflow.defaultLayer),
+    Layer.provide(AutoFiling.defaultLayer),
     Layer.provide(FolderRepository.defaultLayer),
     Layer.provide(SavedItemRepository.defaultLayer),
     Layer.provide(HybridSearch.defaultLayer),

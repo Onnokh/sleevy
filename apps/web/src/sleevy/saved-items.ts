@@ -10,6 +10,7 @@ import type {
 } from "@sleevy/contract"
 
 import { getSourceName } from "../components/source-name/source-name-storage"
+import { useAccountSettings } from "./account-settings"
 import { apiFetch } from "./api"
 
 export type { SavedItemSort, Topic }
@@ -56,11 +57,18 @@ const updateSavedItemsCaches = (
 const HYDRATION_POLL_MS = 1500
 const HYDRATION_WINDOW_MS = 60_000
 
-const isHydrating = (response: SavedItemsResponseJson | undefined): boolean => {
+// Auto-Filing runs just after Enrichment, so a save can gain its Folder a
+// moment after it stops being pending. While it is on, a new save that is still
+// unfiled keeps the list asking for a few seconds more.
+const AUTO_FILING_WINDOW_MS = 10_000
+
+const isHydrating = (response: SavedItemsResponseJson | undefined, autoFiling: boolean): boolean => {
   const now = Date.now()
-  return (response?.savedItems ?? []).some((item) =>
-    item.enrichmentStatus === "pending" && now - Date.parse(item.lastSavedAt) < HYDRATION_WINDOW_MS,
-  )
+  return (response?.savedItems ?? []).some((item) => {
+    const age = now - Date.parse(item.lastSavedAt)
+    return (item.enrichmentStatus === "pending" && age < HYDRATION_WINDOW_MS) ||
+      (autoFiling && item.folder === null && age < AUTO_FILING_WINDOW_MS)
+  })
 }
 
 export function useSavedItems(
@@ -70,13 +78,14 @@ export function useSavedItems(
 ) {
   const params = new URLSearchParams({ sort })
   if (folder) params.set("folder", folder)
+  const autoFiling = useAccountSettings(enabled).data?.autoFiling ?? false
 
   return useQuery({
     queryKey: savedItemsListQueryKey(sort, folder),
     enabled,
     queryFn: () => apiFetch<SavedItemsResponseJson>(`/v1/saved-items?${params.toString()}`),
     staleTime: 30_000,
-    refetchInterval: (query) => isHydrating(query.state.data) ? HYDRATION_POLL_MS : false,
+    refetchInterval: (query) => isHydrating(query.state.data, autoFiling) ? HYDRATION_POLL_MS : false,
   })
 }
 

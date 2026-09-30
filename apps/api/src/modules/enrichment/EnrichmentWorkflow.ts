@@ -10,7 +10,8 @@ import {
   EnrichmentJob,
   EnrichmentStageResult,
 } from "../../domain/EnrichmentJob.js"
-import { AiEnricher, type AiEnrichmentResult } from "../ai/AiEnricher.js"
+import { AiEnricher } from "../ai/AiEnricher.js"
+import { JevClassifier } from "../ai/JevClassifier.js"
 import { LinkContentRepository } from "../content/LinkContentRepository.js"
 import {
   ReadableContentExtractor,
@@ -45,6 +46,7 @@ export class EnrichmentWorkflow extends Context.Service<EnrichmentWorkflow>()(
       const metadataFetcher = yield* MetadataFetcher
       const oEmbedFetcher = yield* OEmbedFetcher
       const aiEnricher = yield* AiEnricher
+      const jev = yield* JevClassifier
       const pageFetcher = yield* PageFetcher
       const intake = yield* SavedItemIntake
       const contentExtractor = yield* ReadableContentExtractor
@@ -217,21 +219,22 @@ export class EnrichmentWorkflow extends Context.Service<EnrichmentWorkflow>()(
             content,
           }
 
-          // Tags and Preview Summary come from one AI call, so the page is sent
-          // once. Both stages report on that call: they fail together, and each
-          // is skipped on its own when the model returns nothing for it.
-          const aiResult = yield* Effect.all([aiEnricher.enrich(aiInput)], {
-            mode: "result",
-          }).pipe(Effect.map(([result]) => result))
+          // Tags come from Jev as typed answers and the Preview Summary from a
+          // text model, so the two calls are independent and run side by side.
+          // Each stage fails or skips on its own.
+          const [tagResult, summaryResult] = yield* Effect.all(
+            [jev.tags(aiInput), aiEnricher.enrich(aiInput)],
+            { mode: "result", concurrency: 2 },
+          )
 
           const aiStage = <A>(
-            pick: (result: AiEnrichmentResult) => Option.Option<A>,
+            result: Result.Result<Option.Option<A>, unknown>,
             skipMessage: string,
           ): Effect.Effect<StageResult<A>, unknown> =>
-            Result.isFailure(aiResult)
-              ? Effect.fail(aiResult.failure)
+            Result.isFailure(result)
+              ? Effect.fail(result.failure)
               : Effect.succeed(
-                Option.match(pick(aiResult.success), {
+                Option.match(result.success, {
                   onNone: (): StageResult<A> => ({
                     _tag: "skip",
                     message: skipMessage,
@@ -243,10 +246,7 @@ export class EnrichmentWorkflow extends Context.Service<EnrichmentWorkflow>()(
           {
             const result = yield* runStage<readonly Topic[]>(
               "tagging",
-              aiStage(
-                (value) => value.tags,
-                "AI tags lacked enough signal or AI is disabled.",
-              ),
+              aiStage(tagResult, "No Tag fit the link, or Jev is not configured."),
               stages,
             )
 
@@ -260,10 +260,9 @@ export class EnrichmentWorkflow extends Context.Service<EnrichmentWorkflow>()(
             // the message itself, so a Preview Summary would restate what the
             // reader is about to read, in more words than the post used.
             //
-            // Tags and the summary come from one AI call, so this skips the
-            // summary rather than the call — a post still gets Tags. The stage is
-            // recorded as skipped rather than dropped, so a job accounts for every
-            // stage either way.
+            // The summary call has already run by now, so this skips the stage
+            // rather than the call. The stage is recorded as skipped rather than
+            // dropped, so a job accounts for every stage either way.
             const result = yield* runStage<string>(
               "preview-summary",
               linkEnrichment.type === "post"
@@ -272,7 +271,7 @@ export class EnrichmentWorkflow extends Context.Service<EnrichmentWorkflow>()(
                   message: "A post is its own preview, so it takes no Preview Summary.",
                 })
                 : aiStage(
-                  (value) => value.summary,
+                  Result.map(summaryResult, (value) => value.summary),
                   "AI preview summary is disabled or no input was available.",
                 ),
               stages,
@@ -316,6 +315,7 @@ export class EnrichmentWorkflow extends Context.Service<EnrichmentWorkflow>()(
     Layer.provide(MetadataFetcher.layer),
     Layer.provide(OEmbedFetcher.layer),
     Layer.provide(AiEnricher.defaultLayer),
+    Layer.provide(JevClassifier.defaultLayer),
     Layer.provide(PageFetcher.defaultLayer),
     Layer.provide(SavedItemIntake.defaultLayer),
     Layer.provide(ReadableContentExtractor.layer),

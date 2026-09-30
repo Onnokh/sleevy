@@ -1,9 +1,9 @@
-import { and, asc, eq, ne, sql } from "drizzle-orm"
+import { and, asc, eq, isNotNull, ne, sql } from "drizzle-orm"
 import { Context, Effect, Layer, Option, Schema } from "effect"
 
 import { Folder, type FolderId, type UserId } from "../../domain/SavedItem.js"
 import { PostgresClient } from "../persistence/PostgresClient.js"
-import { foldersTable } from "../persistence/schema.js"
+import { foldersTable, linkMetadataTable, savedItemsTable } from "../persistence/schema.js"
 
 const decodeFolder = Schema.decodeUnknownSync(Folder)
 
@@ -24,6 +24,41 @@ export class FolderRepository extends Context.Service<FolderRepository>()(
             .where(eq(foldersTable.userId, userId))
             .orderBy(asc(sql`lower(${foldersTable.name})`), asc(foldersTable.id))
           return rows.map(toFolder)
+        }),
+
+        // The newest few titles in each Folder show a classifier what the
+        // person keeps there, which a bare name such as "Work" or "Later" does
+        // not.
+        exampleTitles: Effect.fn("FolderRepository.exampleTitles")(function* (userId: UserId, limit: number) {
+          const ranked = db
+            .select({
+              folderId: savedItemsTable.folderId,
+              title: linkMetadataTable.title,
+              rank: sql<number>`row_number() over (partition by ${savedItemsTable.folderId} order by ${savedItemsTable.lastSavedAt} desc)`.as("rank"),
+            })
+            .from(savedItemsTable)
+            .innerJoin(linkMetadataTable, eq(linkMetadataTable.linkId, savedItemsTable.linkId))
+            .where(and(
+              eq(savedItemsTable.userId, userId),
+              isNotNull(savedItemsTable.folderId),
+              isNotNull(linkMetadataTable.title),
+            ))
+            .as("ranked")
+
+          const rows = yield* db
+            .select({ folderId: ranked.folderId, title: ranked.title })
+            .from(ranked)
+            .where(sql`${ranked.rank} <= ${limit}`)
+            .orderBy(ranked.folderId, ranked.rank)
+
+          const byFolder = new Map<FolderId, string[]>()
+          for (const row of rows) {
+            if (!row.folderId || !row.title) continue
+            const titles = byFolder.get(row.folderId) ?? []
+            titles.push(row.title)
+            byFolder.set(row.folderId, titles)
+          }
+          return byFolder
         }),
 
         findByUserAndId: Effect.fn("FolderRepository.findByUserAndId")(function* (userId: UserId, id: FolderId) {
