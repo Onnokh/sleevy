@@ -1,6 +1,6 @@
 import * as Dialog from "@radix-ui/react-dialog"
 import clsx from "clsx"
-import { Check, Folder, X } from "lucide-react"
+import { Check, Folder, FolderPlus, ListChecks, Minus, ScanSearch, X } from "lucide-react"
 import { AnimatePresence, domAnimation, LazyMotion, m, MotionConfig } from "motion/react"
 import { type CSSProperties, type ReactNode, useMemo, useState } from "react"
 
@@ -14,6 +14,7 @@ import {
 } from "../../sleevy/organize"
 import { colorSwatches } from "../folders/folder-dialog"
 import type { FolderCardColor } from "../folders/folder-card-shader"
+import { faviconUrl } from "../saved-card/saved-card"
 import { Button } from "../ui/button/button"
 import styles from "./organize-wizard.module.scss"
 
@@ -30,6 +31,8 @@ type Group = {
 }
 
 type Step = "start" | "scan" | "folders" | "review" | "done"
+
+const ORDER: readonly Step[] = ["start", "scan", "folders", "review", "done"]
 
 const plural = (count: number, one: string, many: string) => `${count} ${count === 1 ? one : many}`
 
@@ -70,7 +73,36 @@ function groupMoves(
 }
 
 const swatch = (color: string | null) =>
-  color && color in colorSwatches ? colorSwatches[color as FolderCardColor] : "var(--muted)"
+  color && color in colorSwatches ? colorSwatches[color as FolderCardColor] : colorSwatches.neutral
+
+const hostOf = (url: string) => {
+  try {
+    return new URL(url).hostname.replace(/^www\./, "")
+  } catch {
+    return url
+  }
+}
+
+/** A round check that stands in for the browser checkbox; the real input stays for keyboard and screen readers. */
+function Tick({ state }: { readonly state: "on" | "off" | "some" }) {
+  return (
+    <span className={clsx(styles.tick, state !== "off" && styles.tickOn)} aria-hidden>
+      {state === "on" ? <Check size={12} strokeWidth={3} /> : state === "some" ? <Minus size={12} strokeWidth={3} /> : null}
+    </span>
+  )
+}
+
+function FolderTile({ emoji, color, size = "md" }: { readonly emoji: string | null; readonly color: string | null; readonly size?: "md" | "lg" }) {
+  return (
+    <span
+      className={clsx(styles.folderTile, size === "lg" && styles.folderTileLarge)}
+      style={{ "--folder-swatch": swatch(color) } as CSSProperties}
+      aria-hidden
+    >
+      {emoji ?? <Folder size={size === "lg" ? 18 : 15} strokeWidth={2} />}
+    </span>
+  )
+}
 
 /**
  * Organize as a guided overlay: scan the unfiled saves, keep or drop the new
@@ -97,7 +129,7 @@ export function OrganizeWizard({ open, onClose }: { readonly open: boolean; read
   const kept = liveGroups.flatMap((group) => group.moves).filter((move) => !skipped.has(move.savedItemId))
   const keptNewFolders = new Set(kept.flatMap((move) => move.newFolderKey ?? []))
 
-  const step: Step = result
+  const step: Step = result || apply.isPending
     ? "done"
     : run.data?.status === "running"
       ? "scan"
@@ -105,12 +137,16 @@ export function OrganizeWizard({ open, onClose }: { readonly open: boolean; read
         ? newGroups.length > 0 && !reviewing ? "folders" : "review"
         : "start"
 
+  // The whole flow is one wizard, from the start to the save. The New folders
+  // step drops out once a plan is known to suggest none.
   const steps: readonly { id: Step; label: string }[] = [
+    { id: "start", label: "Start" },
     { id: "scan", label: "Scan" },
     ...(plan && newGroups.length === 0 ? [] : [{ id: "folders" as const, label: "New folders" }]),
     { id: "review", label: "Review" },
+    { id: "done", label: "Save" },
   ]
-  const order: Step[] = ["start", "scan", "folders", "review", "done"]
+  const current = ORDER.indexOf(step)
 
   const reset = () => {
     setDroppedFolders(new Set())
@@ -162,29 +198,41 @@ export function OrganizeWizard({ open, onClose }: { readonly open: boolean; read
     )
   }
 
+  let heading: string
   let body: ReactNode
   let footer: ReactNode
 
   switch (step) {
     case "start": {
       const unavailable = start.error ? folderErrorMessage(start.error) : null
+      heading = "Find a place for every save"
       body = (
         <>
           <p className={styles.lead}>
-            Sleevy reads every save that has no folder and finds where it belongs.
+            Sleevy reads each save that has no folder and matches it to your folders. You decide what moves.
           </p>
           <ol className={styles.explainer}>
-            <li><strong>Scan.</strong> Each save is matched against your folders. Where a group of saves fits none, a new folder is suggested, named like yours.</li>
-            <li><strong>New folders.</strong> Keep the suggestions you like and drop the rest.</li>
-            <li><strong>Review.</strong> See every move and untick anything that should stay where it is.</li>
+            {[
+              { icon: <ScanSearch size={17} />, title: "Scan", text: "Each save is matched to the folder it clearly fits." },
+              { icon: <FolderPlus size={17} />, title: "New folders", text: "Groups that fit nowhere get a folder named like yours. Keep only the ones you like." },
+              { icon: <ListChecks size={17} />, title: "Review", text: "See every move, and untick anything that should stay where it is." },
+            ].map((item) => (
+              <li key={item.title} className={styles.explainerItem}>
+                <span className={styles.explainerIcon} aria-hidden>{item.icon}</span>
+                <span>
+                  <span className={styles.explainerTitle}>{item.title}</span>
+                  <span className={styles.explainerText}>{item.text}</span>
+                </span>
+              </li>
+            ))}
           </ol>
-          <p className={styles.note}>Nothing moves until you confirm. The scan runs on its own, so you can close this and come back.</p>
           {run.data?.status === "failed" ? <p className={styles.error}>The last scan could not finish. Nothing was moved.</p> : null}
           {unavailable ? <p className={styles.error}>{unavailable}</p> : null}
         </>
       )
       footer = (
         <>
+          <span className={styles.footerNote}>Nothing moves until you confirm.</span>
           <Button variant="ghost" onClick={close}>Cancel</Button>
           <Button onClick={begin} disabled={start.isPending || !run.data}>
             {run.data?.status === "failed" ? "Try again" : "Start scan"}
@@ -196,30 +244,49 @@ export function OrganizeWizard({ open, onClose }: { readonly open: boolean; read
     case "scan": {
       const { phase, done, total } = run.data!
       const share = total > 0 ? Math.min(1, done / total) : 0
+      const phases = [
+        { id: "proposing", label: "Looking for new folders" },
+        { id: "filing", label: "Sorting saves into folders" },
+      ] as const
+      const phaseIndex = phase === "filing" ? 1 : phase === "proposing" ? 0 : -1
+      heading = "Scanning your unfiled saves"
       body = (
         <div className={styles.scan} role="status">
-          <div className={styles.scanLabel}>
-            <span>{phase === "proposing" ? "Looking for new folders" : phase === "filing" ? "Sorting saves" : "Getting started"}</span>
+          <div className={styles.scanFigure}>
+            <span className={styles.scanPercent}>{Math.round(share * 100)}<small>%</small></span>
             {total > 0 ? <span className={styles.count}>{done} of {total}</span> : null}
           </div>
           <div className={styles.track}>
-            <m.div className={styles.fill} animate={{ width: `${Math.round(share * 100)}%` }} transition={{ duration: 0.4, ease: "easeOut" }} />
+            <m.div className={styles.fill} animate={{ width: `${Math.max(2, Math.round(share * 100))}%` }} transition={{ duration: 0.5, ease: "easeOut" }} />
           </div>
-          <p className={styles.note}>
-            {phase === "proposing"
-              ? "Checking which groups of saves need a folder you do not have yet."
-              : "Placing each save in the folder it clearly fits. A save that fits none stays unfiled."}
-          </p>
+          <ul className={styles.phases}>
+            {phases.map((item, index) => {
+              const state = index < phaseIndex ? "on" : index === phaseIndex ? "busy" : "off"
+              return (
+                <li key={item.id} className={clsx(styles.phase, styles[`phase-${state}`])}>
+                  {state === "busy" ? <span className={styles.spinner} aria-hidden /> : <Tick state={state === "on" ? "on" : "off"} />}
+                  {item.label}
+                </li>
+              )
+            })}
+          </ul>
         </div>
       )
-      footer = <Button variant="ghost" onClick={close}>Close and keep scanning</Button>
+      footer = (
+        <>
+          <span className={styles.footerNote}>This runs on its own. You can close this and come back.</span>
+          <Button variant="ghost" onClick={close}>Close</Button>
+        </>
+      )
       break
     }
     case "folders": {
+      const keptCount = newGroups.filter((group) => !droppedFolders.has(group.newFolderKey!)).length
+      heading = plural(newGroups.length, "new folder suggested", "new folders suggested")
       body = (
         <>
           <p className={styles.lead}>
-            {plural(newGroups.length, "new folder fits", "new folders fit")} your unfiled saves. Drop any you do not want; their saves stay unfiled.
+            These groups of saves fit none of your folders. Keep a folder to make it; drop it and its saves stay unfiled.
           </p>
           <ul className={styles.folderList}>
             {newGroups.map((group) => {
@@ -234,16 +301,20 @@ export function OrganizeWizard({ open, onClose }: { readonly open: boolean; read
                     onClick={() => toggleFolder(key)}
                     style={{ "--folder-swatch": swatch(group.color) } as CSSProperties}
                   >
-                    <span className={styles.folderIcon} aria-hidden>{group.emoji ?? <Folder size={16} />}</span>
+                    <FolderTile emoji={group.emoji} color={group.color} size="lg" />
                     <span className={styles.folderText}>
                       <span className={styles.folderName}>{group.name}</span>
-                      <span className={styles.folderSample}>
-                        {plural(group.moves.length, "save", "saves")} · {group.moves.slice(0, 2).map((move) => move.title ?? move.url).join(", ")}
+                      <span className={styles.folderSample}>{plural(group.moves.length, "save", "saves")}</span>
+                      <span className={styles.favicons}>
+                        {group.moves.slice(0, 4).map((move) => (
+                          <span key={move.savedItemId} className={styles.sample}>
+                            <img className={styles.faviconSmall} src={faviconUrl(hostOf(move.url))} alt="" loading="lazy" />
+                            <span className={styles.sampleTitle}>{move.title ?? hostOf(move.url)}</span>
+                          </span>
+                        ))}
                       </span>
                     </span>
-                    <span className={clsx(styles.check, keep && styles.checkOn)} aria-hidden>
-                      {keep ? <Check size={14} strokeWidth={3} /> : null}
-                    </span>
+                    <Tick state={keep ? "on" : "off"} />
                   </button>
                 </li>
               )
@@ -253,62 +324,95 @@ export function OrganizeWizard({ open, onClose }: { readonly open: boolean; read
       )
       footer = (
         <>
-          <Button variant="ghost" onClick={throwAway} disabled={discard.isPending}>Discard</Button>
-          <Button onClick={() => setReviewing(true)}>Continue</Button>
+          <Button variant="ghost" onClick={throwAway} disabled={discard.isPending}>Discard plan</Button>
+          <span className={styles.spacer} />
+          <Button onClick={() => setReviewing(true)}>
+            {keptCount === newGroups.length ? "Keep all and continue" : `Keep ${keptCount} and continue`}
+          </Button>
         </>
       )
       break
     }
     case "review": {
       const nothing = liveGroups.length === 0
+      const considered = plan!.considered
+      heading = nothing ? "Everything stays put" : "Review the moves"
       body = nothing ? (
-        <p className={styles.lead}>
-          None of your {plural(plan!.considered, "unfiled save", "unfiled saves")} clearly fits a folder. They stay where they are.
-        </p>
+        <div className={styles.empty}>
+          <span className={styles.emptyMark} aria-hidden><Folder size={22} /></span>
+          <p className={styles.lead}>
+            None of your {plural(considered, "unfiled save", "unfiled saves")} clearly fits a folder. They stay where they are.
+          </p>
+        </div>
       ) : (
         <>
-          <p className={styles.lead}>
-            {plural(kept.length, "save moves", "saves move")}, out of {plural(plan!.considered, "unfiled save", "unfiled saves")}. Untick anything that should stay where it is.
-          </p>
+          <dl className={styles.stats}>
+            <div className={styles.stat}>
+              <dt>To move</dt>
+              <dd>{kept.length}</dd>
+            </div>
+            <div className={styles.stat}>
+              <dt>New folders</dt>
+              <dd>{keptNewFolders.size}</dd>
+            </div>
+            <div className={styles.stat}>
+              <dt>Stay unfiled</dt>
+              <dd>{considered - kept.length}</dd>
+            </div>
+          </dl>
           <div className={styles.groups}>
             {liveGroups.map((group) => {
               const ids = group.moves.map((move) => move.savedItemId)
               const keptCount = ids.filter((id) => !skipped.has(id)).length
+              const all = keptCount === ids.length
               return (
-                <fieldset key={group.id} className={styles.group}>
-                  <legend className={styles.groupHeader}>
-                    <label className={styles.groupToggle}>
-                      <input
-                        type="checkbox"
-                        checked={keptCount === ids.length}
-                        ref={(input) => {
-                          if (input) input.indeterminate = keptCount > 0 && keptCount < ids.length
-                        }}
-                        onChange={(event) => toggle(ids, event.target.checked)}
-                      />
-                      <span className={styles.groupName}>
-                        {group.emoji ? <span aria-hidden>{group.emoji} </span> : null}
-                        {group.name}
-                      </span>
-                    </label>
-                    {group.newFolderKey ? <span className={styles.badge}>New</span> : null}
-                    <span className={styles.count}>{keptCount}</span>
-                  </legend>
+                <section
+                  key={group.id}
+                  className={clsx(styles.group, keptCount === 0 && styles.groupOff)}
+                  style={{ "--folder-swatch": swatch(group.color) } as CSSProperties}
+                  aria-label={group.name}
+                >
+                  <label className={styles.groupHeader}>
+                    <input
+                      type="checkbox"
+                      className={styles.srOnly}
+                      checked={all}
+                      ref={(input) => {
+                        if (input) input.indeterminate = keptCount > 0 && !all
+                      }}
+                      onChange={(event) => toggle(ids, event.target.checked)}
+                    />
+                    <FolderTile emoji={group.emoji} color={group.color} />
+                    <span className={styles.groupName}>{group.name}</span>
+                    {group.newFolderKey ? <span className={styles.badge}>New folder</span> : null}
+                    <span className={styles.groupCount}>{keptCount} of {ids.length}</span>
+                    <Tick state={all ? "on" : keptCount > 0 ? "some" : "off"} />
+                  </label>
                   <ul className={styles.items}>
-                    {group.moves.map((move) => (
-                      <li key={move.savedItemId}>
-                        <label className={styles.item}>
-                          <input
-                            type="checkbox"
-                            checked={!skipped.has(move.savedItemId)}
-                            onChange={(event) => toggle([move.savedItemId], event.target.checked)}
-                          />
-                          <span className={styles.itemTitle}>{move.title ?? move.url}</span>
-                        </label>
-                      </li>
-                    ))}
+                    {group.moves.map((move) => {
+                      const on = !skipped.has(move.savedItemId)
+                      const host = hostOf(move.url)
+                      return (
+                        <li key={move.savedItemId}>
+                          <label className={clsx(styles.item, !on && styles.itemOff)}>
+                            <input
+                              type="checkbox"
+                              className={styles.srOnly}
+                              checked={on}
+                              onChange={(event) => toggle([move.savedItemId], event.target.checked)}
+                            />
+                            <img className={styles.favicon} src={faviconUrl(host)} alt="" loading="lazy" />
+                            <span className={styles.itemText}>
+                              <span className={styles.itemTitle}>{move.title ?? move.url}</span>
+                              <span className={styles.itemHost}>{host}</span>
+                            </span>
+                            <Tick state={on ? "on" : "off"} />
+                          </label>
+                        </li>
+                      )
+                    })}
                   </ul>
-                </fieldset>
+                </section>
               )
             })}
           </div>
@@ -316,38 +420,74 @@ export function OrganizeWizard({ open, onClose }: { readonly open: boolean; read
         </>
       )
       footer = nothing ? (
-        <Button onClick={throwAway} disabled={discard.isPending}>Done</Button>
+        <>
+          <span className={styles.spacer} />
+          <Button onClick={throwAway} disabled={discard.isPending}>Done</Button>
+        </>
       ) : (
         <>
           {newGroups.length > 0 ? (
             <Button variant="ghost" onClick={() => setReviewing(false)} disabled={apply.isPending}>Back</Button>
           ) : (
-            <Button variant="ghost" onClick={throwAway} disabled={discard.isPending || apply.isPending}>Discard</Button>
+            <Button variant="ghost" onClick={throwAway} disabled={discard.isPending || apply.isPending}>Discard plan</Button>
           )}
+          <span className={styles.spacer} />
           <Button onClick={confirm} disabled={kept.length === 0 || apply.isPending}>
-            {apply.isPending ? "Moving…" : `Move ${plural(kept.length, "save", "saves")}`}
+            {apply.isPending
+              ? "Moving…"
+              : keptNewFolders.size > 0
+                ? `Move ${plural(kept.length, "save", "saves")} · make ${plural(keptNewFolders.size, "folder", "folders")}`
+                : `Move ${plural(kept.length, "save", "saves")}`}
           </Button>
         </>
       )
       break
     }
     case "done": {
+      if (!result) {
+        heading = "Saving your folders"
+        body = (
+          <div className={styles.done} role="status">
+            <span className={styles.savingMark} aria-hidden><span className={styles.spinner} /></span>
+            <p className={styles.doneTitle}>
+              Moving {plural(kept.length, "save", "saves")}
+              {keptNewFolders.size > 0 ? ` into ${plural(keptNewFolders.size, "new folder", "new folders")} and your own` : ""}…
+            </p>
+          </div>
+        )
+        footer = <span className={styles.spacer} />
+        break
+      }
+      heading = "All sorted"
       body = (
         <div className={styles.done}>
-          <span className={styles.doneMark} aria-hidden><Check size={22} strokeWidth={2.5} /></span>
+          <m.span
+            className={styles.doneMark}
+            aria-hidden
+            initial={{ scale: 0.6, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: "spring", stiffness: 420, damping: 22 }}
+          >
+            <Check size={26} strokeWidth={2.5} />
+          </m.span>
           <p className={styles.doneTitle}>
             Moved {plural(result!.filed, "save", "saves")}
             {result!.foldersCreated > 0 ? ` and made ${plural(result!.foldersCreated, "folder", "folders")}` : ""}.
           </p>
-          <p className={styles.note}>New saves go into these folders too when “Sort new saves into folders” is on.</p>
+          <p className={styles.note}>When “Sort new saves into folders” is on, new saves go into these folders too.</p>
         </div>
       )
-      footer = <Button onClick={close}>Done</Button>
+      footer = (
+        <>
+          <span className={styles.spacer} />
+          <Button onClick={close}>Done</Button>
+        </>
+      )
       break
     }
   }
 
-  const current = order.indexOf(step)
+  const visible = steps.findIndex((item) => item.id === step)
 
   return (
     // Settings sits outside the app's LazyMotion, so the overlay brings its own.
@@ -358,23 +498,36 @@ export function OrganizeWizard({ open, onClose }: { readonly open: boolean; read
             <Dialog.Overlay className={styles.overlay} />
             <Dialog.Content className={styles.content} aria-describedby={undefined}>
               <header className={styles.header}>
-                <Dialog.Title className={styles.title}>Organize unfiled saves</Dialog.Title>
+                <div className={styles.headerText}>
+                  <span className={styles.eyebrow}>Organize · Step {visible + 1} of {steps.length}</span>
+                  <Dialog.Title className={styles.title}>{heading}</Dialog.Title>
+                </div>
                 <Dialog.Close className={styles.close} aria-label="Close"><X size={16} /></Dialog.Close>
               </header>
-    
+
               <ol className={styles.stepper} aria-label="Steps">
-                {steps.map((item, index) => {
-                  const position = order.indexOf(item.id)
+                {steps.map((item) => {
+                  const position = ORDER.indexOf(item.id)
                   const state = current > position ? "stepDone" : current === position ? "stepCurrent" : "stepTodo"
                   return (
                     <li key={item.id} className={clsx(styles.stepItem, styles[state])} aria-current={state === "stepCurrent" ? "step" : undefined}>
-                      <span className={styles.stepDot}>{state === "stepDone" ? <Check size={11} strokeWidth={3} /> : index + 1}</span>
-                      <span className={styles.stepLabel}>{item.label}</span>
+                      <span className={styles.stepBar}>
+                        <m.span
+                          className={styles.stepBarFill}
+                          initial={false}
+                          animate={{ scaleX: state === "stepTodo" ? 0 : 1 }}
+                          transition={{ duration: 0.35, ease: "easeOut" }}
+                        />
+                      </span>
+                      <span className={styles.stepLabel}>
+                        {state === "stepDone" ? <Check size={12} strokeWidth={3} /> : null}
+                        {item.label}
+                      </span>
                     </li>
                   )
                 })}
               </ol>
-    
+
               <div className={styles.body}>
                 <AnimatePresence mode="wait" initial={false}>
                   <m.div
@@ -389,7 +542,7 @@ export function OrganizeWizard({ open, onClose }: { readonly open: boolean; read
                   </m.div>
                 </AnimatePresence>
               </div>
-    
+
               <footer className={styles.footer}>{footer}</footer>
             </Dialog.Content>
           </Dialog.Portal>

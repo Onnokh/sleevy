@@ -18,6 +18,8 @@ struct OrganizeView: View {
     @State private var isWorking = false
     @State private var errorMessage: String?
     @State private var result: OrganizeResult?
+    /// True while the plan is being applied: the Save step shows the work in progress.
+    @State private var isApplying = false
 
     private enum Step: Int, Comparable {
         case start, scan, folders, review, done
@@ -68,7 +70,7 @@ struct OrganizeView: View {
     // MARK: Steps
 
     private var step: Step {
-        if result != nil { return .done }
+        if result != nil || isApplying { return .done }
         switch run?.status {
         case .running: return .scan
         case .ready where run?.plan != nil: return !newGroups.isEmpty && !isReviewing ? .folders : .review
@@ -78,7 +80,9 @@ struct OrganizeView: View {
 
     private var steps: [(Step, String)] {
         let hasPlan = run?.plan != nil
-        return [(.scan, "Scan")] + (hasPlan && newGroups.isEmpty ? [] : [(.folders, "New Folders")]) + [(.review, "Review")]
+        return [(.start, "Start"), (.scan, "Scan")]
+            + (hasPlan && newGroups.isEmpty ? [] : [(.folders, "New Folders")])
+            + [(.review, "Review"), (.done, "Save")]
     }
 
     private var stepper: some View {
@@ -101,10 +105,12 @@ struct OrganizeView: View {
                         }
                     }
                     .frame(width: 20, height: 20)
-                    Text(label)
-                        .font(.footnote.weight(isCurrent ? .semibold : .regular))
-                        .foregroundStyle(isCurrent || isDone ? .primary : .secondary)
-                        .fixedSize()
+                    if isCurrent {
+                        // Five labels do not fit a phone width; the current one is the one that matters.
+                        Text(label)
+                            .font(.footnote.weight(.semibold))
+                            .fixedSize()
+                    }
                 }
                 if index < steps.count - 1 {
                     Rectangle().fill(.secondary.opacity(0.3)).frame(height: 1)
@@ -285,7 +291,21 @@ struct OrganizeView: View {
         }
     }
 
+    @ViewBuilder
     private var doneStep: some View {
+        if result == nil {
+            VStack(spacing: 14) {
+                ProgressView().controlSize(.large)
+                Text("Moving \(saves(keptMoves.count))…")
+                    .font(.title3.weight(.semibold))
+            }
+            .padding(32)
+        } else {
+            savedStep
+        }
+    }
+
+    private var savedStep: some View {
         VStack(spacing: 14) {
             Image(systemName: "checkmark.circle.fill")
                 .font(.system(size: 52))
@@ -327,7 +347,7 @@ struct OrganizeView: View {
                     newGroups.isEmpty ? ("Discard Plan", { Task { await discard() } }) : ("Back", { isReviewing = false })
                 )
             case .done:
-                return (("Done", false, { dismiss() }), nil)
+                return result == nil ? (nil, nil) : (("Done", false, { dismiss() }), nil)
             }
         }()
 
@@ -447,7 +467,11 @@ struct OrganizeView: View {
 
     private func apply(_ plan: OrganizePlan) async {
         isWorking = true
-        defer { isWorking = false }
+        isApplying = true
+        defer {
+            isWorking = false
+            isApplying = false
+        }
         errorMessage = nil
         let kept = keptMoves
         let keptKeys = Set(kept.compactMap(\.newFolderKey))
