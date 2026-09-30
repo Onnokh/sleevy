@@ -219,6 +219,10 @@ _Avoid_: Reading text, scraped text, full text, Readable Content
 The article prose of a Link, extracted once and kept in two forms: the extractor's own article HTML, and the Markdown converted from it. The Reader View renders the Markdown; the HTML is kept only so a better conversion can be run later without re-fetching the page. It is what the page said, not a copy of the page: no assets are stored and images remain External Image URLs.
 _Avoid_: Archive, cached page, page copy, full text, Extracted Page Content
 
+**Content Passage**:
+A bounded, section-aware slice derived from a Link's Readable Content for keyword and semantic retrieval. It keeps its heading path and order, can always be rebuilt from the Markdown, and is never user-authored content.
+_Avoid_: Saved Item note, permanent article fragment, source document
+
 **Reader View**:
 The in-product surface that renders a Saved Item's Readable Content instead of sending the user to the Original URL.
 _Avoid_: In-app browser, web view, archive view, detail screen

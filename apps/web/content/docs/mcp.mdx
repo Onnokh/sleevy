@@ -4,7 +4,7 @@ description: Connect an AI agent to save, find, and organize your Sleevy reading
 icon: Bot
 ---
 
-Sleevy supports the [Model Context Protocol](https://modelcontextprotocol.io/) (MCP). Connect it to an AI agent to save links, find saved items, organize folders, and manage your reading queue without leaving your workflow.
+Sleevy supports the [Model Context Protocol](https://modelcontextprotocol.io/) (MCP). Connect it to an AI agent to save links, search their Readable Content, organize folders, and manage your reading queue without leaving your workflow.
 
 ## Install Sleevy
 
@@ -30,12 +30,15 @@ The first time your agent connects, Sleevy opens an OAuth sign-in and consent fl
 
 | Capability | Tools |
 | --- | --- |
-| Save and find links | `save_link`, `list_saved_items` |
+| Save and list links | `save_link`, `list_saved_items` |
+| Search saved reading | `search_saved_content` |
 | Organize saved items | `set_saved_item_read_state`, `set_saved_item_folder` |
 | Manage folders | `list_folders`, `add_folder` |
 | Remove content | `delete_saved_item`, `remove_folder` |
 
 The tools available to an agent are determined by the permissions granted during OAuth consent. Reconnect Sleevy to review or change those permissions.
+
+`search_saved_content` accepts a natural-language question or search phrase and returns the most relevant passages with their section and original URL. It combines keyword and semantic search over Readable Content. The agent should base its answer on those excerpts, cite the URLs, and say when the saved material does not provide enough evidence. It uses the existing `saved-items:read` permission.
 
 ### Looking before you connect
 

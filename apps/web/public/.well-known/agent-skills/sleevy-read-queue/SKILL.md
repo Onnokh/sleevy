@@ -12,11 +12,12 @@ and tracking what they have got through.
 
 ## When to use this
 
-The user asks what is in their reading list, wants to find a link they saved
-earlier, or wants something marked read or unread.
+The user asks what is in their reading list, wants to find a link they saved,
+wants a question answered from saved reading, or wants something marked read or
+unread.
 
-Do **not** use this as a source of facts about pages. Sleevy knows the title, the
-site, and a short summary of a saved link — not its contents.
+Sleevy searches only the Readable Content it extracted from saved links. Do not
+use it as a source for pages the user has not saved.
 
 ## Connect
 
@@ -38,9 +39,14 @@ Over REST the same shape lives at `GET /v1/saved-items?limit=50&cursor=...`.
 
 ## Find something specific
 
-There is no full-text search over page contents. Page the list and match on the
-title, host, or tags Sleevy returns. If the user describes a link vaguely, list a
-page and offer candidates rather than guessing at a single answer.
+Call `search_saved_content` with a natural-language question or search phrase.
+It combines keyword and semantic search and returns relevant passages with their
+section and original URL. Base an answer on those excerpts, cite the URLs, and
+say when the results do not provide enough evidence. Reading and search both use
+the `saved-items:read` scope.
+
+Use `list_saved_items` when the user wants the queue itself rather than an answer
+from article content.
 
 ## Mark things read
 

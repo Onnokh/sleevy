@@ -9,9 +9,11 @@ import {
   jsonb,
   pgEnum,
   pgTable,
+  primaryKey,
   text,
   timestamp,
   uniqueIndex,
+  vector,
 } from "drizzle-orm/pg-core"
 
 import {
@@ -189,9 +191,35 @@ export const linkContentTable = pgTable(
     extractedAt: timestamp("extracted_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
+    passageIndexedAt: timestamp("passage_indexed_at", { withTimezone: true }),
+    passageIndexError: text("passage_index_error"),
   },
   (table) => [
     index("link_content_search_idx").using("gin", table.search),
+  ],
+)
+
+export const linkContentPassagesTable = pgTable(
+  "link_content_passages",
+  {
+    linkId: text("link_id")
+      .$type<LinkId>()
+      .notNull()
+      .references(() => linkContentTable.linkId, { onDelete: "cascade" }),
+    ordinal: integer("ordinal").notNull(),
+    headingPath: text("heading_path").notNull().default(""),
+    content: text("content").notNull(),
+    search: tsvector("search").generatedAlwaysAs(
+      (): SQL =>
+        sql`to_tsvector('english', ${linkContentPassagesTable.headingPath} || ' ' || regexp_replace(regexp_replace(${linkContentPassagesTable.content}, '[]][(][^)]*[)]', ']', 'g'), 'https?://[^[:space:]]+', ' ', 'g'))`,
+    ),
+    embedding: vector("embedding", { dimensions: 1024 }).notNull(),
+    embeddingModel: text("embedding_model").notNull(),
+    indexedAt: timestamp("indexed_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.linkId, table.ordinal] }),
+    index("link_content_passages_search_idx").using("gin", table.search),
   ],
 )
 
@@ -387,6 +415,7 @@ export const relationalSchema = {
   linkMetadata: linkMetadataTable,
   linkEnrichment: linkEnrichmentTable,
   linkContent: linkContentTable,
+  linkContentPassages: linkContentPassagesTable,
   sources: sourcesTable,
   folders: foldersTable,
   profiles: profilesTable,
@@ -410,6 +439,10 @@ export const relations = defineRelations(relationalSchema, (r) => ({
       from: r.links.id,
       to: r.linkContent.linkId,
       optional: true,
+    }),
+    contentPassages: r.many.linkContentPassages({
+      from: r.links.id,
+      to: r.linkContentPassages.linkId,
     }),
     savedItems: r.many.savedItems({
       from: r.links.id,
@@ -437,6 +470,13 @@ export const relations = defineRelations(relationalSchema, (r) => ({
   linkContent: {
     link: r.one.links({
       from: r.linkContent.linkId,
+      to: r.links.id,
+      optional: false,
+    }),
+  },
+  linkContentPassages: {
+    link: r.one.links({
+      from: r.linkContentPassages.linkId,
       to: r.links.id,
       optional: false,
     }),
@@ -497,6 +537,7 @@ export const schema = {
   linkMetadataTable,
   linkEnrichmentTable,
   linkContentTable,
+  linkContentPassagesTable,
   sourcesTable,
   foldersTable,
   profilesTable,

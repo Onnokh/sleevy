@@ -43,6 +43,8 @@ export class LinkContentRepository extends Context.Service<LinkContentRepository
                     html: article.html,
                     markdown: article.markdown,
                     extractedAt,
+                    passageIndexedAt: null,
+                    passageIndexError: null,
                   },
                 })
 

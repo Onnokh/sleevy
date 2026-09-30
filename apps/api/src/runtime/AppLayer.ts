@@ -21,6 +21,8 @@ import { ConnectAuthorizeRateLimiter } from "../modules/rate-limit/ConnectAuthor
 import { ConnectExchangeRateLimiter } from "../modules/rate-limit/ConnectExchangeRateLimiter.js";
 import { PublicProfileRateLimiter } from "../modules/rate-limit/PublicProfileRateLimiter.js";
 import { SavedItemRepository } from "../modules/saved-items/SavedItemRepository.js";
+import { ContentPassageWorker } from "../modules/search/ContentPassageWorker.js";
+import { HybridSearch } from "../modules/search/HybridSearch.js";
 import { AppConfig } from "./Config.js";
 
 // Each service exposes a self-contained `defaultLayer` that provides its own
@@ -56,4 +58,6 @@ export const appLayer = Layer.mergeAll(
   PublicProfileRateLimiter.defaultLayer,
   PublicProfileRepository.defaultLayer,
   SavedItemRepository.defaultLayer,
+  ContentPassageWorker.defaultLayer,
+  HybridSearch.defaultLayer,
 );

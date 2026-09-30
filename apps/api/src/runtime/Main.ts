@@ -1,12 +1,14 @@
 import { Effect, Schedule } from "effect"
 
 import { ConnectCodeRepository } from "../modules/connect/ConnectCodeRepository.js"
+import { ContentPassageWorker } from "../modules/search/ContentPassageWorker.js"
 import { appLayer } from "./AppLayer.js"
 import { AppConfig } from "./Config.js"
 import { makeApiWebHandler } from "./HttpApp.js"
 
 const program = Effect.gen(function* () {
   const config = yield* AppConfig
+  yield* ContentPassageWorker
   const fetch = yield* makeApiWebHandler
 
   const server = yield* Effect.acquireRelease(
