@@ -16,12 +16,11 @@ import SwiftUI
 struct ReadableItemsSidebar: View {
     let items: [SavedItem]
     let selectedID: SavedItem.ID
-    let onSelect: (SavedItem) -> Void
-
-    /// The column's width. Between the Web Companion's 18rem and 21.5rem, and
-    /// fixed, so the article's measure does not move as the reader steps from
+    /// Set by the Reader View from the window and the posture, never from the
+    /// titles, so the article's measure does not move as the reader steps from
     /// a short title to a long one.
-    static let width: CGFloat = 300
+    let width: CGFloat
+    let onSelect: (SavedItem) -> Void
 
     var body: some View {
         ScrollViewReader { proxy in
@@ -57,7 +56,7 @@ struct ReadableItemsSidebar: View {
                 }
             }
         }
-        .frame(width: Self.width)
+        .frame(width: width)
         .accessibilityLabel("Articles")
     }
 

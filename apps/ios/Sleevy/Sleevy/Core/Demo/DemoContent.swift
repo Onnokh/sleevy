@@ -256,6 +256,58 @@ nonisolated extension DemoMode {
 
         Turn the Reader View off in Settings and every Saved Item goes
         straight out to its Original URL again, exactly as it did before.
+
+        ## Saving from anywhere
+
+        The share sheet, the browser extension, a shortcut on the Home Screen:
+        each one is a door into the same list, and none of them asks you to
+        decide anything at the moment of saving.
+
+        ## Folders without filing
+
+        A folder is somewhere to put the things you will come back to on
+        purpose. The rest can stay in the Library, where search finds them.
+
+        ## Search that remembers
+
+        You rarely remember a title. You remember that it was about espresso,
+        or that a mathematician said something about old problems. Search
+        reads the article, not only the headline.
+
+        ## Reading on the go
+
+        A train has two minutes of signal between stations. The article should
+        already be there when you open it, not be on its way.
+
+        ## Reading at a desk
+
+        On a wide screen the list stays beside the article, so finishing one
+        and starting the next is a tap rather than a trip back.
+
+        ## Typography
+
+        One typeface, a comfortable size, and lines short enough to follow. A
+        reading surface should be the article and nothing else.
+
+        ## Long reads
+
+        The outline is what makes a long article manageable: where you are,
+        how much is left, and a way back to the part you wanted to quote.
+
+        ## Sharing what you read
+
+        A link is the best thing to send. The person you send it to gets the
+        page as its writer made it.
+
+        ## Clearing the list
+
+        Read State is the only bookkeeping. An article you have opened is read;
+        the list keeps it, and the Inbox lets it go.
+
+        ## What comes next
+
+        The loop stays the same: save it, find it, read it. Everything else is
+        in service of that.
         """
 
         return ReadableContent(

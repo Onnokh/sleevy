@@ -15,7 +15,9 @@ import SwiftUI
 /// it lays out as the Web Companion's Reader View does: the articles beside
 /// the article, then the article itself with its Article Outline in the
 /// gutter. Narrower than that, both fold away and the article takes the whole
-/// width, which is the Reader View every iPhone has had.
+/// width, which is the Reader View every iPhone has had. Creased like a book,
+/// the two sides of the fold become two pages: the articles on the left one,
+/// the article on the right.
 struct ReaderView: View {
     /// The Saved Item the reader opened. The pane can move on from it without
     /// pushing a new screen, so this is where reading started rather than what
@@ -31,6 +33,15 @@ struct ReaderView: View {
     @State private var scrollTop: CGFloat = 0
     @State private var viewportHeight: CGFloat = 0
     @State private var contentHeight: CGFloat = 0
+    @State private var isCreased = false
+    /// The reader's finger on the scrubber in the vertical bar, while it is
+    /// down.
+    @State private var scrub: OutlineScrub?
+    /// The section the scrubber last asked for; the article scrolls to it.
+    @State private var scrubTarget: String?
+    /// Which side the vertical bar holding the scrubber is on, or nil when
+    /// the outline is in the gutter instead.
+    @State private var scrubberEdge: HorizontalEdge?
     @Environment(\.openURL) private var openURL
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
@@ -58,6 +69,14 @@ struct ReaderView: View {
     /// the Reader View 867pt of it. 520pt is about 62 characters of 19pt prose,
     /// which is still a column.
     private static let minimumPaneForList: CGFloat = 520
+
+    /// The list's share of the window beside a flat article: enough for two
+    /// lines of title, and the rest stays the article's.
+    private static let listShare: CGFloat = 0.25
+
+    /// The narrowest the list gets, so a small window still shows a title in
+    /// two lines rather than four.
+    private static let minimumListWidth: CGFloat = 220
 
     /// The coordinate space the section offsets are measured in: the scrolling
     /// content itself, so a section's top is its offset into the article and
@@ -145,22 +164,29 @@ struct ReaderView: View {
 
     var body: some View {
         GeometryReader { geometry in
-            let showsList = isRegularWidth
-                && geometry.size.width - ReadableItemsSidebar.width >= Self.minimumPaneForList
-                && readableItems.count > 1
+            let listWidth = listWidth(in: geometry)
 
             HStack(alignment: .top, spacing: 0) {
-                if showsList {
-                    ReadableItemsSidebar(items: readableItems, selectedID: selectedID) { next in
+                if let listWidth {
+                    ReadableItemsSidebar(items: readableItems, selectedID: selectedID, width: listWidth) { next in
                         select(next.id)
                     }
 
                     Divider()
                 }
 
-                articlePane(paneWidth: geometry.size.width - (showsList ? ReadableItemsSidebar.width + 1 : 0))
+                articlePane(paneWidth: geometry.size.width - (listWidth.map { $0 + 1 } ?? 0))
             }
         }
+        .overlay { scrubDeck }
+        .animation(.smooth(duration: 0.35), value: isCreased)
+        .onCreaseChange { isCreased = $0 }
+        .outlineScrubber(
+            outline: loadedOutline,
+            activeIndex: activeIndex,
+            onScrub: scrubbed,
+            onEdgeChange: { scrubberEdge = $0 }
+        )
         .navigationTitle(item?.displayTitle ?? "")
         .navigationBarTitleDisplayMode(.inline)
         // The one screen in the app that hides the tab bar. Everywhere else
@@ -191,10 +217,40 @@ struct ReaderView: View {
 
     // MARK: - Panes
 
+    /// How wide the list beside the article is, or nil when there is no room
+    /// for one.
+    ///
+    /// Creased with the hinge running down the pane, the list fills the left
+    /// side of the fold and the article the right, divided on the hinge so no
+    /// line of prose runs across it. iOS says the hinge is partly open but not
+    /// where it is. On the iPhone Duo it is the middle of the inner display, so
+    /// the split is measured from the middle of the window, not of the pane:
+    /// the system rail's inset puts the pane off centre.
+    ///
+    /// Otherwise the list takes a quarter of the window, and only while the
+    /// article keeps a column beside it.
+    private func listWidth(in geometry: GeometryProxy) -> CGFloat? {
+        guard isRegularWidth, readableItems.count > 1 else { return nil }
+
+        let leadingEdge = geometry.frame(in: .global).minX
+        let windowWidth = leadingEdge + geometry.size.width + geometry.safeAreaInsets.trailing
+
+        if isCreased, geometry.size.width > geometry.size.height {
+            return windowWidth / 2 - leadingEdge
+        }
+
+        let width = max(Self.minimumListWidth, windowWidth * Self.listShare)
+        return geometry.size.width - width - 1 >= Self.minimumPaneForList ? width : nil
+    }
+
     /// The article, with its Article Outline in the leading gutter where the
     /// column leaves one.
     private func articlePane(paneWidth: CGFloat) -> some View {
-        let layout = Layout(paneWidth: paneWidth, hasOutline: hasOutline)
+        // One outline on screen: where the vertical bar has the scrubber, the
+        // gutter is the column's.
+        let layout = Layout(paneWidth: paneWidth, hasOutline: !loadedOutline.isEmpty && scrubberEdge == nil)
+        // A page of a creased book is an iPhone's width, and is set like one.
+        let largeType = isRegularWidth && layout.columnWidth >= Self.minimumPaneForList
 
         return ScrollViewReader { proxy in
             HStack(alignment: .top, spacing: 0) {
@@ -214,7 +270,7 @@ struct ReaderView: View {
                         ProgressView()
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
                     case .loaded(let article):
-                        scrollingArticle(article)
+                        scrollingArticle(article, largeType: largeType)
                     case .failed(let failure):
                         unavailable(failure)
                     }
@@ -227,12 +283,43 @@ struct ReaderView: View {
                     Spacer(minLength: 0)
                 }
             }
+            // No animation: the article keeps up with the finger, and a scroll
+            // still easing towards one section when the finger is on the next
+            // reads as lag.
+            .onChange(of: scrubTarget) { _, target in
+                if let target { proxy.scrollTo(target, anchor: .top) }
+            }
         }
     }
 
-    private var hasOutline: Bool {
-        if case .loaded(let article) = phase { return !article.outline.isEmpty }
-        return false
+    private var loadedOutline: ArticleOutline {
+        if case .loaded(let article) = phase { return article.outline }
+        return []
+    }
+
+    /// The deck of section cards beside the scrubber, level with the mark
+    /// under the finger, on the side of the bar the article is on.
+    @ViewBuilder
+    private var scrubDeck: some View {
+        GeometryReader { geometry in
+            if let scrub, let scrubberEdge, loadedOutline.indices.contains(scrub.index) {
+                let origin = geometry.frame(in: .global).origin
+                let gap: CGFloat = 12
+                let half = OutlineDeck.width / 2
+                let x = scrubberEdge == .trailing
+                    ? scrub.frame.minX - gap - half
+                    : scrub.frame.maxX + gap + half
+                // Kept clear of the pane's ends, so the cards either side of
+                // the first and last sections are not cut off.
+                let y = min(max(scrub.markY - origin.y, 110), geometry.size.height - 110)
+
+                OutlineDeck(outline: loadedOutline, frontIndex: scrub.index)
+                    .position(x: x - origin.x, y: y)
+                    .animation(OutlineDeck.travel, value: y)
+                    .transition(.opacity.animation(.easeOut(duration: 0.14)))
+            }
+        }
+        .allowsHitTesting(false)
     }
 
     /// How the article pane divides between the outline gutter and the column.
@@ -253,14 +340,14 @@ struct ReaderView: View {
         }
     }
 
-    private func scrollingArticle(_ article: Article) -> some View {
+    private func scrollingArticle(_ article: Article, largeType: Bool) -> some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 // The article's own title, not the row's: the extractor read
                 // the page and the Saved Metadata read the tags, and when they
                 // disagree the page is the one that was written by a person.
                 Text(article.content.title ?? item?.displayTitle ?? "")
-                    .font(isRegularWidth ? .system(size: 40, weight: .bold) : .largeTitle.weight(.bold))
+                    .font(largeType ? .system(size: 40, weight: .bold) : .largeTitle.weight(.bold))
 
                 if let item {
                     Text(item.displayDomain)
@@ -270,7 +357,7 @@ struct ReaderView: View {
 
                 ForEach(article.sections) { section in
                     Markdown(section.markdown)
-                        .markdownTheme(.sleevyReader(isRegularWidth: isRegularWidth))
+                        .markdownTheme(.sleevyReader(largeType: largeType))
                         .id(section.id)
                         .onGeometryChange(for: CGFloat.self) { proxy in
                             proxy.frame(in: .named(Self.articleSpace)).minY
@@ -358,6 +445,19 @@ struct ReaderView: View {
         }
     }
 
+    /// The scrubber pointed at a section, or let go. A scrub with no frame
+    /// is a jump from an assistive technology: the article moves, and there
+    /// is no finger for a deck to sit beside.
+    private func scrubbed(_ next: OutlineScrub?) {
+        guard let next else {
+            scrub = nil
+            scrubTarget = nil
+            return
+        }
+        scrub = next.frame == .zero ? nil : next
+        scrubTarget = loadedOutline[next.index].id
+    }
+
     /// Which mark the rail lights, from the same arithmetic the Web Companion
     /// uses. A section the layout has not reported yet is not a place the
     /// reader can be, so it never claims the mark.
@@ -437,11 +537,11 @@ extension MarkdownUI.Theme {
     /// Theme setting (System / Light / Dark) governs the Reader View too.
     ///
     /// The inner display is read at arm's length rather than in the hand, so
-    /// the body grows with the pane. The measure is capped either way, so the
+    /// a wide column sets larger type. The measure is capped either way, so the
     /// larger size is more words on a line the eye can still track, not a
     /// longer line.
-    static func sleevyReader(isRegularWidth: Bool) -> MarkdownUI.Theme {
-        let body: CGFloat = isRegularWidth ? 19 : 17
+    static func sleevyReader(largeType: Bool) -> MarkdownUI.Theme {
+        let body: CGFloat = largeType ? 19 : 17
 
         return MarkdownUI.Theme()
             .text {
@@ -472,7 +572,7 @@ extension MarkdownUI.Theme {
             }
             .paragraph { configuration in
                 configuration.label
-                    .lineSpacing(isRegularWidth ? 7 : 6)
+                    .lineSpacing(largeType ? 7 : 6)
                     .markdownMargin(top: 0, bottom: 14)
             }
             .blockquote { configuration in
