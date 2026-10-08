@@ -11,14 +11,17 @@ struct OutlineScrub: Equatable {
     let frame: CGRect
 }
 
-/// The Article Outline as a strip of marks the reader drags along, for the
-/// vertical bar a device puts beside the content (the iPhone Duo's system
-/// rail). The marks taper from the section being read, as on the outline
-/// rail. A finger on the strip points at the mark level with it, the article
-/// follows the finger, and lifting it leaves the reader where they stopped.
+/// The Article Outline as a scroll wheel, for the vertical bar a device puts
+/// beside the content (the iPhone Duo's system rail). One mark per section
+/// sits on a drum; the one level with the middle is the section being read.
 ///
-/// The strip only reports where the finger is; the caller scrolls and draws
-/// the deck, since both are outside the bar.
+/// The wheel turns with the finger rather than pointing at where it lands:
+/// every notch of travel clicks it on by one section, with a tick under the
+/// thumb, and the article follows. Past the first or last section it gives a
+/// little and bumps, and on release it settles back onto the notch.
+///
+/// The wheel only reports where it is; the caller scrolls and draws the deck,
+/// since both are outside the bar.
 struct OutlineScrubber: View {
     let outline: ArticleOutline
     let activeIndex: Int
@@ -29,64 +32,67 @@ struct OutlineScrubber: View {
 
     static let width: CGFloat = 44
 
-    /// The same length whatever the outline: it takes the free part of the
-    /// bar, so a short outline is still a long target for the thumb, and a
-    /// long one packs its marks closer instead of pushing the bar's other
-    /// items off the screen. Shorter on a short screen: an item the bar
-    /// cannot fit goes into its overflow menu, where a strip is no use.
-    private var height: CGFloat {
-        verticalSizeClass == .compact ? 160 : 300
-    }
+    /// The finger's travel from one section to the next.
+    private static let notch: CGFloat = 22
     private static let fullMark: CGFloat = 22
-    /// Room between the end marks and the ends of the bar's capsule. A finger
-    /// in it still points at the end section.
-    private static let endInset: CGFloat = 16
 
+    /// Shorter on a short screen: an item the bar cannot fit goes into its
+    /// overflow menu, where a wheel is no use.
+    private var height: CGFloat {
+        verticalSizeClass == .compact ? 100 : 132
+    }
+
+    /// Where the wheel is, in sections, while a finger turns it: between
+    /// notches mid-turn, and past the ends while it is pulled beyond them.
+    @State private var turn: CGFloat?
+    @State private var turnStart = 0
     @State private var pointed: Int?
-    @Environment(\.verticalSizeClass) private var verticalSizeClass
+    @State private var isPastEnd = false
+    @State private var frame = CGRect.zero
     @State private var probe = WindowFrameProbe()
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
 
     var body: some View {
+        let position = turn ?? CGFloat(activeIndex)
         let shown = pointed ?? activeIndex
-        let pitch = (height - 2 * Self.endInset) / CGFloat(max(outline.count, 1))
+        // The marks sit on a drum seen from the side: they close up and fade
+        // towards the ends, and a quarter turn from the middle is out of sight.
+        let radius = height / 2 - 8
 
-        VStack(spacing: 0) {
+        ZStack {
             ForEach(outline.indices, id: \.self) { index in
-                let isShown = index == shown
-                Capsule()
-                    .fill(isShown ? Color.accentColor : Color.secondary.opacity(0.4))
-                    .frame(
-                        width: Self.fullMark * OutlineRail.scale(distance: abs(index - shown)),
-                        height: isShown ? 3 : 2
-                    )
-                    .frame(maxWidth: .infinity, minHeight: pitch, maxHeight: pitch)
+                let angle = (CGFloat(index) - position) * Self.notch / radius
+                if abs(angle) < .pi / 2 {
+                    let isShown = index == shown
+                    Capsule()
+                        .fill(isShown ? Color.accentColor : Color.secondary)
+                        .frame(width: Self.fullMark * (isShown ? 1 : 0.64), height: isShown ? 3 : 2)
+                        .opacity(isShown ? 1 : 0.5 * cos(angle))
+                        .offset(y: radius * sin(angle))
+                }
             }
         }
-        .animation(.easeOut(duration: 0.15), value: shown)
-        .padding(.vertical, Self.endInset)
         .frame(width: Self.width, height: height)
         .background(WindowFrameReader(probe: probe))
         .contentShape(.rect)
         .gesture(
             DragGesture(minimumDistance: 0, coordinateSpace: .local)
                 .onChanged { drag in
-                    let along = drag.location.y - Self.endInset
-                    let index = min(outline.count - 1, max(0, Int(along / pitch)))
-                    guard index != pointed else { return }
-                    pointed = index
-                    let frame = probe.frame
-                    onScrub(OutlineScrub(
-                        index: index,
-                        markY: frame.minY + Self.endInset + (CGFloat(index) + 0.5) * pitch,
-                        frame: frame
-                    ))
+                    if turn == nil {
+                        turnStart = activeIndex
+                        frame = probe.frame
+                    }
+                    turned(by: drag.translation.height)
                 }
                 .onEnded { _ in
+                    withAnimation(.spring(duration: 0.3, bounce: 0.2)) { turn = nil }
                     pointed = nil
+                    isPastEnd = false
                     onScrub(nil)
                 }
         )
         .sensoryFeedback(.selection, trigger: pointed) { _, new in new != nil }
+        .sensoryFeedback(.impact(flexibility: .rigid, intensity: 0.8), trigger: isPastEnd) { _, new in new }
         .accessibilityElement()
         .accessibilityLabel("Article sections")
         .accessibilityValue(outline.indices.contains(shown) ? outline[shown].title : "")
@@ -97,10 +103,37 @@ struct OutlineScrubber: View {
             @unknown default: activeIndex
             }
             guard outline.indices.contains(next) else { return }
-            // A jump, not a drag: no frame, so no deck, and no release to
+            // A jump, not a turn: no frame, so no deck, and no release to
             // follow it.
             onScrub(OutlineScrub(index: next, markY: 0, frame: .zero))
         }
+    }
+
+    /// Turns the wheel to where the finger has pulled it: down is further
+    /// into the article, as a mouse wheel rolled towards you.
+    private func turned(by travel: CGFloat) {
+        let last = CGFloat(outline.count - 1)
+        let free = CGFloat(turnStart) + travel / Self.notch
+        // Beyond an end the wheel only gives a little, and less the further
+        // it is pulled.
+        let held = if free < 0 {
+            -Self.give(-free)
+        } else if free > last {
+            last + Self.give(free - last)
+        } else {
+            free
+        }
+        turn = held
+        isPastEnd = free < -0.3 || free > last + 0.3
+
+        let index = Int(min(max(held, 0), last).rounded())
+        guard index != pointed else { return }
+        pointed = index
+        onScrub(OutlineScrub(index: index, markY: frame.midY, frame: frame))
+    }
+
+    private static func give(_ overshoot: CGFloat) -> CGFloat {
+        0.4 * overshoot / (1 + overshoot)
     }
 }
 

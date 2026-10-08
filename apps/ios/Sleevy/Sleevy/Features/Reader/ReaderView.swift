@@ -297,8 +297,8 @@ struct ReaderView: View {
         return []
     }
 
-    /// The deck of section cards beside the scrubber, level with the mark
-    /// under the finger, on the side of the bar the article is on.
+    /// The deck of section cards beside the scrubber, level with the pointed
+    /// mark, on the side of the bar the article is on.
     @ViewBuilder
     private var scrubDeck: some View {
         GeometryReader { geometry in
@@ -448,6 +448,10 @@ struct ReaderView: View {
     /// The scrubber pointed at a section, or let go. A scrub with no frame
     /// is a jump from an assistive technology: the article moves, and there
     /// is no finger for a deck to sit beside.
+    ///
+    /// A finger that only rests on the wheel points at the section being
+    /// read. That shows the deck and leaves the article where it is, rather
+    /// than jumping back to the top of the section.
     private func scrubbed(_ next: OutlineScrub?) {
         guard let next else {
             scrub = nil
@@ -455,7 +459,9 @@ struct ReaderView: View {
             return
         }
         scrub = next.frame == .zero ? nil : next
-        scrubTarget = loadedOutline[next.index].id
+        if next.index != activeIndex {
+            scrubTarget = loadedOutline[next.index].id
+        }
     }
 
     /// Which mark the rail lights, from the same arithmetic the Web Companion
