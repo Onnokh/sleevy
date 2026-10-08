@@ -237,6 +237,25 @@ nonisolated extension DemoMode {
         Reading in place changes the arithmetic. There is one column of text,
         the typography is yours, and the only thing on screen is the thing you
         saved.
+
+        ## On a larger display
+
+        A wider pane is not a wider column. Prose set across the full width of
+        an unfolded display runs past the point where the eye can find the
+        start of the next line, so the column keeps its measure and the space
+        left over goes to the Article Outline instead.
+
+        The outline is read out of the article itself, so it says what the
+        writer wrote rather than what a heuristic guessed.
+
+        ## What you give up
+
+        Nothing you cannot take back. The Original URL is one tap away in the
+        menu, and an extraction that lost the part you wanted is never a dead
+        end — the page is still the page.
+
+        Turn the Reader View off in Settings and every Saved Item goes
+        straight out to its Original URL again, exactly as it did before.
         """
 
         return ReadableContent(
@@ -303,6 +322,7 @@ nonisolated extension DemoMode {
         case folder
         case profile
         case search
+        case reader
     }
 
     static var initialScreen: Screen? {
@@ -314,5 +334,11 @@ nonisolated extension DemoMode {
     /// capture shows a Folder that also appears on the Public Profile.
     static var featuredFolderID: String? {
         folders.first(where: \.isPublished)?.id
+    }
+
+    /// The Saved Item the `reader` screen opens: the first one with a Reader
+    /// View, so the capture shows the article rather than an empty state.
+    static var featuredReadableItemID: String? {
+        savedItems.first { $0.hasReadableContent || $0.type == "post" }?.id
     }
 }

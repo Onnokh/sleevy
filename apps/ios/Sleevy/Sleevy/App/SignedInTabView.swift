@@ -203,6 +203,11 @@ struct SignedInTabView: View {
             sleevyPath = [.myProfile]
         case .search:
             selectedTab = .search
+        case .reader:
+            selectedTab = .sleevy
+            if let itemID = DemoMode.featuredReadableItemID {
+                sleevyPath = [.reader(id: itemID)]
+            }
         }
     }
 
