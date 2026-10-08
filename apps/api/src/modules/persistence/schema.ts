@@ -9,9 +9,11 @@ import {
   jsonb,
   pgEnum,
   pgTable,
+  primaryKey,
   text,
   timestamp,
   uniqueIndex,
+  vector,
 } from "drizzle-orm/pg-core"
 
 import {
@@ -189,9 +191,35 @@ export const linkContentTable = pgTable(
     extractedAt: timestamp("extracted_at", { withTimezone: true })
       .notNull()
       .defaultNow(),
+    passageIndexedAt: timestamp("passage_indexed_at", { withTimezone: true }),
+    passageIndexError: text("passage_index_error"),
   },
   (table) => [
     index("link_content_search_idx").using("gin", table.search),
+  ],
+)
+
+export const linkContentPassagesTable = pgTable(
+  "link_content_passages",
+  {
+    linkId: text("link_id")
+      .$type<LinkId>()
+      .notNull()
+      .references(() => linkContentTable.linkId, { onDelete: "cascade" }),
+    ordinal: integer("ordinal").notNull(),
+    headingPath: text("heading_path").notNull().default(""),
+    content: text("content").notNull(),
+    search: tsvector("search").generatedAlwaysAs(
+      (): SQL =>
+        sql`to_tsvector('english', ${linkContentPassagesTable.headingPath} || ' ' || regexp_replace(regexp_replace(${linkContentPassagesTable.content}, '[]][(][^)]*[)]', ']', 'g'), 'https?://[^[:space:]]+', ' ', 'g'))`,
+    ),
+    embedding: vector("embedding", { dimensions: 1024 }).notNull(),
+    embeddingModel: text("embedding_model").notNull(),
+    indexedAt: timestamp("indexed_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.linkId, table.ordinal] }),
+    index("link_content_passages_search_idx").using("gin", table.search),
   ],
 )
 
@@ -283,6 +311,40 @@ export const onboardingTable = pgTable("onboarding", {
   commandPaletteOpenedAt: timestamp("command_palette_opened_at", { withTimezone: true }),
   iphoneHandOffSeenAt: timestamp("iphone_hand_off_seen_at", { withTimezone: true }),
   iphoneCardDismissedAt: timestamp("iphone_card_dismissed_at", { withTimezone: true }),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+})
+
+// The Account settings that travel with the Account rather than staying on one
+// device, one row per Account. A missing row reads as the defaults, which are
+// what a new Account gets.
+//
+// Auto-Filing is on by default for new Accounts. The migration that added it
+// wrote a row with it off for every Account that already existed, so nobody's
+// Library started changing under them without asking.
+export const accountSettingsTable = pgTable("account_settings", {
+  userId: text("user_id")
+    .$type<UserId>()
+    .primaryKey()
+    .references(() => user.id, { onDelete: "cascade" }),
+  autoFiling: boolean("auto_filing").notNull().default(true),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+})
+
+// The one Organize run an Account may have: it works through every unfiled
+// Saved Item in batches in the background, and keeps the finished plan until
+// the person applies or discards it. A run that stops updating (the process
+// restarted under it) counts as failed and may be started again.
+export const organizeRunsTable = pgTable("organize_runs", {
+  userId: text("user_id")
+    .$type<UserId>()
+    .primaryKey()
+    .references(() => user.id, { onDelete: "cascade" }),
+  status: text("status").$type<"running" | "ready" | "failed">().notNull(),
+  phase: text("phase").$type<"proposing" | "filing">(),
+  done: integer("done").notNull().default(0),
+  total: integer("total").notNull().default(0),
+  plan: jsonb("plan"),
+  startedAt: timestamp("started_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
 })
 
@@ -387,6 +449,7 @@ export const relationalSchema = {
   linkMetadata: linkMetadataTable,
   linkEnrichment: linkEnrichmentTable,
   linkContent: linkContentTable,
+  linkContentPassages: linkContentPassagesTable,
   sources: sourcesTable,
   folders: foldersTable,
   profiles: profilesTable,
@@ -410,6 +473,10 @@ export const relations = defineRelations(relationalSchema, (r) => ({
       from: r.links.id,
       to: r.linkContent.linkId,
       optional: true,
+    }),
+    contentPassages: r.many.linkContentPassages({
+      from: r.links.id,
+      to: r.linkContentPassages.linkId,
     }),
     savedItems: r.many.savedItems({
       from: r.links.id,
@@ -437,6 +504,13 @@ export const relations = defineRelations(relationalSchema, (r) => ({
   linkContent: {
     link: r.one.links({
       from: r.linkContent.linkId,
+      to: r.links.id,
+      optional: false,
+    }),
+  },
+  linkContentPassages: {
+    link: r.one.links({
+      from: r.linkContentPassages.linkId,
       to: r.links.id,
       optional: false,
     }),
@@ -497,6 +571,7 @@ export const schema = {
   linkMetadataTable,
   linkEnrichmentTable,
   linkContentTable,
+  linkContentPassagesTable,
   sourcesTable,
   foldersTable,
   profilesTable,

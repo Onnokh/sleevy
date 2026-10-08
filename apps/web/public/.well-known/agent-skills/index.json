@@ -13,7 +13,7 @@
       "type": "skill-md",
       "description": "Read and search the user's Sleevy reading queue, and mark items read or unread. Use when the user asks what is in their reading list, wants to find something they saved, or wants to mark something off.",
       "url": "/.well-known/agent-skills/sleevy-read-queue/SKILL.md",
-      "digest": "sha256:06a5450a6683e6157b5326b8c0c1e6c5ecbf331d9b0a0d0aceb553415b8ddf90"
+      "digest": "sha256:a329d88e921616f4f785279c5290949a89040ed23cddb2b15b172764f1790ac8"
     },
     {
       "name": "sleevy-save-links",

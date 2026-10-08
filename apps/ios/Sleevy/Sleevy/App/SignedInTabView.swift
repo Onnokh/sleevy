@@ -5,12 +5,11 @@ import SwiftUI
 /// the single `navigationDestination(for: AppRoute.self)` that resolves every
 /// push destination through `AppRoute.destination`.
 struct SignedInTabView: View {
-    @Environment(AuthStore.self) private var authStore
     @Environment(DeepLinkStore.self) private var deepLinks
     @Environment(AppSettings.self) private var appSettings
     @Environment(\.scenePhase) private var scenePhase
     let session: AppSession
-    @State private var store: ReadingListStore
+    let store: ReadingListStore
     @State private var profileLoader = PublicProfileLoader()
     @State private var profileStore: ProfileStore
     @State private var selectedTab: AppTab = .sleevy
@@ -19,15 +18,9 @@ struct SignedInTabView: View {
     @State private var searchPath: [AppRoute] = []
     @State private var shouldRefreshAfterActivation = false
 
-    init(session: AppSession, tokenStore: SessionTokenStore) {
+    init(session: AppSession, tokenStore: SessionTokenStore, store: ReadingListStore) {
         self.session = session
-        _store = State(
-            wrappedValue: ReadingListStore(
-                session: session,
-                tokenStore: tokenStore,
-                network: DemoMode.isEnabled ? DemoReadingListAdapter() : nil
-            )
-        )
+        self.store = store
         _profileStore = State(
             wrappedValue: DemoMode.isEnabled ? ProfileStore.demo() : ProfileStore.live(tokenStore: tokenStore)
         )
@@ -86,11 +79,6 @@ struct SignedInTabView: View {
             // is private, so the record must be known outside the profile page.
             await profileStore.load()
             openDemoScreenIfNeeded()
-        }
-        .onAppear {
-            store.onAuthenticationInvalid = { message in
-                authStore.invalidateSession(message: message)
-            }
         }
         .onChange(of: scenePhase) { _, newPhase in
             handleScenePhaseChange(newPhase)

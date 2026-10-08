@@ -1,6 +1,8 @@
 import { Layer } from "effect";
 
 import { Analytics } from "../modules/analytics/Analytics.js";
+import { AutoFiling } from "../modules/auto-filing/AutoFiling.js";
+import { Organizer } from "../modules/organize/Organizer.js";
 import { AuthHandler } from "../modules/auth/AuthHandler.js";
 import { BetterAuth } from "../modules/auth/BetterAuth.js";
 import { CaptureService } from "../modules/capture/CaptureService.js";
@@ -20,7 +22,10 @@ import { BearerRateLimiter } from "../modules/rate-limit/BearerRateLimiter.js";
 import { ConnectAuthorizeRateLimiter } from "../modules/rate-limit/ConnectAuthorizeRateLimiter.js";
 import { ConnectExchangeRateLimiter } from "../modules/rate-limit/ConnectExchangeRateLimiter.js";
 import { PublicProfileRateLimiter } from "../modules/rate-limit/PublicProfileRateLimiter.js";
+import { AccountSettingsRepository } from "../modules/settings/AccountSettingsRepository.js";
 import { SavedItemRepository } from "../modules/saved-items/SavedItemRepository.js";
+import { ContentPassageWorker } from "../modules/search/ContentPassageWorker.js";
+import { HybridSearch } from "../modules/search/HybridSearch.js";
 import { AppConfig } from "./Config.js";
 
 // Each service exposes a self-contained `defaultLayer` that provides its own
@@ -39,6 +44,9 @@ export const appLayer = Layer.mergeAll(
   AnonymousRateLimiter.defaultLayer,
   ApiKeyRateLimiter.defaultLayer,
   AuthHandler.defaultLayer,
+  AutoFiling.defaultLayer,
+  Organizer.defaultLayer,
+  AccountSettingsRepository.defaultLayer,
   BearerRateLimiter.defaultLayer,
   BetterAuth.defaultLayer,
   CaptureService.defaultLayer,
@@ -56,4 +64,6 @@ export const appLayer = Layer.mergeAll(
   PublicProfileRateLimiter.defaultLayer,
   PublicProfileRepository.defaultLayer,
   SavedItemRepository.defaultLayer,
+  ContentPassageWorker.defaultLayer,
+  HybridSearch.defaultLayer,
 );

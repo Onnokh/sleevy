@@ -23,6 +23,14 @@ const config = (cache: {
   },
   cache,
   ai: { enabled: false, provider: undefined, model: undefined, apiKey: undefined },
+  typesafe: { apiKey: "", model: "jev-1.13.0" },
+  search: {
+    semanticEnabled: false,
+    embeddingBaseUrl: "http://localhost:11434",
+    embeddingModel: "qwen3-embedding:0.6b",
+    embeddingDimensions: 1024,
+    embeddingTimeoutMs: 30_000,
+  },
   auth: {
     googleClientId: "",
     googleClientSecret: "",
@@ -45,11 +53,11 @@ describe("PublicProfileCachePurger", () => {
     let request: Request | undefined
     let requestBody: BodyInit | null | undefined
 
-    globalThis.fetch = async (input, init) => {
+    globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
       request = new Request(input, init)
       requestBody = init?.body
       return Response.json({ success: true })
-    }
+    }) as unknown as typeof fetch
 
     return Effect.gen(function* () {
       const purger = yield* PublicProfileCachePurger
@@ -77,10 +85,10 @@ describe("PublicProfileCachePurger", () => {
   it.effect("does not call Cloudflare when purging is unconfigured", () => {
     const originalFetch = globalThis.fetch
     let called = false
-    globalThis.fetch = async () => {
+    globalThis.fetch = (async () => {
       called = true
       return Response.json({ success: true })
-    }
+    }) as unknown as typeof fetch
 
     return Effect.gen(function* () {
       const purger = yield* PublicProfileCachePurger

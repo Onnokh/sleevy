@@ -8,7 +8,7 @@ import { savedItemsQueryKey } from "./saved-items"
 export type Folder = FolderDto.Encoded
 type FoldersResponseJson = FoldersResponse.Encoded
 
-const foldersQueryKey = ["folders"] as const
+export const foldersQueryKey = ["folders"] as const
 export const SAVED_ITEM_DRAG_TYPE = "application/x-sleevy-saved-item"
 
 // apiFetch throws the response body as the message of an Error, and the API

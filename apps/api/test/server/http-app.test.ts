@@ -18,6 +18,9 @@ import { Analytics } from "../../src/modules/analytics/Analytics.js"
 import { CaptureService } from "../../src/modules/capture/CaptureService.js"
 import { InvalidUrl } from "../../src/modules/capture/CaptureError.js"
 import { EnrichmentWorkflow } from "../../src/modules/enrichment/EnrichmentWorkflow.js"
+import { AutoFiling } from "../../src/modules/auto-filing/AutoFiling.js"
+import { Organizer } from "../../src/modules/organize/Organizer.js"
+import { AccountSettingsRepository } from "../../src/modules/settings/AccountSettingsRepository.js"
 import { FolderRepository } from "../../src/modules/folders/FolderRepository.js"
 import { McpTools, MCP_TOOL_CATALOG } from "../../src/modules/mcp/McpTools.js"
 import { RESERVED_HANDLES } from "../../src/modules/profiles/Handle.js"
@@ -43,6 +46,10 @@ import {
   PublicProfileRateLimiter,
 } from "../../src/modules/rate-limit/PublicProfileRateLimiter.js"
 import { SavedItemRepository } from "../../src/modules/saved-items/SavedItemRepository.js"
+import {
+  HybridSearch,
+  type HybridSearchResult,
+} from "../../src/modules/search/HybridSearch.js"
 import { savedItemsTable } from "../../src/modules/persistence/schema.js"
 import { AppConfig } from "../../src/runtime/Config.js"
 import { idempotencyRedisKey } from "../../src/modules/idempotency/IdempotentWrites.js"
@@ -85,6 +92,14 @@ const configLayer = Layer.succeed(AppConfig, AppConfig.of({
     provider: undefined,
     model: undefined,
     apiKey: undefined,
+  },  typesafe: { apiKey: "", model: "jev-1.13.0" },
+
+  search: {
+    semanticEnabled: false,
+    embeddingBaseUrl: "http://localhost:11434",
+    embeddingModel: "qwen3-embedding:0.6b",
+    embeddingDimensions: 1024,
+    embeddingTimeoutMs: 30_000,
   },
   auth: {
     googleClientId: "",
@@ -131,6 +146,12 @@ const routeLayer = (input: {
     readonly cursorId?: string | undefined
     readonly sort?: string | undefined
     readonly folderId?: string | null | undefined
+  }) => void) | undefined
+  readonly searchResults?: readonly HybridSearchResult[] | undefined
+  readonly onContentSearch?: ((input: {
+    readonly userId: UserId
+    readonly query: string
+    readonly limit: number
   }) => void) | undefined
   readonly claimedHandle?: {
     readonly userId: UserId
@@ -300,6 +321,18 @@ const routeLayer = (input: {
     })),
     Layer.succeed(EnrichmentWorkflow, EnrichmentWorkflow.of({
       enrich: () => Effect.void as never,
+    } as never)),
+    Layer.succeed(AutoFiling, AutoFiling.of({
+      file: () => Effect.succeed({ _tag: "skipped", reason: "off" }) as never,
+    } as never)),
+    Layer.succeed(Organizer, Organizer.of({
+      available: false,
+      get: () => Effect.succeed({ status: "idle", phase: null, done: 0, total: 0, plan: null }),
+    } as never)),
+    Layer.succeed(AccountSettingsRepository, AccountSettingsRepository.of({
+      findByUser: () => Effect.succeed({ autoFiling: true }),
+      update: (_userId: UserId, change: { readonly autoFiling?: boolean | undefined }) =>
+        Effect.succeed({ autoFiling: change.autoFiling ?? true }),
     } as never)),
     Layer.succeed(FolderRepository, FolderRepository.of({
       listByUser: () => Effect.succeed([]),
@@ -524,6 +557,13 @@ const routeLayer = (input: {
         table: savedItemsTable,
       } as never),
     } as never)),
+    Layer.succeed(HybridSearch, HybridSearch.of({
+      search: (requestedUserId: UserId, query: string, limit = 10) =>
+        Effect.sync(() => {
+          input.onContentSearch?.({ userId: requestedUserId, query, limit })
+          return input.searchResults ?? []
+        }),
+    })),
     Layer.succeed(ApiKeyRateLimiter, ApiKeyRateLimiter.of({
       check: () =>
         Effect.succeed({
@@ -1247,7 +1287,7 @@ describe("HttpApp", () => {
     }),
   )
 
-  it.effect("lists only the read-only saved-items MCP tool", () =>
+  it.effect("lists the read-only Saved Item tools for the read scope", () =>
     Effect.gen(function* () {
       const response = yield* mcpRequest(
         {
@@ -1264,7 +1304,13 @@ describe("HttpApp", () => {
         jsonrpc: "2.0",
         id: 2,
         result: {
-          tools: [{ name: "list_saved_items", annotations: { readOnlyHint: true } }],
+          tools: [
+            { name: "list_saved_items", annotations: { readOnlyHint: true } },
+            {
+              name: "search_saved_content",
+              annotations: { readOnlyHint: true, openWorldHint: false },
+            },
+          ],
         },
       })
     }),
@@ -1299,6 +1345,68 @@ describe("HttpApp", () => {
       expect(JSON.parse(body.result.content[0]!.text)).toEqual(body.result.structuredContent)
     }),
   )
+
+  it.effect("searches saved Readable Content through MCP", () => {
+    let searchInput: { readonly userId: UserId; readonly query: string; readonly limit: number } | undefined
+
+    return Effect.gen(function* () {
+      const response = yield* mcpRequest(
+        {
+          jsonrpc: "2.0",
+          id: 31,
+          method: "tools/call",
+          params: {
+            name: "search_saved_content",
+            arguments: { query: "how should we handle cache invalidation?", limit: 4 },
+          },
+        },
+        { credentials: true, protocolVersion: "2025-06-18" },
+      ).pipe(Effect.provide(routeLayer({
+        onContentSearch: (value) => {
+          searchInput = value
+        },
+        searchResults: [{
+          savedItemId,
+          linkId,
+          ordinal: 2,
+          title: "Cache invalidation in practice",
+          url: "https://example.com/cache",
+          host: "example.com",
+          headingPath: "Operations > Purging",
+          excerpt: "Purge the derived key after the write commits.",
+          matchedBy: "both",
+          score: 0.032,
+        }],
+      })))
+
+      expect(response.status).toBe(200)
+      expect(searchInput).toEqual({
+        userId,
+        query: "how should we handle cache invalidation?",
+        limit: 4,
+      })
+
+      const body = JSON.parse(yield* text(response)) as {
+        readonly result: {
+          readonly content: ReadonlyArray<{ readonly text: string }>
+          readonly structuredContent: unknown
+        }
+      }
+      expect(body.result.structuredContent).toEqual({
+        query: "how should we handle cache invalidation?",
+        results: [{
+          citation: "[1]",
+          savedItemId,
+          title: "Cache invalidation in practice",
+          url: "https://example.com/cache",
+          section: "Operations > Purging",
+          excerpt: "Purge the derived key after the write commits.",
+          matchedBy: "both",
+        }],
+      })
+      expect(JSON.parse(body.result.content[0]!.text)).toEqual(body.result.structuredContent)
+    })
+  })
 
   it.effect("pages saved items through MCP with an opaque cursor", () =>
     Effect.gen(function* () {
@@ -1428,6 +1536,7 @@ describe("HttpApp", () => {
       }
       expect(body.result.tools.map((tool) => tool.name)).toEqual([
         "list_saved_items",
+        "search_saved_content",
         "save_link",
         "set_saved_item_read_state",
         "set_saved_item_folder",

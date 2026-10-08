@@ -84,6 +84,7 @@ final class ReadingListStore {
     /// resolves only once fresh data has actually loaded — without ever starting a
     /// second overlapping network pass that would corrupt the queues.
     private var syncTask: Task<Void, Never>?
+    private var isStopped = false
     /// The last connectivity value we acted on, so a genuine offline→online
     /// transition can be told apart from the repeated same-value path updates
     /// `NWPathMonitor` delivers while already online. `nil` until the first report.
@@ -123,28 +124,21 @@ final class ReadingListStore {
     /// Whether `activate()` has run. `@ObservationIgnored` so the flag itself
     /// never registers with a SwiftUI dependency set.
     @ObservationIgnored private var isActivated = false
+    @ObservationIgnored private var isMonitoringConnectivity = false
 
-    /// The effectful part of construction, separated from `init` on purpose.
-    ///
-    /// `SignedInTabView.init` constructs a `ReadingListStore` inside
-    /// `State(wrappedValue:)`, which SwiftUI evaluates on *every* parent body
-    /// evaluation and then discards in favour of the retained first instance.
-    /// That construction runs inside the enclosing view's observation
-    /// tracking, so any read of this store's observable state during `init`
-    /// (and a struct-member write like `status.x = y` reads `status`)
-    /// registers the throwaway instance as a dependency of that view. The
-    /// connectivity monitor's first callback then mutates `status`,
-    /// invalidating the view, which constructs another throwaway instance —
-    /// a self-sustaining render loop that syncs against the API dozens of
-    /// times per second. Running the setup here, from a `.task` after body
-    /// evaluation, keeps `init` invisible to observation.
-    private func activate() {
-        guard !isActivated else { return }
-        isActivated = true
-
-        status.lastSuccessfulSyncAt = statusDefaults.object(forKey: Self.lastSyncDefaultsKey(for: userId)) as? Date
-        refreshPendingCaptureState()
-        startMonitoringConnectivity()
+    /// Keep construction idle. A background wake runs one bounded sync;
+    /// connectivity monitoring starts only when a foreground view loads.
+    private func activate(monitorConnectivity: Bool = true) {
+        guard !isStopped else { return }
+        if !isActivated {
+            isActivated = true
+            status.lastSuccessfulSyncAt = statusDefaults.object(forKey: Self.lastSyncDefaultsKey(for: userId)) as? Date
+            refreshPendingCaptureState()
+        }
+        if monitorConnectivity, !isMonitoringConnectivity {
+            isMonitoringConnectivity = true
+            startMonitoringConnectivity()
+        }
     }
 
     /// Production convenience initializer. Collaborators default to their live
@@ -324,6 +318,21 @@ final class ReadingListStore {
         await sync()
     }
 
+    /// A background wake owns only the work it starts. If a foreground sync
+    /// already runs, leave it alone rather than cancelling it on task expiry.
+    func refreshInBackground() async {
+        guard !Task.isCancelled, !isStopped, !isSyncing,
+              syncTask == nil, !status.isInitialLoad else { return }
+        activate(monitorConnectivity: false)
+        await sync(cancelOnExpiration: true)
+    }
+
+    /// Prevent an old Account's in-flight requests from republishing after sign-out.
+    func stop() {
+        isStopped = true
+        syncTask?.cancel()
+    }
+
     func refresh(_ request: RetrievalRequest) async {
         await refresh()
         guard let fetchRequest = request.fetchRequest else { return }
@@ -346,8 +355,8 @@ final class ReadingListStore {
     /// `refresh()` can await *this* cycle's completion instead of being swallowed by
     /// the `isSyncing` guard. Re-entrant callers await the same in-flight task
     /// rather than starting a second overlapping pass.
-    private func sync() async {
-        guard !status.isInitialLoad else { return }
+    private func sync(cancelOnExpiration: Bool = false) async {
+        guard !isStopped, !Task.isCancelled, !status.isInitialLoad else { return }
         // A tracked sync is in flight: await it rather than start a second pass.
         if let inFlight = syncTask {
             await inFlight.value
@@ -366,17 +375,29 @@ final class ReadingListStore {
 
             self.refreshPendingCaptureState()
             await self.drainPendingCaptures()
+            guard !Task.isCancelled, !self.isStopped else { return }
             await self.drainPendingReadState()
+            guard !Task.isCancelled, !self.isStopped else { return }
             await self.performLoad()
         }
         syncTask = task
-        await task.value
+        if cancelOnExpiration {
+            await withTaskCancellationHandler {
+                await task.value
+            } onCancel: {
+                task.cancel()
+            }
+        } else {
+            await task.value
+        }
     }
 
     /// Fetches the complete Library item set and Folder list. The item fetch is
     /// the critical path; folders load best-effort.
     @discardableResult
     private func performLoad() async -> Bool {
+        guard !isStopped, !Task.isCancelled else { return false }
+        let previousCoverage = retrievalIndex.globalCoverage
         // Cached content remains explicitly cached while it is revalidated. This
         // lets first paint distinguish a usable empty cache from no data yet.
         if retrievalIndex.globalCoverage != .cached {
@@ -384,6 +405,8 @@ final class ReadingListStore {
         }
         do {
             let savedItems = try await network.loadSavedItems(.completeLibrary)
+            guard !isStopped else { return false }
+            try Task.checkCancellation()
             updateIndex {
                 $0.replaceGlobal(
                     with: readStateQueue.apply(to: savedItems),
@@ -396,9 +419,15 @@ final class ReadingListStore {
             status.isAPIReachable = true
             status.errorMessage = nil
             await persistItems(at: now)
+            guard !isStopped, !Task.isCancelled else { return false }
             await loadFolders()
             return true
         } catch {
+            guard !isStopped else { return false }
+            if Task.isCancelled {
+                updateIndex { $0.globalCoverage = previousCoverage }
+                return false
+            }
             updateIndex {
                 $0.globalCoverage = $0.globalCoverage == .cached || !$0.isEmpty
                     ? .stale
@@ -411,7 +440,9 @@ final class ReadingListStore {
 
     private func loadFolders() async {
         do {
-            folders = try await network.loadFolders()
+            let loaded = try await network.loadFolders()
+            guard !isStopped, !Task.isCancelled else { return }
+            folders = loaded
             publishUnreadBacklog()
             status.libraryErrorMessage = nil
         } catch {
@@ -707,6 +738,7 @@ final class ReadingListStore {
     }
 
     private func handleConnectivityChange(isOnline: Bool) {
+        guard !isStopped else { return }
         status.isOnline = isOnline
 
         // Only act on a genuine offline→online transition. `NWPathMonitor` reports
@@ -749,6 +781,7 @@ final class ReadingListStore {
     ) async -> [Item] {
         var processed: [Item] = []
         for item in pending {
+            guard !isStopped, !Task.isCancelled else { return processed }
             guard let fault = await push(item) else {
                 processed.append(item)
                 continue
@@ -868,6 +901,8 @@ final class ReadingListStore {
     }
 
     private func invalidateAuthentication() {
+        guard !isStopped else { return }
+        stop()
         status.errorMessage = nil
         onAuthenticationInvalid?("Your Sleevy session expired. Please sign in again.")
     }
@@ -980,6 +1015,7 @@ final class ReadingListStore {
     /// about what is unread, and publishing its empty item list would blank
     /// the widget on every launch.
     private func publishUnreadBacklog() {
+        guard !isStopped, !Task.isCancelled else { return }
         switch inboxSnapshot.coverage {
         case .cached, .complete, .stale:
             break

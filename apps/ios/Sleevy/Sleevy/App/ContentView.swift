@@ -12,8 +12,9 @@ struct ContentView: View {
     @Environment(AuthStore.self) private var authStore
 
     var body: some View {
-        if let session = authStore.session {
-            SignedInTabView(session: session, tokenStore: authStore.tokenStore)
+        if let session = authStore.session, let store = authStore.readingListStore {
+            SignedInTabView(session: session, tokenStore: authStore.tokenStore, store: store)
+                .id(session.userId)
         } else {
             NavigationStack {
                 if authStore.isRestoringSession {

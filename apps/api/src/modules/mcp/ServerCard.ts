@@ -29,7 +29,7 @@ export const mcpServerCard = (input: {
     version: "1.0.0",
     title: "Sleevy",
     description:
-      "Save links to your Sleevy library and manage your saved items and folders.",
+      "Save links, search their Readable Content, and manage your Sleevy library.",
     websiteUrl: input.webUrl,
     documentationUrl: `${input.webUrl}/docs/mcp`,
     // `remotes` is the Server Card shape; `serverUrl` and `transport` are the

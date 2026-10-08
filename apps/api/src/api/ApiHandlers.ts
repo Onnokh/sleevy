@@ -11,6 +11,7 @@ import { onboardingGroupLive } from "./OnboardingHandlers.js"
 import { profileGroupLive } from "./ProfileHandlers.js"
 import { publicProfilesGroupLive } from "./PublicProfileHandlers.js"
 import { savedItemsGroupLive } from "./SavedItemsHandlers.js"
+import { settingsGroupLive } from "./SettingsHandlers.js"
 
 const groupLives = Layer.mergeAll(
   healthGroupLive,
@@ -18,6 +19,7 @@ const groupLives = Layer.mergeAll(
   foldersGroupLive,
   profileGroupLive,
   onboardingGroupLive,
+  settingsGroupLive,
   publicProfilesGroupLive,
   savedItemsGroupLive,
   connectAuthorizeGroupLive,

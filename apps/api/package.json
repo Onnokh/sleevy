@@ -10,6 +10,7 @@
     "dev": "portless run --app-port 4001 bun --watch src/index.ts",
     "dev:raw": "bun --watch src/index.ts",
     "generate:discovery": "bun run scripts/generate-discovery.ts",
+    "search:backfill": "bun scripts/backfill-content-passages.ts",
     "prepare": "effect-language-service patch",
     "start": "bun src/index.ts",
     "test": "bun test",

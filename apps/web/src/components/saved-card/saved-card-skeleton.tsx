@@ -20,9 +20,13 @@ function SavedCardSkeleton({ titleWidth }: { readonly titleWidth: string }) {
   )
 }
 
-export function SavedListSkeleton({ rows = 6 }: { readonly rows?: number }) {
+export function SavedListSkeleton({ rows = 6, still = false }: {
+  readonly rows?: number
+  /** Drawn for a list that is empty rather than loading, so it does not move. */
+  readonly still?: boolean
+}) {
   return (
-    <ul className="item-list" aria-hidden="true">
+    <ul className={clsx("item-list", still && styles.still)} aria-hidden="true">
       {Array.from({ length: rows }).map((_, index) => (
         // eslint-disable-next-line react/no-array-index-key
         <li key={index}>

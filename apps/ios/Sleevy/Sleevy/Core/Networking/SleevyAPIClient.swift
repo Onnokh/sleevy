@@ -294,6 +294,42 @@ struct SleevyAPIClient {
         )
     }
 
+    // MARK: - Account settings verbs
+
+    func loadAccountSettings() async throws -> AccountSettings {
+        try await request(path: "/v1/settings", responseType: AccountSettings.self)
+    }
+
+    func setAutoFiling(_ isOn: Bool) async throws -> AccountSettings {
+        try await request(
+            path: "/v1/settings",
+            method: .patch,
+            body: AccountSettings(autoFiling: isOn),
+            responseType: AccountSettings.self
+        )
+    }
+
+    func loadOrganizeRun() async throws -> OrganizeRun {
+        try await request(path: "/v1/settings/organize", responseType: OrganizeRun.self)
+    }
+
+    func startOrganize() async throws -> OrganizeRun {
+        try await request(path: "/v1/settings/organize", method: .post, responseType: OrganizeRun.self)
+    }
+
+    func discardOrganize() async throws -> OrganizeRun {
+        try await request(path: "/v1/settings/organize", method: .delete, responseType: OrganizeRun.self)
+    }
+
+    func applyOrganize(_ kept: OrganizeApply) async throws -> OrganizeResult {
+        try await request(
+            path: "/v1/settings/organize/apply",
+            method: .post,
+            body: kept,
+            responseType: OrganizeResult.self
+        )
+    }
+
     private func mapStatusError(code: Int, data: Data) -> Error {
         if code == 401 || code == 403 {
             return AuthError.sessionExpired

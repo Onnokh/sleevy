@@ -25,7 +25,9 @@
 # decides how fast the chain resolves.
 services:
   postgres:
-    image: postgres:17-alpine
+    build:
+      context: .
+      dockerfile: docker/postgres/Dockerfile
     restart: unless-stopped
     environment:
       POSTGRES_USER: sleevy
@@ -55,6 +57,31 @@ services:
       start_period: 30s
       start_interval: 1s
 
+  ollama:
+    image: ollama/ollama:0.34.4
+    restart: unless-stopped
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        ollama serve &
+        server_pid=$$!
+        until ollama pull qwen3-embedding:0.6b; do sleep 5; done
+        wait $$server_pid
+    environment:
+      OLLAMA_KEEP_ALIVE: -1
+      OLLAMA_NUM_PARALLEL: 1
+    volumes:
+      - ollama-data:/root/.ollama
+    cpus: 2.0
+    mem_limit: 1536m
+    healthcheck:
+      test: ["CMD", "ollama", "show", "qwen3-embedding:0.6b"]
+      interval: 10s
+      timeout: 5s
+      retries: 60
+      start_period: 30s
+      start_interval: 2s
+
   api:
     build:
       context: .
@@ -64,6 +91,8 @@ services:
       postgres:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      ollama:
         condition: service_healthy
     environment:
       PORT: 3002
@@ -97,6 +126,12 @@ services:
       AI_PROVIDER: ${AI_PROVIDER:-}
       AI_MODEL: ${AI_MODEL:-}
       OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      TYPESAFE_API_KEY: ${TYPESAFE_API_KEY:-}
+      SEMANTIC_SEARCH_ENABLED: ${SEMANTIC_SEARCH_ENABLED:-true}
+      EMBEDDING_BASE_URL: http://ollama:11434
+      EMBEDDING_MODEL: qwen3-embedding:0.6b
+      EMBEDDING_DIMENSIONS: 1024
+      EMBEDDING_TIMEOUT_MS: 30000
       # Browser Rendering, used by the page fetcher's Cloudflare tier to render
       # pages this host is refused by. An empty value disables that tier rather
       # than failing a capture, which on a blocklisted origin quietly costs the
@@ -161,3 +196,4 @@ services:
 volumes:
   postgres-data:
   redis-data:
+  ollama-data:

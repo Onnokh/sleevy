@@ -8,6 +8,7 @@ import { SavedItemId } from "../../domain/SavedItem.js"
 import { savedItemToDto } from "../../api/ApiContract.js"
 import type { Scope } from "../auth/Scopes.js"
 import { CaptureService } from "../capture/CaptureService.js"
+import { AutoFiling } from "../auto-filing/AutoFiling.js"
 import { EnrichmentWorkflow } from "../enrichment/EnrichmentWorkflow.js"
 import { FolderRepository } from "../folders/FolderRepository.js"
 import {
@@ -16,6 +17,7 @@ import {
   SavedItemRepository,
 } from "../saved-items/SavedItemRepository.js"
 import type { SavedItemsPageCursor } from "../saved-items/SavedItemRepository.js"
+import { HybridSearch } from "../search/HybridSearch.js"
 import { AppConfig } from "../../runtime/Config.js"
 
 export const MCP_SCOPES = [
@@ -45,7 +47,7 @@ export const MCP_SCOPES = [
  * cheerfully use a read-later queue as a web crawler, so the boundary is stated
  * here rather than left to be inferred.
  */
-const SERVER_INSTRUCTIONS = `Sleevy is one person's read-later queue. Use it to save an HTTP or HTTPS link for later, to see what they have already saved, to mark something read or unread, and to organize saved items into folders.
+const SERVER_INSTRUCTIONS = `Sleevy is one person's read-later queue. Use it to save an HTTP or HTTPS link for later, to see what they have already saved, to search the Readable Content they saved, to mark something read or unread, and to organize saved items into folders.
 
 Do not use Sleevy as a web crawler, a page-content archive, a general notes database, or a source of facts about pages that have not been saved. It stores and organizes links; it does not replace the publisher of the linked page.
 
@@ -54,6 +56,7 @@ Working with it:
 - Ask the person before delete_saved_item or remove_folder. Deletion is permanent, and a bulk cleanup is still worth confirming item by item. Removing a folder keeps the saved items in it; deleting a saved item does not.
 - A freshly saved link comes back before its title, image, and tags are fetched. If the person wants the title, save it and read the item back a moment later.
 - list_saved_items is paged. Follow nextCursor until it comes back null, and pass the cursor back exactly as given.
+- Use search_saved_content when a question may be answered by the person's saved reading. Base the answer on the returned excerpts, cite their original URLs, and say when the excerpts do not provide enough evidence.
 - Ask for the narrowest scopes that do the job. A session only sees the tools its scopes cover.
 - initialize and tools/list need no credential, so you may read this list before asking the person to authorize anything. Every tool call does need one.`
 
@@ -71,6 +74,18 @@ export const MCP_TOOL_CATALOG = [
     inputSchema: {
       limit: z.number().int().min(1).max(MAX_PAGE_SIZE).optional(),
       cursor: z.string().min(1).optional(),
+    },
+  },
+  {
+    name: "search_saved_content",
+    title: "Search saved content",
+    description:
+      "Find passages from the authenticated user's saved Readable Content using keyword and semantic search. Use this for natural-language questions about what the user has saved; ground the answer in the excerpts and cite their URLs.",
+    scopes: ["saved-items:read"],
+    annotations: { readOnlyHint: true, openWorldHint: false },
+    inputSchema: {
+      query: z.string().trim().min(2).max(500),
+      limit: z.number().int().min(1).max(20).optional(),
     },
   },
   {
@@ -213,6 +228,19 @@ const savedItemsPageOutputSchema = {
   nextCursor: z.string().nullable(),
 }
 
+const savedContentSearchOutputSchema = {
+  query: z.string(),
+  results: z.array(z.object({
+    citation: z.string(),
+    savedItemId: z.string(),
+    title: z.string(),
+    url: z.string(),
+    section: z.string().nullable(),
+    excerpt: z.string(),
+    matchedBy: z.enum(["keyword", "semantic", "both"]),
+  })),
+}
+
 export class McpTools extends Context.Service<McpTools>()(
   "@app/modules/mcp/McpTools",
   {
@@ -220,8 +248,10 @@ export class McpTools extends Context.Service<McpTools>()(
       const config = yield* AppConfig
       const capture = yield* CaptureService
       const enrichment = yield* EnrichmentWorkflow
+      const autoFiling = yield* AutoFiling
       const folders = yield* FolderRepository
       const savedItems = yield* SavedItemRepository
+      const contentSearch = yield* HybridSearch
       // The MCP SDK forces Promise-based tool callbacks; carry the app context across
       // that boundary so spans and log annotations keep working inside tools.
       const context = yield* Effect.context<never>()
@@ -249,10 +279,33 @@ export class McpTools extends Context.Service<McpTools>()(
         return structuredContent(result)
       })
 
+      const searchSavedContent = Effect.fn("McpTools.searchSavedContent")(function* (
+        userId: UserId,
+        query: string,
+        limit = 8,
+      ) {
+        const matches = yield* contentSearch.search(userId, query, limit)
+        return structuredContent({
+          query: query.trim(),
+          results: matches.map((match, index) => ({
+            citation: `[${index + 1}]`,
+            savedItemId: match.savedItemId,
+            title: match.title ?? match.host,
+            url: match.url,
+            section: match.headingPath || null,
+            excerpt: match.excerpt,
+            matchedBy: match.matchedBy,
+          })),
+        })
+      })
+
       const saveLink = Effect.fn("McpTools.saveLink")(function* (userId: UserId, url: string) {
         const result = yield* capture.save({ userId, url, captureChannel: "api" })
         if (result.enrichment._tag === "start") {
+          // An MCP save never names a Folder, so Auto-Filing always follows.
           yield* enrichment.enrich(result.enrichment.linkId).pipe(
+            Effect.ignore({ log: true }),
+            Effect.andThen(autoFiling.file(userId, result.savedItem.savedItem.id)),
             Effect.ignore({ log: true }),
             Effect.forkDetach,
           )
@@ -317,6 +370,11 @@ export class McpTools extends Context.Service<McpTools>()(
             ...describe("list_saved_items"),
             outputSchema: savedItemsPageOutputSchema,
           }, async ({ limit, cursor }) => runPromise(listSavedItems(userId, limit, cursor)))
+
+          server.registerTool("search_saved_content", {
+            ...describe("search_saved_content"),
+            outputSchema: savedContentSearchOutputSchema,
+          }, async ({ query, limit }) => runPromise(searchSavedContent(userId, query, limit)))
         }
 
         if (scopes.has("saved-items:capture")) {
@@ -424,7 +482,9 @@ export class McpTools extends Context.Service<McpTools>()(
     Layer.provide(AppConfig.layer),
     Layer.provide(CaptureService.defaultLayer),
     Layer.provide(EnrichmentWorkflow.defaultLayer),
+    Layer.provide(AutoFiling.defaultLayer),
     Layer.provide(FolderRepository.defaultLayer),
     Layer.provide(SavedItemRepository.defaultLayer),
+    Layer.provide(HybridSearch.defaultLayer),
   )
 }

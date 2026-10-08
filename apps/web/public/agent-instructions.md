@@ -8,6 +8,7 @@ Use Sleevy when a person asks an agent to:
 
 - save an HTTP or HTTPS URL for later;
 - list or find URLs already saved in their Sleevy reading queue;
+- answer a question from the Readable Content of saved links;
 - mark a Saved Item read or unread;
 - move a Saved Item into a folder; or
 - create, list, or remove Sleevy folders.
@@ -34,5 +35,6 @@ For scripts or clients that do not support MCP, use the REST API at `https://api
 - Send an `Idempotency-Key` on every REST write, so a retry after a timeout cannot save the same link twice.
 - To save many links, use `POST /v1/captures/batch` rather than a loop; each entry reports its own outcome and one bad URL does not sink the rest.
 - Page lists with `limit` and `nextCursor` rather than asking for everything at once.
+- Use `search_saved_content` for questions about saved reading. Ground the answer in its excerpts, cite the original URLs, and say when the results are insufficient.
 - For structured failures, inspect `code`, `message`, and `resolution` in the JSON error response.
 - For all developer resources, start at the [Sleevy API and MCP documentation](https://sleevy.app/docs) or [llms.txt](https://sleevy.app/llms.txt).

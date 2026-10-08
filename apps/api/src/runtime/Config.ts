@@ -40,6 +40,17 @@ type AppConfigShape = {
     readonly model: string | undefined;
     readonly apiKey: string | undefined;
   };
+  readonly typesafe: {
+    readonly apiKey: string;
+    readonly model: string;
+  };
+  readonly search: {
+    readonly semanticEnabled: boolean;
+    readonly embeddingBaseUrl: string;
+    readonly embeddingModel: string;
+    readonly embeddingDimensions: number;
+    readonly embeddingTimeoutMs: number;
+  };
   readonly auth: {
     readonly googleClientId: string;
     readonly googleClientSecret: string;
@@ -123,6 +134,30 @@ export class AppConfig extends Context.Service<AppConfig, AppConfigShape>()(
       const aiProvider = yield* Config.option(Config.string("AI_PROVIDER"));
       const aiModel = yield* Config.option(Config.string("AI_MODEL"));
       const aiApiKey = yield* Config.option(Config.string("OPENAI_API_KEY"));
+      // Jev answers the Tag and Auto-Filing questions. An empty key turns both
+      // off. The model is pinned to a version rather than `jev-latest`, because
+      // the confidence cut-offs were tuned against it and an alias can move.
+      const typesafeApiKey = yield* Config.string("TYPESAFE_API_KEY").pipe(
+        Config.withDefault(""),
+      );
+      const typesafeModel = yield* Config.string("TYPESAFE_MODEL").pipe(
+        Config.withDefault("jev-1.13.0"),
+      );
+      const semanticSearchEnabled = yield* Config.boolean("SEMANTIC_SEARCH_ENABLED").pipe(
+        Config.withDefault(false),
+      );
+      const embeddingBaseUrl = yield* Config.string("EMBEDDING_BASE_URL").pipe(
+        Config.withDefault("http://localhost:11434"),
+      );
+      const embeddingModel = yield* Config.string("EMBEDDING_MODEL").pipe(
+        Config.withDefault("qwen3-embedding:0.6b"),
+      );
+      const embeddingDimensions = yield* Config.int("EMBEDDING_DIMENSIONS").pipe(
+        Config.withDefault(1024),
+      );
+      const embeddingTimeoutMs = yield* Config.int("EMBEDDING_TIMEOUT_MS").pipe(
+        Config.withDefault(30_000),
+      );
       const googleClientId = yield* Config.string("GOOGLE_CLIENT_ID").pipe(
         Config.withDefault(""),
       );
@@ -200,6 +235,17 @@ export class AppConfig extends Context.Service<AppConfig, AppConfigShape>()(
           provider: Option.isSome(aiProvider) ? aiProvider.value : undefined,
           model: Option.isSome(aiModel) ? aiModel.value : undefined,
           apiKey: Option.isSome(aiApiKey) ? aiApiKey.value : undefined,
+        },
+        typesafe: {
+          apiKey: typesafeApiKey,
+          model: typesafeModel,
+        },
+        search: {
+          semanticEnabled: semanticSearchEnabled,
+          embeddingBaseUrl,
+          embeddingModel,
+          embeddingDimensions,
+          embeddingTimeoutMs,
         },
         auth: {
           googleClientId,

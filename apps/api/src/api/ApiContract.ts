@@ -35,6 +35,13 @@ import {
   InvalidUrlError,
   OnboardingDto,
   OnboardingPayload,
+  AccountSettingsDto,
+  AccountSettingsPayload,
+  OrganizeApplyPayload,
+  OrganizePlanDto,
+  OrganizeRunDto,
+  OrganizeResultDto,
+  OrganizeUnavailableError,
   ProfileDto,
   ProfileNotFoundError,
   ProfileVisibilityPayload,
@@ -102,6 +109,13 @@ export {
   InvalidUrlError,
   OnboardingDto,
   OnboardingPayload,
+  AccountSettingsDto,
+  AccountSettingsPayload,
+  OrganizeApplyPayload,
+  OrganizePlanDto,
+  OrganizeRunDto,
+  OrganizeResultDto,
+  OrganizeUnavailableError,
   ProfileDto,
   ProfileNotFoundError,
   ProfileVisibilityPayload,
@@ -506,6 +520,62 @@ const onboardingGroup = HttpApiGroup.make("onboarding")
   )
   .middleware(SessionOnlyAuth)
 
+// The Account settings that follow the person to every device, such as
+// Auto-Filing. Session-only, like the Handle: the v1 REST API does not expose
+// account administration through API Keys.
+const settingsGroup = HttpApiGroup.make("settings")
+  .add(
+    HttpApiEndpoint.get("get", "/v1/settings", {
+      success: AccountSettingsDto,
+      error: [RateLimitExceeded],
+    })
+      .annotate(OpenApi.Summary, "Get the account settings")
+      .annotate(OpenApi.Description, "Read the authenticated account's settings. `autoFiling` says whether a new Saved Item that arrives without a Folder is put into the existing Folder that clearly fits it. Requires an App Session."),
+  )
+  .add(
+    HttpApiEndpoint.patch("update", "/v1/settings", {
+      payload: AccountSettingsPayload,
+      success: AccountSettingsDto,
+      error: [RateLimitExceeded],
+    })
+      .annotate(OpenApi.Summary, "Update the account settings")
+      .annotate(OpenApi.Description, "Change some of the account's settings. A setting that is left out keeps its value. Turning `autoFiling` off stops future filing and leaves Saved Items that were already filed where they are."),
+  )
+  .add(
+    HttpApiEndpoint.get("getOrganize", "/v1/settings/organize", {
+      success: OrganizeRunDto,
+      error: [RateLimitExceeded],
+    })
+      .annotate(OpenApi.Summary, "Get the Organize run")
+      .annotate(OpenApi.Description, "Read the account's Organize run: its progress while it runs, and its plan once it is ready. `status` is `idle` when there is no run."),
+  )
+  .add(
+    HttpApiEndpoint.post("startOrganize", "/v1/settings/organize", {
+      success: OrganizeRunDto,
+      error: [OrganizeUnavailableError, RateLimitExceeded],
+    })
+      .annotate(OpenApi.Summary, "Start Organize")
+      .annotate(OpenApi.Description, "Start planning where every unfiled Saved Item goes, in batches of 50 in the background. Each goes into an existing Folder that clearly fits it, or into a new Folder proposed in the style of the account's Folders; a Saved Item that fits nowhere is left out. Nothing changes until the plan is applied. A run that is already going is returned as it is, and a finished plan is replaced. Returns `503` when the classifier is not configured."),
+  )
+  .add(
+    HttpApiEndpoint.delete("discardOrganize", "/v1/settings/organize", {
+      success: OrganizeRunDto,
+      error: [RateLimitExceeded],
+    })
+      .annotate(OpenApi.Summary, "Discard the Organize plan")
+      .annotate(OpenApi.Description, "Throw away the finished or failed Organize run without changing anything."),
+  )
+  .add(
+    HttpApiEndpoint.post("applyOrganize", "/v1/settings/organize/apply", {
+      payload: OrganizeApplyPayload,
+      success: OrganizeResultDto,
+      error: [RateLimitExceeded],
+    })
+      .annotate(OpenApi.Summary, "Apply Organize")
+      .annotate(OpenApi.Description, "Apply the moves kept from the Organize plan, and end the run. New Folders are made only for kept moves, and a name the account already uses reuses that Folder. A Saved Item that was filed since the preview, or that is not the account's, is left alone."),
+  )
+  .middleware(SessionOnlyAuth)
+
 // The public half of Public Profiles. This group takes no middleware on
 // purpose: a visitor reads a Public Profile without an App Session and without
 // an API Key, so it is bucketed on the client address instead (see
@@ -678,6 +748,7 @@ export const sleevyApi = HttpApi.make("SleevyApi")
   .add(foldersGroup)
   .add(profileGroup)
   .add(onboardingGroup)
+  .add(settingsGroup)
   .add(publicProfilesGroup)
   .add(connectAuthorizeGroup)
   .add(connectExchangeGroup)

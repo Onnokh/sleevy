@@ -1,5 +1,6 @@
 import { useKeyboardNav } from "../../contexts/keyboard-nav-context"
 import { useHotkey } from "@tanstack/react-hotkeys"
+import { useHotkeyLabel } from "../../hooks/use-hotkey-label"
 import styles from "./keyboard-help.module.scss"
 
 const shortcuts = [
@@ -12,12 +13,13 @@ const shortcuts = [
   { keys: ["n"], description: "Capture URL" },
   { keys: ["g", "i"], description: "Go to Inbox" },
   { keys: ["g", "l"], description: "Go to Library" },
-  { keys: ["⌘", "K"], description: "Command palette" },
+  { keys: ["Mod", "K"], description: "Command palette" },
   { keys: ["?"], description: "This help" },
 ] as const
 
 export function KeyboardHelp() {
   const { helpOpen, setHelpOpen } = useKeyboardNav()
+  const mod = useHotkeyLabel("Mod")
 
   useHotkey("Escape", () => setHelpOpen(false), { enabled: helpOpen, conflictBehavior: "allow" })
 
@@ -41,7 +43,7 @@ export function KeyboardHelp() {
             <div key={s.description} className={styles.row}>
               <span className={styles.keys}>
                 {s.keys.map((key) => (
-                  <kbd key={key} className={styles.kbd}>{key}</kbd>
+                  <kbd key={key} className={styles.kbd}>{key === "Mod" ? mod : key}</kbd>
                 ))}
               </span>
               <span className={styles.desc}>{s.description}</span>

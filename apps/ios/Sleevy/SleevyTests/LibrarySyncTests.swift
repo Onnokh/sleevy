@@ -257,6 +257,112 @@ struct LibrarySyncTests {
         #expect(env.network.calls.filter { $0 == "loadSavedItems" }.count == 1)
     }
 
+    // MARK: - Background refresh
+
+    @Test func backgroundRefreshPullsNewSavesAndDrainsWidgetReads() async {
+        let env = Environment()
+        env.network.items["new"] = .fixture(id: "new", isRead: false)
+        env.network.items["opened"] = .fixture(id: "opened", isRead: false)
+        env.readState.enqueue(itemId: "opened", isRead: true)
+        let library = env.makeStore()
+
+        await library.refreshInBackground()
+
+        #expect(library.inboxSnapshot.items.map(\.id) == ["new"])
+        #expect(library.completeLibrarySnapshot.items.count == 2)
+        #expect(env.readState.all().isEmpty)
+        #expect(env.network.calls == ["setReadState", "loadSavedItems", "loadFolders"])
+        #expect(env.connectivity.startCount == 0)
+        let cached = await env.cache.load()
+        #expect(cached?.index.globalItems.count == 2)
+
+        await library.refresh()
+        #expect(env.connectivity.startCount == 1)
+    }
+
+    @Test func expiredBackgroundRefreshKeepsLastSnapshotAndCanRetry() async {
+        let env = Environment()
+        env.network.items["old"] = .fixture(id: "old", isRead: false)
+        let library = env.makeStore()
+        await library.refreshInBackground()
+        let lastSync = library.lastSuccessfulSyncAt
+        env.network.items["new"] = .fixture(id: "new", isRead: false)
+        env.network.resetCalls()
+
+        var refresh: Task<Void, Never>?
+        env.network.onLoadSavedItems = { refresh?.cancel() }
+        refresh = Task { await library.refreshInBackground() }
+        await refresh?.value
+
+        #expect(library.inboxSnapshot.items.map(\.id) == ["old"])
+        #expect(library.inboxSnapshot.coverage == .complete)
+        #expect(library.lastSuccessfulSyncAt == lastSync)
+        #expect(env.network.calls == ["loadSavedItems"])
+        let cached = await env.cache.load()
+        #expect(cached?.index.globalItems.map(\.id) == ["old"])
+
+        env.network.onLoadSavedItems = nil
+        await library.refreshInBackground()
+        #expect(library.inboxSnapshot.items.count == 2)
+    }
+
+    @Test func expiredBackgroundDrainKeepsUnsentCapturesAndReads() async throws {
+        let env = Environment()
+        try env.captures.enqueue(url: "https://example.com/a", sourceName: nil, captureChannel: nil)
+        try env.captures.enqueue(url: "https://example.com/b", sourceName: nil, captureChannel: nil)
+        env.readState.enqueue(itemId: "opened", isRead: true)
+        let library = env.makeStore()
+        var refresh: Task<Void, Never>?
+        env.network.onCapture = { refresh?.cancel() }
+
+        refresh = Task { await library.refreshInBackground() }
+        await refresh?.value
+
+        #expect(try env.captures.load().count == 1)
+        #expect(env.readState.all().count == 1)
+        #expect(env.network.calls == ["capture"])
+    }
+
+    @Test func backgroundRefreshDoesNotOverlapForegroundSync() async {
+        let env = Environment()
+        env.network.items["new"] = .fixture(id: "new", isRead: false)
+        let library = env.makeStore()
+        env.network.onLoadSavedItems = { await library.refreshInBackground() }
+
+        await library.refresh()
+
+        #expect(env.network.calls == ["loadSavedItems", "loadFolders"])
+        #expect(library.inboxSnapshot.items.map(\.id) == ["new"])
+    }
+
+    @Test func signOutDuringBackgroundPullDoesNotApplyItsResponse() async {
+        let env = Environment()
+        env.network.items["old-account"] = .fixture(id: "old-account", isRead: false)
+        let library = env.makeStore()
+        env.network.onLoadSavedItems = { library.stop() }
+
+        await library.refreshInBackground()
+
+        #expect(library.completeLibrarySnapshot.items.isEmpty)
+        #expect(library.lastSuccessfulSyncAt == nil)
+        #expect(env.network.calls == ["loadSavedItems"])
+        let cached = await env.cache.load()
+        #expect(cached == nil)
+    }
+
+    @Test func backgroundFailureKeepsLastSnapshot() async {
+        let env = Environment()
+        env.network.items["old"] = .fixture(id: "old", isRead: false)
+        let library = env.makeStore()
+        await library.refreshInBackground()
+        env.network.faults["loadSavedItems"] = .transient(reason: "offline")
+
+        await library.refreshInBackground()
+
+        #expect(library.inboxSnapshot.items.map(\.id) == ["old"])
+        #expect(library.inboxSnapshot.coverage == .stale)
+    }
+
     // MARK: - The single retry authority
 
     /// The headline regression: a *permanent* failure must DROP the pending
@@ -300,6 +406,7 @@ struct LibrarySyncTests {
         await library.refresh()
 
         #expect(signedOut)
+        #expect(env.network.calls == ["setReadState"])
     }
 
     // MARK: - Folder mutations route through the classify authority
@@ -555,8 +662,10 @@ final class InMemoryNetworkAdapter: ReadingListNetworkPort {
 /// deterministically, with no live `NWPathMonitor`.
 final class StubConnectivityMonitor: ConnectivityMonitoring {
     private var onChange: (@MainActor (Bool) -> Void)?
+    private(set) var startCount = 0
 
     func start(onChange: @escaping @MainActor (Bool) -> Void) {
+        startCount += 1
         self.onChange = onChange
     }
 
