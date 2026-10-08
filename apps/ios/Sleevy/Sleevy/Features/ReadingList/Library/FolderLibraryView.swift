@@ -2,6 +2,7 @@ import SwiftUI
 
 @MainActor
 struct FolderLibraryView: View {
+    @Environment(\.openSavedItem) private var openSavedItem
     let folder: Folder
     var store: ReadingListStore
     @State private var filter = LibraryFilter()
@@ -112,7 +113,7 @@ struct FolderLibraryView: View {
 
             ForEach(projection.items) { item in
                 SavedItemRow(item: item) {
-                    await store.markOpened(item)
+                    await openSavedItem(item)
                 } onToggleRead: {
                     await store.setRead(item, isRead: !item.isRead)
                 } onDelete: {

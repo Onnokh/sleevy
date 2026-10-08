@@ -14,6 +14,10 @@ enum AppRoute: Hashable {
     case settings
     case folder(id: Folder.ID)
     case myProfile
+    /// The Reader View for a Saved Item. Carries the id rather than the item so
+    /// the route stays cheap vocabulary and the store remains the one source of
+    /// the item's current state.
+    case reader(id: SavedItem.ID)
     /// Debug-only picking ground for the folder card gradients; nothing
     /// links to it in release builds.
     case folderCardPlayground

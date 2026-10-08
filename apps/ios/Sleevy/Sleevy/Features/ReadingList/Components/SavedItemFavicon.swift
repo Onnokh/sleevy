@@ -11,15 +11,22 @@ struct SavedItemFavicon: View {
     }
 
     private let source: Source
+    /// The side of the square the favicon draws in. The list rows set the
+    /// default; the Reader View's article list asks for a smaller one, where
+    /// the favicon sits beside the host on a meta line rather than leading a
+    /// row of its own.
+    private let size: CGFloat
 
-    init(item: SavedItem) {
+    init(item: SavedItem, size: CGFloat = 30) {
         source = .item(item)
+        self.size = size
     }
 
     /// For rows built from other DTOs (the public profile page), which carry
     /// a plain favicon URL instead of a SavedItem.
-    init(faviconURL: URL?, monogram: String) {
+    init(faviconURL: URL?, monogram: String, size: CGFloat = 30) {
         source = .remote(faviconURL, monogram: monogram)
+        self.size = size
     }
 
     var body: some View {
@@ -42,7 +49,7 @@ struct SavedItemFavicon: View {
                 faviconFallback
             }
         }
-        .frame(width: 30, height: 30)
+        .frame(width: size, height: size)
         .padding(.vertical, 4)
     }
 

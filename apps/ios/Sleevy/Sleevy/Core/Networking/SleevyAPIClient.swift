@@ -210,6 +210,16 @@ struct SleevyAPIClient {
         )
     }
 
+    /// The item's Readable Content as Markdown, for the Reader View.
+    ///
+    /// Answers 404 both for an item that belongs to someone else and for one
+    /// whose Link yielded no article, so absence and non-ownership stay
+    /// indistinguishable. Most Links are not articles, so a 404 here is
+    /// ordinary — check `hasReadableContent` before calling.
+    func readableContent(id: String) async throws -> ReadableContent {
+        try await request(path: "/v1/saved-items/\(id)/content", method: .get, responseType: ReadableContent.self)
+    }
+
     /// Records that the item was opened, returning it with read state applied.
     func markOpened(id: String) async throws -> SavedItem {
         try await request(path: "/v1/saved-items/\(id)/open", method: .post, responseType: SavedItem.self)

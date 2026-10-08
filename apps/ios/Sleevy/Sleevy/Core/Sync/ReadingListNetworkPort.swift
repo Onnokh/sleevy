@@ -22,6 +22,7 @@ protocol ReadingListNetworkPort {
     func capture(url: String, sourceName: String?, captureChannel: String?) async throws(SyncFault) -> SavedItem
     func setReadState(itemId: String, isRead: Bool) async throws(SyncFault) -> SavedItem
     func markOpened(itemId: String) async throws(SyncFault) -> SavedItem
+    func readableContent(itemId: String) async throws(SyncFault) -> ReadableContent
     func deleteItem(itemId: String) async throws(SyncFault)
 
     func createFolder(name: String, emoji: String?, color: String?) async throws(SyncFault) -> Folder

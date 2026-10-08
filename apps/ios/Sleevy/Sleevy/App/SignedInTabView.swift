@@ -6,6 +6,7 @@ import SwiftUI
 /// push destination through `AppRoute.destination`.
 struct SignedInTabView: View {
     @Environment(DeepLinkStore.self) private var deepLinks
+    @Environment(AppSettings.self) private var appSettings
     @Environment(\.scenePhase) private var scenePhase
     let session: AppSession
     let store: ReadingListStore
@@ -14,6 +15,7 @@ struct SignedInTabView: View {
     @State private var selectedTab: AppTab = .sleevy
     @State private var sleevyPath: [AppRoute] = []
     @State private var libraryPath: [AppRoute] = []
+    @State private var searchPath: [AppRoute] = []
     @State private var shouldRefreshAfterActivation = false
 
     init(session: AppSession, tokenStore: SessionTokenStore, store: ReadingListStore) {
@@ -39,6 +41,7 @@ struct SignedInTabView: View {
                             route.destination(store: store, session: session)
                         }
                         .environment(\.pushRoute) { sleevyPath.append($0) }
+                        .environment(\.openSavedItem) { item in await openItem(item) { sleevyPath.append($0) } }
                 }
             }
 
@@ -54,12 +57,18 @@ struct SignedInTabView: View {
                             route.destination(store: store, session: session)
                         }
                         .environment(\.pushRoute) { libraryPath.append($0) }
+                        .environment(\.openSavedItem) { item in await openItem(item) { libraryPath.append($0) } }
                 }
             }
 
             Tab(value: AppTab.search, role: .search) {
-                NavigationStack {
+                NavigationStack(path: $searchPath) {
                     SearchView(store: store)
+                        .navigationDestination(for: AppRoute.self) { route in
+                            route.destination(store: store, session: session)
+                        }
+                        .environment(\.pushRoute) { searchPath.append($0) }
+                        .environment(\.openSavedItem) { item in await openItem(item) { searchPath.append($0) } }
                 }
             }
         }
@@ -84,6 +93,25 @@ struct SignedInTabView: View {
                 await open(link)
             }
         }
+    }
+
+    /// Where this Saved Item opens, and the Open recorded either way.
+    ///
+    /// Reader View when the item has one and the reader has not turned it off;
+    /// otherwise the browser, exactly as before the Reader View existed. The
+    /// push happens on the stack the tap came from, so the article lands in the
+    /// tab the reader was already in.
+    private func openItem(_ item: SavedItem, push: @MainActor (AppRoute) -> Void) async {
+        guard opensInReader(item, readerViewDisabled: appSettings.isReaderViewDisabled) else {
+            await store.markOpened(item)
+            return
+        }
+
+        push(.reader(id: item.id))
+        // The same Open Action either way (ADR 0021): reading it here counts as
+        // reading it. `recordOpen` skips the browser launch that `markOpened`
+        // would do, because the reader is already looking at the article.
+        await store.recordOpen(item)
     }
 
     private static let deepLinkLogger = Logger(subsystem: "app.sleevy", category: "deep-link")
@@ -113,7 +141,7 @@ struct SignedInTabView: View {
                 Self.deepLinkLogger.error("No Saved Item \(id, privacy: .public) in the Retrieval Index")
                 return
             }
-            await store.markOpened(item)
+            await openItem(item) { sleevyPath.append($0) }
         }
     }
 
@@ -163,6 +191,11 @@ struct SignedInTabView: View {
             sleevyPath = [.myProfile]
         case .search:
             selectedTab = .search
+        case .reader:
+            selectedTab = .sleevy
+            if let itemID = DemoMode.featuredReadableItemID {
+                sleevyPath = [.reader(id: itemID)]
+            }
         }
     }
 

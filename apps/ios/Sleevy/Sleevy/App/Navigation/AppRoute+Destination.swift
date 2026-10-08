@@ -19,6 +19,12 @@ extension AppRoute {
             }
         case .myProfile:
             MyProfileView(session: session)
+        case .reader(let id):
+            if store.savedItem(id: id) != nil {
+                ReaderView(openedID: id, store: store)
+            } else {
+                ContentUnavailableView("Item Unavailable", systemImage: "doc.text.magnifyingglass")
+            }
         case .folderCardPlayground:
             FolderCardPlaygroundView()
         }

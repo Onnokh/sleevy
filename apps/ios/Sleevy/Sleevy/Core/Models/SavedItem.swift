@@ -58,6 +58,11 @@ nonisolated struct SavedItem: Codable, Identifiable, Equatable, Sendable {
     var captureChannel: String?
     var folder: FolderSummary?
     var isRead: Bool
+    /// Whether this item's Link has Readable Content, so the Reader View has
+    /// something to render. A flag rather than the body: a list read never
+    /// carries article prose (ADR 0021). Defaults to `false` so the memberwise
+    /// init keeps working for callers that predate the Reader View.
+    var hasReadableContent: Bool = false
     var lastSavedAt: Date
     var createdAt: Date
     var updatedAt: Date
@@ -84,6 +89,7 @@ nonisolated struct SavedItem: Codable, Identifiable, Equatable, Sendable {
         case captureChannel
         case folder
         case isRead
+        case hasReadableContent
         case lastSavedAt
         case createdAt
         case updatedAt
@@ -114,6 +120,7 @@ nonisolated extension SavedItem {
         case captureChannel
         case folder
         case isRead
+        case hasReadableContent
         case lastSavedAt
         case createdAt
         case updatedAt
@@ -145,6 +152,9 @@ nonisolated extension SavedItem {
         captureChannel = try container.decodeIfPresent(String.self, forKey: .captureChannel)
         folder = try container.decodeIfPresent(FolderSummary.self, forKey: .folder)
         isRead = try container.decode(Bool.self, forKey: .isRead)
+        // Additive field: rows cached before the Reader View existed have no
+        // key, and an article they never knew about reads as one they do not have.
+        hasReadableContent = try container.decodeIfPresent(Bool.self, forKey: .hasReadableContent) ?? false
         lastSavedAt = try container.decode(Date.self, forKey: .lastSavedAt)
         createdAt = try container.decode(Date.self, forKey: .createdAt)
         updatedAt = try container.decode(Date.self, forKey: .updatedAt)

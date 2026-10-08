@@ -2,6 +2,7 @@ import SwiftUI
 
 @MainActor
 struct SearchView: View {
+    @Environment(\.openSavedItem) private var openSavedItem
     var store: ReadingListStore
     @State private var query = ""
     @State private var isRetryingLoad = false
@@ -47,7 +48,7 @@ struct SearchView: View {
             } else {
                 List(snapshot.items) { item in
                     SavedItemRow(item: item) {
-                        await store.markOpened(item)
+                        await openSavedItem(item)
                     } onToggleRead: {
                         await store.setRead(item, isRead: !item.isRead)
                     } onDelete: {

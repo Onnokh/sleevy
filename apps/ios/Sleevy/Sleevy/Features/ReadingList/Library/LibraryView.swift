@@ -2,6 +2,7 @@ import SwiftUI
 
 @MainActor
 struct LibraryView: View {
+    @Environment(\.openSavedItem) private var openSavedItem
     var store: ReadingListStore
     @State private var filter = LibraryFilter()
     @State private var sort = LibrarySort.newest
@@ -200,7 +201,7 @@ struct LibraryView: View {
                 Section {
                     ForEach(projection.items) { item in
                         SavedItemRow(item: item) {
-                            await store.markOpened(item)
+                            await openSavedItem(item)
                         } onToggleRead: {
                             await store.setRead(item, isRead: !item.isRead)
                         } onDelete: {

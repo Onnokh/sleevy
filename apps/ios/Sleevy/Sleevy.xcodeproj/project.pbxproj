@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		98E5A58B2FA54E3100C9251A /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 98E5A58D2FA54E3100C9251A /* GoogleSignIn */; };
+		A10C7D3E2FB10A0100D14E03 /* MarkdownUI in Frameworks */ = {isa = PBXBuildFile; productRef = A10C7D3E2FB10A0100D14E02 /* MarkdownUI */; };
 		98E5A58E2FA54E3200C9251A /* SleevyShareExtension.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = 98E5A5902FA54E3200C9251A /* SleevyShareExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		98E5A6022FA54E3200C9251A /* SleevyWidgets.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = 98E5A6012FA54E3200C9251A /* SleevyWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
@@ -110,6 +111,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				98E5A58B2FA54E3100C9251A /* GoogleSignIn in Frameworks */,
+				A10C7D3E2FB10A0100D14E03 /* MarkdownUI in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -207,6 +209,7 @@
 			name = Sleevy;
 			packageProductDependencies = (
 				98E5A58D2FA54E3100C9251A /* GoogleSignIn */,
+				A10C7D3E2FB10A0100D14E02 /* MarkdownUI */,
 			);
 			productName = Sleevy;
 			productReference = 98E5A5612FA54E2E00C9251A /* Sleevy.app */;
@@ -344,6 +347,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				98E5A58C2FA54E3100C9251A /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
+				A10C7D3E2FB10A0100D14E01 /* XCRemoteSwiftPackageReference "swift-markdown-ui" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 98E5A5622FA54E2E00C9251A /* Products */;
@@ -888,6 +892,14 @@
 				minimumVersion = 9.0.0;
 			};
 		};
+		A10C7D3E2FB10A0100D14E01 /* XCRemoteSwiftPackageReference "swift-markdown-ui" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/gonzalezreal/swift-markdown-ui";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.4.1;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -895,6 +907,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 98E5A58C2FA54E3100C9251A /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */;
 			productName = GoogleSignIn;
+		};
+		A10C7D3E2FB10A0100D14E02 /* MarkdownUI */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A10C7D3E2FB10A0100D14E01 /* XCRemoteSwiftPackageReference "swift-markdown-ui" */;
+			productName = MarkdownUI;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

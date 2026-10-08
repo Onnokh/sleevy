@@ -193,6 +193,10 @@ nonisolated extension DemoMode {
             captureChannel: "ios-share",
             folder: folderID.flatMap(folderSummary(_:)),
             isRead: isRead,
+            // Every demo fixture is an article, so every one reads in the
+            // Reader View — a capture should never land on an item that
+            // bounces the viewer out to Safari.
+            hasReadableContent: true,
             lastSavedAt: savedAt,
             createdAt: savedAt,
             updatedAt: savedAt
@@ -202,6 +206,118 @@ nonisolated extension DemoMode {
     /// Anchors every fixture timestamp to launch time, so the relative dates in
     /// the rows ("35m", "2h", "Yesterday") read correctly on any capture day.
     private static let referenceDate = Date()
+
+    /// Fabricated article prose for the Reader View, built from the item's own
+    /// title and Preview Summary so a capture shows a page that agrees with the
+    /// row it was opened from. Enough shapes — headings, a list, a quote — to
+    /// show that the Reader View renders structure and not just paragraphs.
+    static func readableContent(for item: SavedItem) -> ReadableContent {
+        let summary = item.previewSummary ?? ""
+        let markdown = """
+        \(summary)
+
+        ## Why it matters
+
+        The habit is easy to describe and hard to keep: save the thing you
+        meant to read, then actually read it. Everything else in a reading
+        list is in service of that one loop.
+
+        - Save it where you are, not where the article is.
+        - Let the list tell you what is still waiting.
+        - Read it without the page arguing for your attention.
+
+        > The best reading list is the one you come back to.
+
+        ## In practice
+
+        Most tools stop at the first step. The save is instant, the list grows,
+        and the reading never happens, because opening an item means opening a
+        browser tab and everything a browser tab brings with it.
+
+        Reading in place changes the arithmetic. There is one column of text,
+        the typography is yours, and the only thing on screen is the thing you
+        saved.
+
+        ## On a larger display
+
+        A wider pane is not a wider column. Prose set across the full width of
+        an unfolded display runs past the point where the eye can find the
+        start of the next line, so the column keeps its measure and the space
+        left over goes to the Article Outline instead.
+
+        The outline is read out of the article itself, so it says what the
+        writer wrote rather than what a heuristic guessed.
+
+        ## What you give up
+
+        Nothing you cannot take back. The Original URL is one tap away in the
+        menu, and an extraction that lost the part you wanted is never a dead
+        end — the page is still the page.
+
+        Turn the Reader View off in Settings and every Saved Item goes
+        straight out to its Original URL again, exactly as it did before.
+
+        ## Saving from anywhere
+
+        The share sheet, the browser extension, a shortcut on the Home Screen:
+        each one is a door into the same list, and none of them asks you to
+        decide anything at the moment of saving.
+
+        ## Folders without filing
+
+        A folder is somewhere to put the things you will come back to on
+        purpose. The rest can stay in the Library, where search finds them.
+
+        ## Search that remembers
+
+        You rarely remember a title. You remember that it was about espresso,
+        or that a mathematician said something about old problems. Search
+        reads the article, not only the headline.
+
+        ## Reading on the go
+
+        A train has two minutes of signal between stations. The article should
+        already be there when you open it, not be on its way.
+
+        ## Reading at a desk
+
+        On a wide screen the list stays beside the article, so finishing one
+        and starting the next is a tap rather than a trip back.
+
+        ## Typography
+
+        One typeface, a comfortable size, and lines short enough to follow. A
+        reading surface should be the article and nothing else.
+
+        ## Long reads
+
+        The outline is what makes a long article manageable: where you are,
+        how much is left, and a way back to the part you wanted to quote.
+
+        ## Sharing what you read
+
+        A link is the best thing to send. The person you send it to gets the
+        page as its writer made it.
+
+        ## Clearing the list
+
+        Read State is the only bookkeeping. An article you have opened is read;
+        the list keeps it, and the Inbox lets it go.
+
+        ## What comes next
+
+        The loop stays the same: save it, find it, read it. Everything else is
+        in service of that.
+        """
+
+        return ReadableContent(
+            savedItemId: item.id,
+            originalURL: item.originalURL,
+            title: item.title,
+            markdown: markdown,
+            extractedAt: item.lastSavedAt
+        )
+    }
 }
 
 // MARK: - Public Profile
@@ -258,6 +374,7 @@ nonisolated extension DemoMode {
         case folder
         case profile
         case search
+        case reader
     }
 
     static var initialScreen: Screen? {
@@ -269,5 +386,11 @@ nonisolated extension DemoMode {
     /// capture shows a Folder that also appears on the Public Profile.
     static var featuredFolderID: String? {
         folders.first(where: \.isPublished)?.id
+    }
+
+    /// The Saved Item the `reader` screen opens: the first one with a Reader
+    /// View, so the capture shows the article rather than an empty state.
+    static var featuredReadableItemID: String? {
+        savedItems.first { $0.hasReadableContent || $0.type == "post" }?.id
     }
 }

@@ -804,6 +804,8 @@ _Avoid_: Deep link, route argument, UI test step
 - Opening a **Saved Item** that has **Readable Content** opens the **Reader View**; opening one without it sends the user to its **Original URL** in the browser.
 - The **Reader View** always offers the **Original URL**, because extraction loses tables, embeds, and figure captions.
 - The **Reader View** shows an **Article Outline** beside the article when one can be read from its Markdown, marking the section being read and offering a way into any of them. It is a reading aid rather than a second surface: an article with too few headings to outline simply has none, and the outline never narrows the column of prose it stands beside.
+- On a wide display the **Reader View** shows the **Library**'s readable **Saved Items** beside the article, in a quarter of the window. On a foldable creased like a book, the fold divides the two: the list on one side, the article on the other, so no line of prose crosses the hinge.
+- Where the device puts a vertical bar beside the content (the iPhone Duo's system rail), the **Article Outline** moves out of the gutter into that bar as a strip the reader drags along. The article follows the finger, and a deck of section cards beside the strip names the section under it and its neighbours.
 - Clients may open the known **Original URL** immediately while asynchronously notifying the API to update **Read State**.
 - The **Open Action** is exposed as `POST /v1/saved-items/{id}/open`.
 - A **Delete Action** removes a **Saved Item** without archive or trash behavior in v1.

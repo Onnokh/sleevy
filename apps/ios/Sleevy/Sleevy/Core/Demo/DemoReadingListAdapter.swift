@@ -70,6 +70,13 @@ final class DemoReadingListAdapter: ReadingListNetworkPort {
         try update(itemId) { $0.isRead = true }
     }
 
+    func readableContent(itemId: String) async throws(SyncFault) -> ReadableContent {
+        guard let item = items.first(where: { $0.id == itemId }) else {
+            throw SyncFault.permanent(reason: "No demo Saved Item with id \(itemId).")
+        }
+        return DemoMode.readableContent(for: item)
+    }
+
     func deleteItem(itemId: String) async throws(SyncFault) {
         items.removeAll { $0.id == itemId }
     }
