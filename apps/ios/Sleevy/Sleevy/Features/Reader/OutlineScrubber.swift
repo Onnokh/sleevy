@@ -191,6 +191,7 @@ private struct OutlineScrubberPlacement: ViewModifier {
     let onEdgeChange: (HorizontalEdge?) -> Void
 
     func body(content: Content) -> some View {
+        #if canImport(SwiftUI, _version: 8.0.85)
         if #available(iOS 27.1, *) {
             content.modifier(VerticalBarScrubber(
                 outline: outline,
@@ -201,9 +202,15 @@ private struct OutlineScrubberPlacement: ViewModifier {
         } else {
             content
         }
+        #else
+        content
+        #endif
     }
 }
 
+// `toolbarVerticalEdge` is only in the iOS 27.1 SDK (SwiftUI 8.0.85). Xcode
+// Cloud's "Latest Release" still builds with the iOS 27.0 SDK.
+#if canImport(SwiftUI, _version: 8.0.85)
 @available(iOS 27.1, *)
 private struct VerticalBarScrubber: ViewModifier {
     let outline: ArticleOutline
@@ -231,3 +238,4 @@ private struct VerticalBarScrubber: ViewModifier {
             .onChange(of: shownEdge, initial: true) { _, new in onEdgeChange(new) }
     }
 }
+#endif
