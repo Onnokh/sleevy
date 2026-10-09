@@ -16,6 +16,9 @@ private struct CreaseObserver: ViewModifier {
     let action: (Bool) -> Void
 
     func body(content: Content) -> some View {
+        // `onHingeChange` is only in the iOS 27.1 SDK (SwiftUI 8.0.85). Xcode
+        // Cloud's "Latest Release" still builds with the iOS 27.0 SDK.
+        #if canImport(SwiftUI, _version: 8.0.85)
         if #available(iOS 27.1, *) {
             content.onHingeChange { _, context in
                 action(context.hinge?.status == .partiallyOpen)
@@ -23,5 +26,8 @@ private struct CreaseObserver: ViewModifier {
         } else {
             content
         }
+        #else
+        content
+        #endif
     }
 }
