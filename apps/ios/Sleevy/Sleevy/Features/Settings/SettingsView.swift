@@ -84,14 +84,6 @@ struct SettingsView: View {
                 Text("New links saved from this iPhone will use this name as their source.")
             }
 
-            #if DEBUG
-            Section("Developer") {
-                NavigationLink(value: AppRoute.folderCardPlayground) {
-                    Label("Folder Card Playground", systemImage: "paintpalette")
-                }
-            }
-            #endif
-
             Section {
                 Button(role: .destructive) {
                     isShowingDeleteConfirmation = true

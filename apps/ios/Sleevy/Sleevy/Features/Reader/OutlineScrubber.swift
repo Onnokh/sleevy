@@ -166,9 +166,9 @@ private struct WindowFrameReader: UIViewRepresentable {
 }
 
 extension View {
-    /// Puts the scrubber in the vertical bar, where the device has one, and
-    /// reports which side of the screen the bar is on: nil while there is no
-    /// bar, before iOS 27.1, or with no outline to scrub.
+    /// Puts the scrubber in the vertical bar, where the device has one and
+    /// there is an outline to scrub, and reports which side of the screen the
+    /// bar is on: nil while there is no bar, or before iOS 27.1.
     func outlineScrubber(
         outline: ArticleOutline,
         activeIndex: Int,
@@ -220,14 +220,10 @@ private struct VerticalBarScrubber: ViewModifier {
 
     @Environment(\.toolbarVerticalEdge) private var edge
 
-    private var shownEdge: HorizontalEdge? {
-        outline.isEmpty ? nil : edge
-    }
-
     func body(content: Content) -> some View {
         content
             .toolbar {
-                if shownEdge != nil {
+                if edge != nil, !outline.isEmpty {
                     ToolbarItem(placement: .bottomBar) {
                         OutlineScrubber(outline: outline, activeIndex: activeIndex, onScrub: onScrub)
                     }
@@ -235,7 +231,7 @@ private struct VerticalBarScrubber: ViewModifier {
                     .contentMarginsRemoved()
                 }
             }
-            .onChange(of: shownEdge, initial: true) { _, new in onEdgeChange(new) }
+            .onChange(of: edge, initial: true) { _, new in onEdgeChange(new) }
     }
 }
 #endif

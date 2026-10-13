@@ -32,10 +32,10 @@ enum FolderEditor: Identifiable {
         }
     }
 
-    var initialColor: FolderAccentColor? {
+    var initialColor: String? {
         switch self {
         case .create: nil
-        case .rename(let folder): FolderAccentColor(rawValue: folder.color ?? "")
+        case .rename(let folder): folder.color
         }
     }
 }
@@ -46,9 +46,10 @@ struct FolderEditorSheet: View {
     let onSave: @MainActor (FolderDraft) async throws -> Void
     @State private var name: String
     /// No longer editable — carried through so a rename never clears an
-    /// emoji a folder already has from before the picker was removed.
-    @State private var selectedEmoji: String?
-    @State private var selectedColor: FolderAccentColor?
+    /// emoji or colour a folder already has from before the pickers were
+    /// removed. The web app still shows the colour.
+    private let selectedEmoji: String?
+    private let selectedColor: String?
     @State private var errorMessage: String?
     @State private var isSaving = false
 
@@ -56,8 +57,8 @@ struct FolderEditorSheet: View {
         self.editor = editor
         self.onSave = onSave
         _name = State(initialValue: editor.initialName)
-        _selectedEmoji = State(initialValue: editor.initialEmoji)
-        _selectedColor = State(initialValue: editor.initialColor)
+        selectedEmoji = editor.initialEmoji
+        selectedColor = editor.initialColor
     }
 
     var body: some View {
@@ -80,8 +81,6 @@ struct FolderEditorSheet: View {
                     )
                     .padding(.top, 14)
 
-                colorPicker
-
                 if let errorMessage {
                     Text(errorMessage)
                         .font(.footnote)
@@ -90,7 +89,7 @@ struct FolderEditorSheet: View {
                 }
             }
         }
-        .presentationDetents([.height(330), .large])
+        .presentationDetents([.height(200), .large])
         .presentationDragIndicator(.visible)
         .presentationContentInteraction(.scrolls)
     }
@@ -115,72 +114,6 @@ struct FolderEditorSheet: View {
             }
         }
     }
-
-    private var colorPicker: some View {
-        FolderPickerSection(title: "Color") {
-            Text("Color")
-                .font(.footnote.weight(.semibold))
-                .foregroundStyle(.secondary)
-
-            LazyVGrid(columns: Self.optionGridColumns, spacing: 10) {
-                optionButton(isSelected: selectedColor == nil) {
-                    Image(systemName: "nosign")
-                        .font(.headline)
-                        .foregroundStyle(.secondary)
-                } action: {
-                    selectedColor = nil
-                }
-
-                ForEach(FolderAccentColor.allCases) { color in
-                    Button {
-                        selectedColor = color
-                    } label: {
-                        Circle()
-                            .fill(color.tint.gradient)
-                            .frame(width: 28, height: 28)
-                            .frame(width: 44, height: 44)
-                            .overlay {
-                                if selectedColor == color {
-                                    Circle()
-                                        .stroke(color.tint, lineWidth: 2)
-                                        .frame(width: 36, height: 36)
-                                }
-                            }
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel(color.title)
-                }
-            }
-        }
-    }
-
-    private static let optionGridColumns = [
-        GridItem(.adaptive(minimum: 44, maximum: 48), spacing: 10)
-    ]
-
-    @ViewBuilder
-    private func optionButton<Content: View>(
-        isSelected: Bool,
-        @ViewBuilder content: () -> Content,
-        action: @escaping () -> Void
-    ) -> some View {
-        Button(action: action) {
-            content()
-                .frame(width: 44, height: 44)
-                .background(
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .fill(isSelected ? Color.accentColor.opacity(0.14) : Color(uiColor: .secondarySystemBackground))
-                )
-                .overlay {
-                    if isSelected {
-                        RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .stroke(Color.accentColor.opacity(0.45), lineWidth: 1)
-                    }
-                }
-        }
-        .buttonStyle(.plain)
-    }
-
 }
 
 private struct FolderEditorDrawer<Content: View>: View {
@@ -216,63 +149,8 @@ private struct FolderEditorDrawer<Content: View>: View {
     }
 }
 
-private struct FolderPickerSection<Content: View>: View {
-    let title: String
-    @ViewBuilder let content: Content
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            content
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel(title)
-    }
-}
-
 struct FolderDraft {
     let name: String
     let emoji: String?
-    let color: FolderAccentColor?
-}
-
-enum FolderAccentColor: String, CaseIterable, Identifiable {
-    case blue
-    case purple
-    case pink
-    case red
-    case orange
-    case yellow
-    case green
-    case teal
-
-    var id: String { rawValue }
-    var title: String { rawValue.capitalized }
-
-    var tint: Color {
-        switch self {
-        case .blue: .blue
-        case .purple: .purple
-        case .pink: .pink
-        case .red: .red
-        case .orange: .orange
-        case .yellow: .yellow
-        case .green: .green
-        case .teal: .teal
-        }
-    }
-
-    /// The gradient palette a folder card wears for this accent colour.
-    var cardPalette: FolderCardPalette {
-        switch self {
-        case .blue: .blue
-        case .purple: .purple
-        case .pink: .pink
-        case .red: .red
-        case .orange: .orange
-        case .yellow: .yellow
-        case .green: .green
-        case .teal: .teal
-        }
-    }
+    let color: String?
 }

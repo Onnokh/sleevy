@@ -2,7 +2,6 @@ import SwiftUI
 
 @MainActor
 struct SearchView: View {
-    @Environment(\.openSavedItem) private var openSavedItem
     var store: ReadingListStore
     @State private var query = ""
     @State private var isRetryingLoad = false
@@ -46,45 +45,14 @@ struct SearchView: View {
             } else if snapshot.items.isEmpty {
                 ContentUnavailableView.search(text: trimmedQuery)
             } else {
-                List(snapshot.items) { item in
-                    SavedItemRow(item: item) {
-                        await openSavedItem(item)
-                    } onToggleRead: {
-                        await store.setRead(item, isRead: !item.isRead)
-                    } onDelete: {
-                        await store.delete(item)
-                    }
-                    .swipeActions(edge: .leading, allowsFullSwipe: true) {
-                        Button {
-                            Task {
-                                await store.setRead(item, isRead: !item.isRead)
-                            }
-                        } label: {
-                            Label(
-                                item.isRead ? "Unread" : "Read",
-                                systemImage: item.isRead ? "circle" : "checkmark.circle"
-                            )
-                        }
-                        .tint(item.isRead ? .orange : .green)
-                    }
-                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                        Button(role: .destructive) {
-                            Task {
-                                await store.delete(item)
-                            }
-                        } label: {
-                            Label("Delete", systemImage: "trash")
-                        }
-                    }
-                    .listRowInsets(EdgeInsets(top: 0, leading: 18, bottom: 0, trailing: 18))
-                    .listRowBackground(Color.clear)
-                    .listRowSeparatorTint(.white.opacity(0.08))
+                List {
+                    SavedItemListRows(items: snapshot.items, store: store)
                 }
                 .listStyle(.plain)
                 .scrollContentBackground(.hidden)
-                .background(Color(.appBackground))
             }
         }
+        .background(Color(.systemBackground))
         .navigationTitle("Search")
         .navigationBarTitleDisplayMode(.large)
         .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always))

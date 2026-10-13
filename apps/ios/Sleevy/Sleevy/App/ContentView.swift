@@ -29,77 +29,81 @@ struct ContentView: View {
         }
     }
 
+    /// The signed-out landing: the mark, the name, and the two ways in. The
+    /// same monochrome as the rest of the app; nothing moves behind it.
     private var signedOutView: some View {
-        ZStack {
-            MetalGradientBackground()
-                .ignoresSafeArea()
+        VStack(spacing: 0) {
+            Spacer()
 
-            FloatingBokehView()
-                .ignoresSafeArea()
+            SleevyBrandmark()
+                .fill(.primary)
+                .frame(width: 66, height: 84)
+                .padding(.bottom, 28)
 
-            VStack(spacing: 0) {
-                Spacer()
+            Text("Sleevy")
+                .font(.system(size: 34, weight: .bold))
 
-                SleevyBrandmark()
-                    .fill(.white)
-                    .frame(width: 88, height: 112)
-                    .shadow(color: .black.opacity(0.15), radius: 12, y: 4)
-                    .padding(.bottom, 48)
+            Text("Save it now. Read it later.")
+                .font(.body)
+                .foregroundStyle(.secondary)
+                .padding(.top, 6)
 
-                VStack(spacing: 14) {
+            Spacer()
 
-                    Button {
-                        Task { await authStore.signInWithApple() }
-                    } label: {
-                        if authStore.isSigningIn {
-                            ProgressView()
-                                .tint(.black)
-                                .frame(maxWidth: .infinity, minHeight: 22)
-                        } else {
-                            Label("Continue with Apple", systemImage: "apple.logo")
-                                .frame(maxWidth: .infinity, minHeight: 22)
-                        }
+            VStack(spacing: 12) {
+                Button {
+                    Task { await authStore.signInWithApple() }
+                } label: {
+                    if authStore.isSigningIn {
+                        ProgressView()
+                            .frame(maxWidth: .infinity, minHeight: 22)
+                    } else {
+                        Label("Continue with Apple", systemImage: "apple.logo")
+                            .frame(maxWidth: .infinity, minHeight: 22)
                     }
-                    .buttonStyle(LandingButtonStyle(variant: .primary))
-                    .disabled(authStore.isSigningIn)
-
-                    Button {
-                        Task { await authStore.signInWithGoogle() }
-                    } label: {
-                        if authStore.isSigningIn {
-                            ProgressView()
-                                .tint(.white)
-                                .frame(maxWidth: .infinity, minHeight: 22)
-                        } else {
-                            HStack(spacing: 8) {
-                                Image("GoogleLogo")
-                                    .resizable()
-                                    .scaledToFit()
-                                    .frame(width: 18, height: 18)
-                                    .accessibilityHidden(true)
-                                Text("Continue with Google")
-                            }
-                                .frame(maxWidth: .infinity, minHeight: 22)
-                        }
-                    }
-                    .buttonStyle(LandingButtonStyle(variant: .secondary))
-                    .disabled(authStore.isSigningIn)
                 }
-                .padding(.horizontal, 32)
+                .buttonStyle(LandingButtonStyle(variant: .primary))
+                .disabled(authStore.isSigningIn)
+
+                Button {
+                    Task { await authStore.signInWithGoogle() }
+                } label: {
+                    if authStore.isSigningIn {
+                        ProgressView()
+                            .frame(maxWidth: .infinity, minHeight: 22)
+                    } else {
+                        HStack(spacing: 8) {
+                            Image("GoogleLogo")
+                                .resizable()
+                                .scaledToFit()
+                                .frame(width: 18, height: 18)
+                                .accessibilityHidden(true)
+                            Text("Continue with Google")
+                        }
+                        .frame(maxWidth: .infinity, minHeight: 22)
+                    }
+                }
+                .buttonStyle(LandingButtonStyle(variant: .secondary))
+                .disabled(authStore.isSigningIn)
 
                 if let errorMessage = authStore.errorMessage {
                     Text(errorMessage)
                         .font(.footnote)
-                        .foregroundStyle(.white)
-                        .padding(.top, 12)
+                        .foregroundStyle(.red)
+                        .padding(.top, 4)
                 }
-
-                Spacer()
             }
+            .frame(maxWidth: 420)
+            .padding(.horizontal, 24)
+            .padding(.bottom, 24)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color(.systemBackground))
     }
 }
 
+/// The two sign-in buttons: a solid capsule for Apple, a grey one for
+/// Google. Primary-on-background, so both read in light and dark mode.
 private struct LandingButtonStyle: ButtonStyle {
     enum Variant { case primary, secondary }
     let variant: Variant
@@ -107,19 +111,16 @@ private struct LandingButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.body.weight(.semibold))
-            .foregroundStyle(variant == .primary ? Color.black : Color.white)
+            .foregroundStyle(variant == .primary ? Color(.systemBackground) : Color.primary)
+            .tint(variant == .primary ? Color(.systemBackground) : Color.primary)
             .padding(.vertical, 16)
             .background(
                 variant == .primary
-                    ? AnyShapeStyle(Color.white)
-                    : AnyShapeStyle(Color.white.opacity(0.2))
+                    ? AnyShapeStyle(Color.primary)
+                    : AnyShapeStyle(Color(.secondarySystemBackground)),
+                in: Capsule()
             )
-            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-            .overlay(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .strokeBorder(Color.white.opacity(variant == .secondary ? 0.3 : 0), lineWidth: 1)
-            )
-            .opacity(configuration.isPressed ? 0.8 : 1)
+            .opacity(configuration.isPressed ? 0.75 : 1)
             .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
     }
 }

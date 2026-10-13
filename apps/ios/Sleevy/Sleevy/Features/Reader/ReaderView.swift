@@ -11,18 +11,23 @@ import SwiftUI
 /// The Original URL is always one tap away, so the Reader View is never a dead
 /// end: an extraction that lost the part you wanted is a tap from the page.
 ///
-/// Where the pane is wide enough — the iPhone Duo's inner display, an iPad —
-/// it lays out as the Web Companion's Reader View does: the articles beside
-/// the article, then the article itself with its Article Outline in the
-/// gutter. Narrower than that, both fold away and the article takes the whole
-/// width, which is the Reader View every iPhone has had. Creased like a book,
-/// the two sides of the fold become two pages: the articles on the left one,
-/// the article on the right.
+/// On an iPhone the article scrolls: its title, where it is from, the Preview
+/// Summary, then the prose. The arrows in the bar step to the save above or
+/// below in the list it was opened from. Where the pane is wide enough — an
+/// iPad — the articles sit beside the article, as in the Web Companion's
+/// Reader View, with the Article Outline in the gutter.
+///
+/// Where the device has a vertical bar — the iPhone Duo — the article is set
+/// as a book instead: see ``BookReader``.
 struct ReaderView: View {
     /// The Saved Item the reader opened. The pane can move on from it without
     /// pushing a new screen, so this is where reading started rather than what
     /// is on screen now.
     let openedID: SavedItem.ID
+    /// The list the save was opened from, in its order at that moment. Taken
+    /// then, not read live: the Inbox drops a save as soon as it is read, and
+    /// the arrows should still step to the saves that were around it.
+    let sequence: [SavedItem.ID]
     let store: ReadingListStore
 
     @State private var selectedID: SavedItem.ID
@@ -37,16 +42,28 @@ struct ReaderView: View {
     /// The reader's finger on the scrubber in the vertical bar, while it is
     /// down.
     @State private var scrub: OutlineScrub?
-    /// The section the scrubber last asked for; the article scrolls to it.
+    /// The section the scrubber last asked for; the article goes to it.
     @State private var scrubTarget: String?
-    /// Which side the vertical bar holding the scrubber is on, or nil when
-    /// the outline is in the gutter instead.
-    @State private var scrubberEdge: HorizontalEdge?
+    /// Which side of the screen the vertical bar is on, or nil where there is
+    /// none. With a bar, the article is a book.
+    @State private var barEdge: HorizontalEdge?
+    /// The page each section of the book starts on, for the deck.
+    @State private var entryPages: [String: Int] = [:]
+    /// Whether the book's left page is the Article Outline. Kept, as a reader
+    /// who likes the contents page wants it on the next article too.
+    @AppStorage("readerShowsOutline", store: SleevyUserPreferences.defaults)
+    private var showsOutline = false
+    /// The reader's type size, in steps from the default.
+    @AppStorage("readerTextSize", store: SleevyUserPreferences.defaults)
+    private var textSizeStep = 0
     @Environment(\.openURL) private var openURL
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.moveToFolder) private var moveToFolder
+    @Environment(\.dismiss) private var dismiss
 
-    init(openedID: SavedItem.ID, store: ReadingListStore) {
+    init(openedID: SavedItem.ID, sequence: [SavedItem.ID] = [], store: ReadingListStore) {
         self.openedID = openedID
+        self.sequence = sequence
         self.store = store
         _selectedID = State(initialValue: openedID)
     }
@@ -57,17 +74,12 @@ struct ReaderView: View {
     private static let measure: CGFloat = 700
 
     /// The breathing room either side of the prose, inside the column.
-    private static let columnPadding: CGFloat = 20
+    private static let columnPadding: CGFloat = 22
 
     /// What has to be left for the article before the list column earns its
     /// place. Below this the list is taking width the prose needs, and the
     /// article is reached by going back instead — the same trade the Web
     /// Companion makes when it drops the column below 1400px.
-    ///
-    /// Measured against the real pane rather than the display: the iPhone Duo's
-    /// inner display is 951pt wide, and the vertical toolbar's safe area leaves
-    /// the Reader View 867pt of it. 520pt is about 62 characters of 19pt prose,
-    /// which is still a column.
     private static let minimumPaneForList: CGFloat = 520
 
     /// The list's share of the window beside a flat article: enough for two
@@ -77,6 +89,13 @@ struct ReaderView: View {
     /// The narrowest the list gets, so a small window still shows a title in
     /// two lines rather than four.
     private static let minimumListWidth: CGFloat = 220
+
+    /// The narrowest pane that is set as two pages. Less than this, a page
+    /// would hold too few words a line to read as a book.
+    private static let minimumSpread: CGFloat = 700
+
+    /// The type size steps a reader can take from the default.
+    private static let textSizeSteps = -2...4
 
     /// The coordinate space the section offsets are measured in: the scrolling
     /// content itself, so a section's top is its offset into the article and
@@ -162,49 +181,88 @@ struct ReaderView: View {
         horizontalSizeClass == .regular
     }
 
+    private var isBook: Bool {
+        barEdge != nil
+    }
+
+    private var textScale: CGFloat {
+        1 + CGFloat(textSizeStep) * 0.1
+    }
+
     var body: some View {
         GeometryReader { geometry in
-            let listWidth = listWidth(in: geometry)
-
-            HStack(alignment: .top, spacing: 0) {
-                if let listWidth {
-                    ReadableItemsSidebar(items: readableItems, selectedID: selectedID, width: listWidth) { next in
-                        select(next.id)
-                    }
-
-                    Divider()
-                }
-
-                articlePane(paneWidth: geometry.size.width - (listWidth.map { $0 + 1 } ?? 0))
+            if isBook {
+                bookPane(in: geometry)
+            } else {
+                columns(in: geometry)
             }
         }
+        .background(Color(.systemBackground))
         .overlay { scrubDeck }
         .animation(.smooth(duration: 0.35), value: isCreased)
         .onCreaseChange { isCreased = $0 }
+        .verticalBarToolbar(isEnabled: isBook) {
+            ToolbarItem(placement: .bottomBar) {
+                Toggle(isOn: $showsOutline) {
+                    Label("Outline", systemImage: "list.bullet.indent")
+                }
+                .toggleStyle(.button)
+                .disabled(loadedOutline.isEmpty)
+            }
+            ToolbarItem(placement: .bottomBar) {
+                Menu {
+                    textSizeControls
+                } label: {
+                    Label("Text Size", systemImage: "textformat.size")
+                }
+            }
+            ToolbarItem(placement: .bottomBar) {
+                moreMenu
+            }
+        }
         .outlineScrubber(
             outline: loadedOutline,
             activeIndex: activeIndex,
             onScrub: scrubbed,
-            onEdgeChange: { scrubberEdge = $0 }
+            onEdgeChange: { barEdge = $0 }
         )
         .navigationTitle(item?.displayTitle ?? "")
         .navigationBarTitleDisplayMode(.inline)
+        // The article sets its own title, large, under the bar.
+        .toolbar(removing: .title)
         // The one screen in the app that hides the tab bar. Everywhere else
         // content scrolling under the floating bar is fine; here it sits on
         // top of the last lines of the article, and a reading surface should
         // be the article and nothing else.
         .toolbar(.hidden, for: .tabBar)
         .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Menu {
-                    Button("Open in Browser", systemImage: "safari") { openOriginal() }
-                    if case .loaded(let article) = phase {
-                        ShareLink(item: URL(string: article.content.originalURL) ?? url) {
-                            Label("Share", systemImage: "square.and.arrow.up")
+            if !isBook {
+                if sequence.count > 1 {
+                    ToolbarItemGroup(placement: .topBarLeading) {
+                        Button {
+                            step(by: -1)
+                        } label: {
+                            Label("Previous Save", systemImage: "chevron.up")
+                        }
+                        .disabled(neighbour(by: -1) == nil)
+
+                        Button {
+                            step(by: 1)
+                        } label: {
+                            Label("Next Save", systemImage: "chevron.down")
+                        }
+                        .disabled(neighbour(by: 1) == nil)
+                    }
+                }
+
+                ToolbarItemGroup(placement: .topBarTrailing) {
+                    if let item {
+                        readButton(item)
+                        if let moveToFolder {
+                            MoveToFolderMenu(item: item, action: moveToFolder)
                         }
                     }
-                } label: {
-                    Label("More", systemImage: "ellipsis.circle")
+                    moreMenu
                 }
             }
         }
@@ -217,18 +275,65 @@ struct ReaderView: View {
 
     // MARK: - Panes
 
+    /// The article as a book, on two pages where the pane is wide and split
+    /// on the hinge, one page where it is not.
+    ///
+    /// iOS says the hinge is there but not where it is. On the iPhone Duo it
+    /// is the middle of the inner display, so the split is measured from the
+    /// middle of the window, not of the pane: the vertical bar's inset puts
+    /// the pane off centre.
+    @ViewBuilder
+    private func bookPane(in geometry: GeometryProxy) -> some View {
+        let size = geometry.size
+        let leadingEdge = geometry.frame(in: .global).minX
+        let windowWidth = leadingEdge + size.width + geometry.safeAreaInsets.trailing
+        let isSpread = size.width > size.height && size.width >= Self.minimumSpread
+        let hinge = isSpread ? windowWidth / 2 - leadingEdge : nil
+
+        switch phase {
+        case .loading:
+            ProgressView()
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+        case .failed(let failure):
+            unavailable(failure)
+        case .loaded(let article):
+            if let item {
+                BookReader(
+                    article: article,
+                    item: item,
+                    bodySize: (17 * textScale).rounded(),
+                    paneSize: size,
+                    hinge: hinge,
+                    showsOutline: $showsOutline,
+                    target: scrubTarget,
+                    activeIndex: $activeIndex,
+                    entryPages: $entryPages
+                )
+            }
+        }
+    }
+
+    /// The scrolling article, with the articles beside it where the pane
+    /// leaves room for them.
+    private func columns(in geometry: GeometryProxy) -> some View {
+        let listWidth = listWidth(in: geometry)
+
+        return HStack(alignment: .top, spacing: 0) {
+            if let listWidth {
+                ReadableItemsSidebar(items: readableItems, selectedID: selectedID, width: listWidth) { next in
+                    select(next.id)
+                }
+
+                Divider()
+            }
+
+            articlePane(paneWidth: geometry.size.width - (listWidth.map { $0 + 1 } ?? 0))
+        }
+    }
+
     /// How wide the list beside the article is, or nil when there is no room
-    /// for one.
-    ///
-    /// Creased with the hinge running down the pane, the list fills the left
-    /// side of the fold and the article the right, divided on the hinge so no
-    /// line of prose runs across it. iOS says the hinge is partly open but not
-    /// where it is. On the iPhone Duo it is the middle of the inner display, so
-    /// the split is measured from the middle of the window, not of the pane:
-    /// the system rail's inset puts the pane off centre.
-    ///
-    /// Otherwise the list takes a quarter of the window, and only while the
-    /// article keeps a column beside it.
+    /// for one: a quarter of the window, and only while the article keeps a
+    /// column beside it.
     private func listWidth(in geometry: GeometryProxy) -> CGFloat? {
         guard isRegularWidth, readableItems.count > 1 else { return nil }
 
@@ -246,10 +351,8 @@ struct ReaderView: View {
     /// The article, with its Article Outline in the leading gutter where the
     /// column leaves one.
     private func articlePane(paneWidth: CGFloat) -> some View {
-        // One outline on screen: where the vertical bar has the scrubber, the
-        // gutter is the column's.
-        let layout = Layout(paneWidth: paneWidth, hasOutline: !loadedOutline.isEmpty && scrubberEdge == nil)
-        // A page of a creased book is an iPhone's width, and is set like one.
+        let layout = Layout(paneWidth: paneWidth, hasOutline: !loadedOutline.isEmpty)
+        // A wide column is read at arm's length, and set a size up.
         let largeType = isRegularWidth && layout.columnWidth >= Self.minimumPaneForList
 
         return ScrollViewReader { proxy in
@@ -298,22 +401,23 @@ struct ReaderView: View {
     }
 
     /// The deck of section cards beside the scrubber, level with the pointed
-    /// mark, on the side of the bar the article is on.
+    /// mark, on the side of the bar the article is on. Not while the book's
+    /// outline is open: the whole outline is on the page already.
     @ViewBuilder
     private var scrubDeck: some View {
         GeometryReader { geometry in
-            if let scrub, let scrubberEdge, loadedOutline.indices.contains(scrub.index) {
+            if let scrub, let barEdge, !(isBook && showsOutline), loadedOutline.indices.contains(scrub.index) {
                 let origin = geometry.frame(in: .global).origin
                 let gap: CGFloat = 12
                 let half = OutlineDeck.width / 2
-                let x = scrubberEdge == .trailing
+                let x = barEdge == .trailing
                     ? scrub.frame.minX - gap - half
                     : scrub.frame.maxX + gap + half
                 // Kept clear of the pane's ends, so the cards either side of
                 // the first and last sections are not cut off.
                 let y = min(max(scrub.markY - origin.y, 110), geometry.size.height - 110)
 
-                OutlineDeck(outline: loadedOutline, frontIndex: scrub.index)
+                OutlineDeck(outline: loadedOutline, frontIndex: scrub.index, pages: isBook ? entryPages : nil)
                     .position(x: x - origin.x, y: y)
                     .animation(OutlineDeck.travel, value: y)
                     .transition(.opacity.animation(.easeOut(duration: 0.14)))
@@ -341,36 +445,33 @@ struct ReaderView: View {
     }
 
     private func scrollingArticle(_ article: Article, largeType: Bool) -> some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                // The article's own title, not the row's: the extractor read
-                // the page and the Saved Metadata read the tags, and when they
-                // disagree the page is the one that was written by a person.
-                Text(article.content.title ?? item?.displayTitle ?? "")
-                    .font(largeType ? .system(size: 40, weight: .bold) : .largeTitle.weight(.bold))
+        let bodySize = ((largeType ? 19 : 18) * textScale).rounded()
 
-                if let item {
-                    Text(item.displayDomain)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
+        return ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
+                articleHeader(article, largeType: largeType, bodySize: bodySize)
+                    .padding(.bottom, 28)
 
-                ForEach(article.sections) { section in
-                    Markdown(section.markdown)
-                        .markdownTheme(.sleevyReader(largeType: largeType))
-                        .id(section.id)
-                        .onGeometryChange(for: CGFloat.self) { proxy in
-                            proxy.frame(in: .named(Self.articleSpace)).minY
-                        } action: { top in
-                            guard let entryID = section.entryID else { return }
-                            sectionTops[entryID] = top
-                            updateActiveEntry(article.outline)
-                        }
+                // Each section is its own Markdown view, and a view drops the
+                // margin above its first heading: the gap is set here instead.
+                VStack(alignment: .leading, spacing: 30) {
+                    ForEach(article.sections) { section in
+                        Markdown(section.markdown)
+                            .markdownTheme(.sleevyReader(bodySize: bodySize))
+                            .id(section.id)
+                            .onGeometryChange(for: CGFloat.self) { proxy in
+                                proxy.frame(in: .named(Self.articleSpace)).minY
+                            } action: { top in
+                                guard let entryID = section.entryID else { return }
+                                sectionTops[entryID] = top
+                                updateActiveEntry(article.outline)
+                            }
+                    }
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, Self.columnPadding)
-            .padding(.top, 8)
+            .padding(.top, 6)
             .padding(.bottom, 48)
             .coordinateSpace(.named(Self.articleSpace))
         }
@@ -381,6 +482,32 @@ struct ReaderView: View {
             viewportHeight = geometry.containerSize.height
             contentHeight = geometry.contentSize.height
             updateActiveEntry(article.outline)
+        }
+    }
+
+    /// The article's own title, where it is from, and its Preview Summary.
+    ///
+    /// The title is the article's, not the row's: the extractor read the page
+    /// and the Saved Metadata read the tags, and when they disagree the page
+    /// is the one that was written by a person.
+    @ViewBuilder
+    private func articleHeader(_ article: Article, largeType: Bool, bodySize: CGFloat) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text(article.content.title ?? item?.displayTitle ?? "")
+                .font(.system(size: largeType ? 38 : 32, weight: .heavy))
+                .kerning(-0.5)
+                .fixedSize(horizontal: false, vertical: true)
+
+            if let item {
+                ReaderByline(item: item, showsAge: false)
+                    .padding(.top, 14)
+
+                if let summary = item.previewSummary?.trimmingCharacters(in: .whitespacesAndNewlines),
+                   !summary.isEmpty {
+                    ReaderSummaryCard(summary: summary, fontSize: bodySize)
+                        .padding(.top, 24)
+                }
+            }
         }
     }
 
@@ -416,15 +543,97 @@ struct ReaderView: View {
         }
     }
 
+    // MARK: - Actions
+
+    private func readButton(_ item: SavedItem) -> some View {
+        Button {
+            Task { await store.setRead(item, isRead: !item.isRead) }
+        } label: {
+            Label(
+                item.isRead ? "Mark Unread" : "Mark Read",
+                systemImage: item.isRead ? "checkmark.circle.fill" : "checkmark.circle"
+            )
+        }
+    }
+
+    /// Everything else the reader can do with the save. In the book the bar
+    /// is shorter, so Mark Read and Move to Folder are in here too.
+    private var moreMenu: some View {
+        Menu {
+            if isBook, let item {
+                readButton(item)
+                if let moveToFolder {
+                    MoveToFolderMenu(item: item, action: moveToFolder)
+                }
+                Divider()
+            }
+
+            if !isBook {
+                textSizeControls
+            }
+
+            Button("Open in Browser", systemImage: "safari") { openOriginal() }
+            ShareLink(item: url) {
+                Label("Share", systemImage: "square.and.arrow.up")
+            }
+            Button("Copy Link", systemImage: "link") { copyLink(url) }
+
+            if let item {
+                Divider()
+                Button("Delete", systemImage: "trash", role: .destructive) {
+                    Task {
+                        await store.delete(item)
+                        dismiss()
+                    }
+                }
+            }
+        } label: {
+            Label("More", systemImage: "ellipsis")
+        }
+    }
+
+    private var textSizeControls: some View {
+        ControlGroup {
+            Button {
+                textSizeStep = max(textSizeStep - 1, Self.textSizeSteps.lowerBound)
+            } label: {
+                Label("Smaller Text", systemImage: "textformat.size.smaller")
+            }
+            .disabled(textSizeStep <= Self.textSizeSteps.lowerBound)
+
+            Button {
+                textSizeStep = min(textSizeStep + 1, Self.textSizeSteps.upperBound)
+            } label: {
+                Label("Larger Text", systemImage: "textformat.size.larger")
+            }
+            .disabled(textSizeStep >= Self.textSizeSteps.upperBound)
+        } label: {
+            Text("Text Size")
+        }
+    }
+
     // MARK: - Behaviour
 
     private var url: URL {
         guard let item else { return URL(string: "https://sleevy.app")! }
-        return URL(string: item.originalURL) ?? URL(string: "https://\(item.host)")!
+        return item.shareURL ?? URL(string: item.originalURL) ?? URL(string: "https://\(item.host)")!
     }
 
     private func openOriginal() {
         openURL(url)
+    }
+
+    /// The save `offset` places from this one in the list it was opened from,
+    /// or nil at either end.
+    private func neighbour(by offset: Int) -> SavedItem.ID? {
+        guard let index = sequence.firstIndex(of: selectedID) else { return nil }
+        let next = index + offset
+        return sequence.indices.contains(next) ? sequence[next] : nil
+    }
+
+    private func step(by offset: Int) {
+        guard let next = neighbour(by: offset) else { return }
+        select(next)
     }
 
     /// Move to another article without leaving the Reader View. In this pane
@@ -435,6 +644,7 @@ struct ReaderView: View {
         selectedID = id
         phase = .loading
         sectionTops = [:]
+        entryPages = [:]
         activeIndex = 0
         scrollTop = 0
 
@@ -468,7 +678,7 @@ struct ReaderView: View {
     /// uses. A section the layout has not reported yet is not a place the
     /// reader can be, so it never claims the mark.
     private func updateActiveEntry(_ outline: ArticleOutline) {
-        guard !outline.isEmpty else { return }
+        guard !outline.isEmpty, !isBook else { return }
 
         let tops = outline.map { sectionTops[$0.id] ?? .greatestFiniteMagnitude }
         let next = activeOutlineIndex(
@@ -535,51 +745,119 @@ struct ReaderView: View {
     }
 }
 
+// MARK: - Article header
+
+/// Where a save is from: its favicon and its site, with how long ago it was
+/// saved where that helps.
+struct ReaderByline: View {
+    let item: SavedItem
+    var showsAge = true
+
+    var body: some View {
+        HStack(spacing: 8) {
+            SavedItemFavicon(item: item, size: 20)
+                .clipShape(.rect(cornerRadius: 5, style: .continuous))
+
+            Text(showsAge ? "\(item.displayDomain) · \(item.createdDateLabel)" : item.displayDomain)
+                .font(.system(size: 15))
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+        }
+    }
+}
+
+/// The Preview Summary as a card over the article, which folds away to its
+/// heading for a reader who would rather start on the text.
+struct ReaderSummaryCard: View {
+    let summary: String
+    var fontSize: CGFloat = 18
+
+    @State private var isExpanded = true
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Button {
+                withAnimation(.snappy(duration: 0.24)) { isExpanded.toggle() }
+            } label: {
+                HStack(spacing: 7) {
+                    Text("Summary")
+                        .font(.system(size: 15, weight: .semibold))
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 11, weight: .semibold))
+                        .rotationEffect(.degrees(isExpanded ? 0 : -90))
+                }
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(.rect)
+            }
+            .buttonStyle(.plain)
+            .accessibilityValue(isExpanded ? "Expanded" : "Collapsed")
+
+            if isExpanded {
+                Text(summary)
+                    .font(.system(size: fontSize))
+                    .lineSpacing(fontSize * 0.3)
+                    .foregroundStyle(.primary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .transition(.opacity)
+            }
+        }
+        .padding(.horizontal, 18)
+        .padding(.top, 15)
+        .padding(.bottom, isExpanded ? 18 : 15)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color(.secondarySystemBackground), in: .rect(cornerRadius: 22, style: .continuous))
+    }
+}
+
 // MARK: - Theme
 
 extension MarkdownUI.Theme {
-    /// Reader typography: one column, generous leading, and a measure that
-    /// stays readable when the Duo unfolds. Semantic colors throughout, so the
-    /// Theme setting (System / Light / Dark) governs the Reader View too.
-    ///
-    /// The inner display is read at arm's length rather than in the hand, so
-    /// a wide column sets larger type. The measure is capped either way, so the
-    /// larger size is more words on a line the eye can still track, not a
-    /// longer line.
-    static func sleevyReader(largeType: Bool) -> MarkdownUI.Theme {
-        let body: CGFloat = largeType ? 19 : 17
-
-        return MarkdownUI.Theme()
+    /// Reader typography: one column, generous leading, gray prose under
+    /// white headings, so the eye finds the sections before the sentences.
+    /// Semantic colors throughout, so the Theme setting (System / Light /
+    /// Dark) governs the Reader View too.
+    static func sleevyReader(bodySize: CGFloat) -> MarkdownUI.Theme {
+        MarkdownUI.Theme()
             .text {
-                FontSize(body)
-                ForegroundColor(.primary)
+                FontSize(bodySize)
+                ForegroundColor(.secondary)
             }
             .code {
                 FontFamilyVariant(.monospaced)
-                FontSize(.em(0.92))
+                FontSize(.em(0.9))
+            }
+            .strong {
+                FontWeight(.semibold)
+                ForegroundColor(.primary)
             }
             .link {
-                ForegroundColor(.accentColor)
+                ForegroundColor(.primary)
+                UnderlineStyle(.single)
             }
             .heading1 { configuration in
                 configuration.label
-                    .markdownMargin(top: 28, bottom: 10)
-                    .markdownTextStyle { FontWeight(.bold); FontSize(.em(1.5)) }
+                    .markdownMargin(top: 30, bottom: 10)
+                    .markdownTextStyle { FontWeight(.bold); FontSize(.em(1.4)); ForegroundColor(.primary) }
             }
             .heading2 { configuration in
                 configuration.label
-                    .markdownMargin(top: 24, bottom: 8)
-                    .markdownTextStyle { FontWeight(.semibold); FontSize(.em(1.28)) }
+                    .markdownMargin(top: 28, bottom: 10)
+                    .markdownTextStyle { FontWeight(.bold); FontSize(.em(1.17)); ForegroundColor(.primary) }
             }
             .heading3 { configuration in
                 configuration.label
-                    .markdownMargin(top: 20, bottom: 6)
-                    .markdownTextStyle { FontWeight(.semibold); FontSize(.em(1.1)) }
+                    .markdownMargin(top: 22, bottom: 8)
+                    .markdownTextStyle { FontWeight(.semibold); FontSize(.em(1.06)); ForegroundColor(.primary) }
             }
             .paragraph { configuration in
                 configuration.label
-                    .lineSpacing(largeType ? 7 : 6)
-                    .markdownMargin(top: 0, bottom: 14)
+                    .lineSpacing(bodySize * 0.42)
+                    .markdownMargin(top: 0, bottom: 16)
+            }
+            .listItem { configuration in
+                configuration.label
+                    .markdownMargin(top: 8)
             }
             .blockquote { configuration in
                 configuration.label

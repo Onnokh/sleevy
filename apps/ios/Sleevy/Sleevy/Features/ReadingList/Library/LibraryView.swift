@@ -1,31 +1,21 @@
 import SwiftUI
 
+/// The Library home: the Folders and the Tags as a sidebar, with counts, and
+/// under them the Saved Items that are in no Folder (the No Folder Filter).
+/// Those have no heading of their own: they are simply what the Library holds
+/// outside its Folders.
 @MainActor
 struct LibraryView: View {
-    @Environment(\.openSavedItem) private var openSavedItem
+    @Environment(\.pushRoute) private var pushRoute
     var store: ReadingListStore
     @State private var filter = LibraryFilter()
     @State private var sort = LibrarySort.newest
     @State private var isShowingFilters = false
     @State private var folderEditor: FolderEditor?
     @State private var folderToDelete: Folder?
-    @State private var itemToMove: SavedItem?
+    @State private var showsFolders = true
+    @State private var showsTags = true
     @Environment(\.colorScheme) private var colorScheme
-    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
-
-    /// Folder cards are a 5:1 banner. One per row fills a phone nicely, but
-    /// across an iPad's width a single card grows into a 200pt slab, so a
-    /// regular-width layout puts two side by side instead.
-    private var folderColumnCount: Int {
-        horizontalSizeClass == .regular ? 2 : 1
-    }
-
-    /// The folders grouped into rows of `folderColumnCount`.
-    private var folderRows: [[Folder]] {
-        stride(from: 0, to: store.folders.count, by: folderColumnCount).map { start in
-            Array(store.folders[start ..< min(start + folderColumnCount, store.folders.count)])
-        }
-    }
 
     var body: some View {
         let projection = store.libraryProjection(
@@ -34,61 +24,30 @@ struct LibraryView: View {
             sort: sort,
             facetOrder: .frequency
         )
+        // The Tags and the count cover the whole Library, Folders included:
+        // a Tag leads to every save that carries it.
+        let complete = store.libraryProjection(
+            for: .completeLibrary,
+            filter: LibraryFilter(),
+            sort: .newest,
+            facetOrder: .name
+        )
 
         Group {
             if store.isLoading && projection.destinationCount == 0 && store.folders.isEmpty {
                 ProgressView("Loading your library...")
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if projection.destinationCount == 0 && store.folders.isEmpty && store.libraryErrorMessage == nil {
-                ContentUnavailableView(
-                    "Library",
-                    systemImage: "books.vertical",
-                    description: Text("Saved reads you organize will appear here.")
-                )
             } else {
-                libraryList(projection: projection)
+                libraryList(projection: projection, complete: complete)
             }
         }
+        .background(Color(.systemBackground))
         .navigationTitle("Library")
         .navigationBarTitleDisplayMode(.large)
+        .modifier(NavigationSubtitleIfAvailable(subtitle: savesText(complete.destinationCount)))
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    folderEditor = .create
-                } label: {
-                    Image(systemName: "plus")
-                }
-                .accessibilityLabel("New Folder")
-            }
-
-            ToolbarItem(placement: .topBarTrailing) {
-                Menu {
-                    Picker("Sort", selection: $sort) {
-                        ForEach(LibrarySort.allCases) { sort in
-                            Text(sort.title).tag(sort)
-                        }
-                    }
-
-                    Divider()
-
-                    Button {
-                        isShowingFilters = true
-                    } label: {
-                        Label("Filters", systemImage: "line.3.horizontal.decrease.circle")
-                    }
-
-                    if filter.isActive {
-                        Button(role: .destructive) {
-                            filter = LibraryFilter()
-                        } label: {
-                            Label("Clear Filters", systemImage: "xmark.circle")
-                        }
-                    }
-                } label: {
-                    Image(systemName: filter.isActive ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle")
-                        .contentTransition(.symbolEffect(.replace))
-                }
-                .accessibilityLabel(filter.isActive ? "Filters Active" : "Filters")
+                LibrarySortMenu(sort: $sort, filter: $filter, isShowingFilters: $isShowingFilters)
             }
         }
         .sheet(isPresented: $isShowingFilters) {
@@ -99,14 +58,10 @@ struct LibraryView: View {
                 types: projection.types
             )
         }
-        .sheet(item: $itemToMove) { item in
-            MoveToFolderSheet(item: item, folders: store.folders) { destination in
-                try await store.move(item, to: destination)
-            }
-        }
         .folderActions(store: store, editor: $folderEditor, folderToDelete: $folderToDelete)
         .task {
             await store.loadIfNeeded(for: .libraryRoot)
+            await store.loadIfNeeded(for: .completeLibrary)
         }
         // Favicons warm as soon as items arrive, off the scroll path.
         .task(id: projection.items) {
@@ -117,135 +72,276 @@ struct LibraryView: View {
         }
     }
 
-    private func folderCard(_ folder: Folder, projection: LibraryProjection) -> some View {
-        FolderCard(
-            folder: folder,
-            itemCount: projection.folderCounts[folder.id, default: 0]
-        ) {
-            folderEditor = .rename(folder)
-        } onDelete: {
-            folderToDelete = folder
-        } onSetPublished: { isPublished in
-            Task {
-                do {
-                    try await store.setFolderPublished(folder, isPublished: isPublished)
-                } catch {
-                    store.libraryErrorMessage = error.localizedDescription
-                }
-            }
-        }
-        .frame(maxWidth: .infinity)
-    }
-
-    private func libraryList(projection: LibraryProjection) -> some View {
+    private func libraryList(projection: LibraryProjection, complete: LibraryProjection) -> some View {
         List {
-            Section {
-                // A stack of slim corona rows, one per folder — full width,
-                // so each folder's field gets room to fan out. Each card is
-                // its own list row: cards sharing a row makes a long-press
-                // lift the whole stack and resolve the first card's menu.
-                ForEach(folderRows, id: \.self) { row in
-                    HStack(spacing: 12) {
-                        ForEach(row) { folder in
-                            folderCard(folder, projection: projection)
-                        }
+            SidebarHeading(title: "Folders", isExpanded: $showsFolders)
 
-                        // A lone card on the last row keeps its column width
-                        // instead of stretching across both.
-                        if row.count < folderColumnCount {
-                            ForEach(0 ..< (folderColumnCount - row.count), id: \.self) { _ in
-                                Color.clear.frame(maxWidth: .infinity)
+            if showsFolders {
+                ForEach(store.folders) { folder in
+                    FolderRow(
+                        folder: folder,
+                        itemCount: projection.folderCounts[folder.id, default: 0]
+                    ) {
+                        folderEditor = .rename(folder)
+                    } onDelete: {
+                        folderToDelete = folder
+                    } onSetPublished: { isPublished in
+                        Task {
+                            do {
+                                try await store.setFolderPublished(folder, isPublished: isPublished)
+                            } catch {
+                                store.libraryErrorMessage = error.localizedDescription
                             }
                         }
                     }
-                    .listRowInsets(EdgeInsets(
-                        top: row == folderRows.first ? 0 : 12,
-                        leading: 16,
-                        bottom: 0,
-                        trailing: 16
-                    ))
-                    .listRowSeparator(.hidden)
-                    .listRowBackground(Color.clear)
                 }
+
+                Button {
+                    folderEditor = .create
+                } label: {
+                    SidebarRow(systemImage: "plus", title: "New Folder")
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+                .sidebarRowStyle()
             }
 
-            if filter.isActive {
-                Section {
-                    ActiveLibraryFilters(filter: $filter)
-                        .listRowInsets(EdgeInsets(top: 8, leading: 18, bottom: 8, trailing: 18))
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
+            if !complete.tags.isEmpty {
+                SidebarHeading(title: "Tags", isExpanded: $showsTags)
+
+                if showsTags {
+                    ForEach(complete.tags, id: \.value) { tag in
+                        Button {
+                            pushRoute(.tag(tag.value))
+                        } label: {
+                            SidebarRow(systemImage: "number", title: tagDisplayName(tag.value), count: tag.count)
+                        }
+                        .buttonStyle(.plain)
+                        .sidebarRowStyle()
+                    }
                 }
             }
 
             if let errorMessage = store.libraryErrorMessage {
-                Section {
-                    Text(errorMessage)
-                        .font(.footnote)
-                        .foregroundStyle(.red)
-                }
-                .listRowBackground(Color.clear)
+                Text(errorMessage)
+                    .font(.footnote)
+                    .foregroundStyle(.red)
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
             }
 
-            if projection.items.isEmpty {
-                ContentUnavailableView(
-                    filter.isActive ? "No Matching Items" : "Library is Empty",
-                    systemImage: filter.isActive ? "line.3.horizontal.decrease.circle" : "books.vertical",
-                    description: Text(filter.isActive ? "Try changing or clearing your filters." : "Items without a folder appear here.")
-                )
+            // The No Folder Filter: what the Library holds outside its
+            // Folders, set apart by space rather than by a name.
+            Color.clear
+                .frame(height: 14)
+                .listRowInsets(EdgeInsets())
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
+
+            if filter.isActive {
+                ActiveLibraryFilters(filter: $filter)
+                    .listRowInsets(EdgeInsets(top: 8, leading: 20, bottom: 8, trailing: 20))
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+
+                if projection.items.isEmpty {
+                    ContentUnavailableView(
+                        "No Matching Items",
+                        systemImage: "line.3.horizontal.decrease.circle",
+                        description: Text("Try changing or clearing your filters.")
+                    )
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                }
             }
 
-            if !projection.items.isEmpty {
-                Section {
-                    ForEach(projection.items) { item in
-                        SavedItemRow(item: item) {
-                            await openSavedItem(item)
-                        } onToggleRead: {
-                            await store.setRead(item, isRead: !item.isRead)
-                        } onDelete: {
-                            await store.delete(item)
-                        } onMove: {
-                            itemToMove = item
-                        }
-                        .swipeActions(edge: .leading, allowsFullSwipe: true) {
-                            Button {
-                                Task {
-                                    await store.setRead(item, isRead: !item.isRead)
-                                }
-                            } label: {
-                                Label(
-                                    item.isRead ? "Unread" : "Read",
-                                    systemImage: item.isRead ? "circle" : "checkmark.circle"
-                                )
-                            }
-                            .tint(item.isRead ? .orange : .green)
-                        }
-                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                            Button(role: .destructive) {
-                                Task {
-                                    await store.delete(item)
-                                }
-                            } label: {
-                                Label("Delete", systemImage: "trash")
-                            }
-                        }
-                        .listRowInsets(EdgeInsets(top: 0, leading: 18, bottom: 0, trailing: 18))
-                        .listRowBackground(Color.clear)
-                        .listRowSeparatorTint(.white.opacity(0.08))
-                    }
+            SavedItemListRows(items: projection.items, store: store)
+        }
+        .listStyle(.plain)
+        .scrollContentBackground(.hidden)
+        .animation(.snappy(duration: 0.24), value: showsFolders)
+        .animation(.snappy(duration: 0.24), value: showsTags)
+    }
+
+    private func savesText(_ count: Int) -> String? {
+        guard count > 0 else { return nil }
+        return count == 1 ? "1 save" : "\(count) saves"
+    }
+}
+
+/// A sidebar section's heading: its name and a chevron that folds it away.
+struct SidebarHeading: View {
+    let title: String
+    @Binding var isExpanded: Bool
+
+    var body: some View {
+        Button {
+            isExpanded.toggle()
+        } label: {
+            HStack(spacing: 6) {
+                Text(title)
+                    .font(.system(size: 15, weight: .semibold))
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 11, weight: .semibold))
+                    .rotationEffect(.degrees(isExpanded ? 0 : -90))
+            }
+            .foregroundStyle(.secondary)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(.rect)
+        }
+        .buttonStyle(.plain)
+        .listRowInsets(EdgeInsets(top: 20, leading: 20, bottom: 6, trailing: 20))
+        .listRowBackground(Color.clear)
+        .listRowSeparator(.hidden)
+        .accessibilityAddTraits(.isHeader)
+        .accessibilityValue(isExpanded ? "Expanded" : "Collapsed")
+    }
+}
+
+/// One line of the Library sidebar: an outline symbol, a name, an optional
+/// marker after the name, and a count at the trailing edge.
+struct SidebarRow<Marker: View>: View {
+    let systemImage: String
+    let title: String
+    var count: Int?
+    @ViewBuilder var marker: Marker
+
+    var body: some View {
+        HStack(spacing: 14) {
+            Image(systemName: systemImage)
+                .font(.system(size: 17))
+                .foregroundStyle(.secondary)
+                .frame(width: 24)
+
+            HStack(spacing: 6) {
+                Text(title)
+                    .font(.system(size: 17))
+                    .lineLimit(1)
+                marker
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            if let count {
+                Text("\(count)")
+                    .font(.system(size: 17))
+                    .monospacedDigit()
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(.vertical, 11)
+        .contentShape(.rect)
+    }
+}
+
+extension SidebarRow where Marker == EmptyView {
+    init(systemImage: String, title: String, count: Int? = nil) {
+        self.init(systemImage: systemImage, title: title, count: count) { EmptyView() }
+    }
+}
+
+extension View {
+    /// The insets and the bare background every sidebar row shares.
+    func sidebarRowStyle() -> some View {
+        listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 0, trailing: 20))
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+    }
+}
+
+/// One Folder in the Library sidebar. Tap opens its Folder View; the
+/// Folder's other actions are behind a long-press. A globe marks a Published
+/// Folder.
+struct FolderRow: View {
+    let folder: Folder
+    let itemCount: Int
+    let onRename: @MainActor () -> Void
+    let onDelete: @MainActor () -> Void
+    let onSetPublished: @MainActor (Bool) -> Void
+
+    @Environment(\.pushRoute) private var pushRoute
+
+    var body: some View {
+        Button {
+            pushRoute(.folder(id: folder.id))
+        } label: {
+            SidebarRow(systemImage: "folder", title: folder.name, count: itemCount) {
+                if folder.isPublished {
+                    Image(systemName: "globe")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.tertiary)
+                        .accessibilityHidden(true)
                 }
             }
         }
-        .listStyle(.plain)
-        .listSectionSpacing(16)
-        .defaultScrollAnchor(.top)
-        .scrollContentBackground(.hidden)
-        // One shared distance between the large title and the first content,
-        // matched with Settings so the screens share a rhythm.
-        .contentMargins(.top, ScreenLayout.contentTopSpacing, for: .scrollContent)
-        .background(Color(.appBackground))
+        .buttonStyle(.plain)
+        .sidebarRowStyle()
+        .accessibilityLabel(folder.name)
+        .accessibilityValue(accessibilityCountLabel)
+        .contextMenu {
+            Button(action: onRename) {
+                Label("Edit", systemImage: "pencil")
+            }
+
+            // The label states what the action does next, so the stored state
+            // stays legible even while Profile Visibility is private.
+            Button {
+                onSetPublished(!folder.isPublished)
+            } label: {
+                Label(
+                    folder.isPublished ? "Remove from Profile" : "Publish to Profile",
+                    systemImage: "globe"
+                )
+            }
+
+            Divider()
+
+            Button(role: .destructive, action: onDelete) {
+                Label("Delete", systemImage: "trash")
+            }
+        }
     }
 
+    private var accessibilityCountLabel: String {
+        let count = itemCount == 1 ? "1 saved item" : "\(itemCount) saved items"
+        return folder.isPublished ? "\(count), on your public profile" : count
+    }
+}
+
+/// The rows of a list of Saved Items with their swipe actions: the Library
+/// home, a Folder View, a Tag and Search all list saves the same way.
+struct SavedItemListRows: View {
+    @Environment(\.openSavedItem) private var openSavedItem
+    let items: [SavedItem]
+    let store: ReadingListStore
+    var showsUnreadIndicator = true
+
+    var body: some View {
+        ForEach(items) { item in
+            SavedItemRow(item: item, showsUnreadIndicator: showsUnreadIndicator) {
+                await openSavedItem(item, items.map(\.id))
+            } onToggleRead: {
+                await store.setRead(item, isRead: !item.isRead)
+            } onDelete: {
+                await store.delete(item)
+            }
+            .swipeActions(edge: .leading, allowsFullSwipe: true) {
+                Button {
+                    Task { await store.setRead(item, isRead: !item.isRead) }
+                } label: {
+                    Label(item.isRead ? "Unread" : "Read", systemImage: item.isRead ? "circle" : "checkmark.circle")
+                }
+                .tint(item.isRead ? .orange : .green)
+            }
+            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                Button(role: .destructive) {
+                    Task { await store.delete(item) }
+                } label: {
+                    Label("Delete", systemImage: "trash")
+                }
+            }
+            .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 0, trailing: 20))
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+        }
+    }
 }

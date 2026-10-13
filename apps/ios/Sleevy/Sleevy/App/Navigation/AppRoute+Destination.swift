@@ -19,14 +19,14 @@ extension AppRoute {
             }
         case .myProfile:
             MyProfileView(session: session)
-        case .reader(let id):
+        case .reader(let id, let sequence):
             if store.savedItem(id: id) != nil {
-                ReaderView(openedID: id, store: store)
+                ReaderView(openedID: id, sequence: sequence, store: store)
             } else {
                 ContentUnavailableView("Item Unavailable", systemImage: "doc.text.magnifyingglass")
             }
-        case .folderCardPlayground:
-            FolderCardPlaygroundView()
+        case .tag(let tag):
+            TagLibraryView(tag: tag, store: store)
         }
     }
 }

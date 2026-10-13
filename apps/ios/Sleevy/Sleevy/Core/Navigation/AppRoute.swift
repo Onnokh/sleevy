@@ -16,11 +16,13 @@ enum AppRoute: Hashable {
     case myProfile
     /// The Reader View for a Saved Item. Carries the id rather than the item so
     /// the route stays cheap vocabulary and the store remains the one source of
-    /// the item's current state.
-    case reader(id: SavedItem.ID)
-    /// Debug-only picking ground for the folder card gradients; nothing
-    /// links to it in release builds.
-    case folderCardPlayground
+    /// the item's current state. `sequence` is the list it was opened from, in
+    /// its order then, so up and down still work once the Inbox has let the
+    /// opened save go.
+    case reader(id: SavedItem.ID, sequence: [SavedItem.ID] = [])
+    /// Every Saved Item with one Tag, across the whole Library: the Library
+    /// home's Tags section leads here.
+    case tag(String)
 }
 
 extension EnvironmentValues {

@@ -8,8 +8,6 @@ struct ReadingListLoadingRow: View {
         ProgressView("Loading your Sleevy...")
             .frame(maxWidth: .infinity, minHeight: height)
             .listRowInsets(EdgeInsets())
-            // First row of the Inbox while it loads and has no subtitle.
-            .stretchyHeaderAnchor(rank: 1)
             .listRowSeparator(.hidden)
     }
 }
@@ -25,8 +23,6 @@ struct EmptyReadingListRow: View {
         )
         .frame(maxWidth: .infinity, minHeight: height)
         .listRowInsets(EdgeInsets())
-        // First row of an empty Inbox, which has no subtitle.
-        .stretchyHeaderAnchor(rank: 1)
         .listRowSeparator(.hidden)
     }
 }
@@ -209,6 +205,11 @@ private struct PendingSavedItemMonogram: View {
     }
 }
 
+/// One Saved Item as one line: the favicon and the title. The UI around it
+/// is monochrome, so the favicon is the only colour in the row.
+///
+/// Touch and hold shows the Preview Summary above the actions, so the
+/// reader can decide what to do with a save without opening it.
 struct SavedItemRow: View {
     @Environment(AppSettings.self) private var appSettings
     let item: SavedItem
@@ -216,7 +217,6 @@ struct SavedItemRow: View {
     let onOpen: () async -> Void
     let onToggleRead: () async -> Void
     let onDelete: () async -> Void
-    var onMove: (() -> Void)? = nil
 
     /// Whether opening this row leaves the app. Deliberately not just
     /// `!hasReaderView(item)`: the badge is a difference between rows, so it
@@ -231,109 +231,203 @@ struct SavedItemRow: View {
                 await onOpen()
             }
         } label: {
-            HStack(alignment: .top, spacing: 12) {
-                SavedItemFavicon(item: item)
+            HStack(spacing: 12) {
+                SavedItemFavicon(item: item, size: 26)
+                    .clipShape(.rect(cornerRadius: 6, style: .continuous))
 
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(item.displayTitle)
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(.primary)
-                        .lineLimit(1)
-                        .multilineTextAlignment(.leading)
+                Text(item.displayTitle)
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(item.isRead && showsUnreadIndicator ? .secondary : .primary)
+                    .lineLimit(1)
+                    .frame(maxWidth: .infinity, alignment: .leading)
 
-                    HStack(spacing: 4) {
-                        Text(item.displayDomain)
-                            .font(.system(size: 12, weight: .medium))
-                            .foregroundStyle(.secondary)
-
-                        // This one leaves: no article was extracted, so opening
-                        // it goes to the site in the browser. Shown only while
-                        // the two destinations are mixed — with the Reader View
-                        // off they all leave, and the setting says so once
-                        // instead of every row saying it. Mirrors the Saved Card
-                        // in the Web Companion.
-                        if leaves {
-                            Image(systemName: "arrow.up.forward.square")
-                                .font(.system(size: 11, weight: .medium))
-                                .foregroundStyle(.tertiary)
-                                .accessibilityLabel("Opens at its original URL")
-                        }
-                    }
+                // This one leaves: no article was extracted, so opening it
+                // goes to the site in the browser. Shown only while the two
+                // destinations are mixed. Mirrors the Saved Card in the Web
+                // Companion.
+                if leaves {
+                    Image(systemName: "arrow.up.forward")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(.tertiary)
+                        .accessibilityLabel("Opens at its original URL")
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
 
-                HStack(spacing: 7) {
-                    if showsUnreadIndicator && !item.isRead {
-                        Circle()
-                            .fill(Color.secondary.opacity(0.55))
-                            .frame(width: 7, height: 7)
-                    }
-
-                    Text(item.createdDateLabel)
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundStyle(.secondary)
-                        .monospacedDigit()
+                if showsUnreadIndicator && !item.isRead {
+                    Circle()
+                        .fill(Color.primary)
+                        .frame(width: 7, height: 7)
+                        .accessibilityLabel("Unread")
                 }
-                .padding(.top, 2)
             }
             .contentShape(Rectangle())
-            .padding(.vertical, 14)
+            .padding(.vertical, 10)
         }
         .buttonStyle(.plain)
         .contextMenu {
-            Button {
-                Task {
-                    await onToggleRead()
-                }
-            } label: {
-                Label(
-                    item.isRead ? "Mark Unread" : "Mark Read",
-                    systemImage: item.isRead ? "circle" : "checkmark.circle"
-                )
-            }
-
-            if let shareURL = item.shareURL {
-                Button {
-                    copyLink(shareURL)
-                } label: {
-                    Label("Copy Link", systemImage: "doc.on.doc")
-                }
-
-                ShareLink(
-                    item: shareURL,
-                    preview: SharePreview(item.displayTitle)
-                ) {
-                    Label("Share", systemImage: "square.and.arrow.up")
-                }
-
-                Divider()
-            }
-
-            if let onMove {
-                Button(action: onMove) {
-                    Label("Move to Folder", systemImage: "folder")
-                }
-
-                Divider()
-            }
-
-            Button(role: .destructive) {
-                Task {
-                    await onDelete()
-                }
-            } label: {
-                Label("Delete", systemImage: "trash")
-            }
+            SavedItemActions(item: item, onToggleRead: onToggleRead, onDelete: onDelete)
+        } preview: {
+            SavedItemPreviewCard(item: item)
         }
         .accessibilityAction(named: "Copy Link") {
             guard let shareURL = item.shareURL else { return }
             copyLink(shareURL)
         }
     }
+}
 
-    private func copyLink(_ url: URL) {
-        UIPasteboard.general.url = url
-        UINotificationFeedbackGenerator().notificationOccurred(.success)
-        UIAccessibility.post(notification: .announcement, argument: "Link copied")
+/// The actions a Saved Item offers wherever it is held: in a row, and in the
+/// Reader View's menu.
+struct SavedItemActions: View {
+    @Environment(\.moveToFolder) private var moveToFolder
+    let item: SavedItem
+    let onToggleRead: () async -> Void
+    let onDelete: () async -> Void
+
+    var body: some View {
+        Button {
+            Task {
+                await onToggleRead()
+            }
+        } label: {
+            Label(
+                item.isRead ? "Mark Unread" : "Mark Read",
+                systemImage: item.isRead ? "circle" : "checkmark.circle"
+            )
+        }
+
+        if let moveToFolder {
+            MoveToFolderMenu(item: item, action: moveToFolder)
+        }
+
+        if let shareURL = item.shareURL {
+            ShareLink(
+                item: shareURL,
+                preview: SharePreview(item.displayTitle)
+            ) {
+                Label("Share", systemImage: "square.and.arrow.up")
+            }
+
+            Button {
+                copyLink(shareURL)
+            } label: {
+                Label("Copy Link", systemImage: "link")
+            }
+        }
+
+        Divider()
+
+        Button(role: .destructive) {
+            Task {
+                await onDelete()
+            }
+        } label: {
+            Label("Delete", systemImage: "trash")
+        }
     }
+}
+
+/// The Move to Folder Action as a submenu: every Folder, with a check on the
+/// one the save is in, and the Library to take it out of a Folder again. The
+/// Library is never named as a Folder of its own — it is where a save goes
+/// back to.
+struct MoveToFolderMenu: View {
+    let item: SavedItem
+    let action: MoveToFolderAction
+
+    var body: some View {
+        Menu {
+            if item.folder != nil {
+                Button {
+                    Task { await action.move(item, nil) }
+                } label: {
+                    Label("Library", systemImage: "books.vertical")
+                }
+
+                Divider()
+            }
+
+            ForEach(action.folders) { folder in
+                Button {
+                    guard folder.id != item.folder?.id else { return }
+                    Task { await action.move(item, folder) }
+                } label: {
+                    if folder.id == item.folder?.id {
+                        Label(folder.name, systemImage: "checkmark")
+                    } else {
+                        Text(folder.name)
+                    }
+                }
+            }
+        } label: {
+            Label("Move to Folder", systemImage: "folder")
+            if let folder = item.folder {
+                Text(folder.name)
+            }
+        }
+    }
+}
+
+/// What Move to Folder can do here: the Folders to offer, and the move. Put
+/// in the environment once per tab, so every row and the Reader View offer
+/// the same submenu without each screen passing it down.
+struct MoveToFolderAction {
+    let folders: [Folder]
+    let move: @MainActor (SavedItem, Folder?) async -> Void
+}
+
+extension EnvironmentValues {
+    @Entry var moveToFolder: MoveToFolderAction?
+}
+
+/// The Preview Summary a held row lifts into: where it is from, the title,
+/// the summary and its Tags.
+struct SavedItemPreviewCard: View {
+    let item: SavedItem
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 8) {
+                SavedItemFavicon(item: item, size: 20)
+                    .clipShape(.rect(cornerRadius: 5, style: .continuous))
+                Text("\(item.displayDomain) · \(item.createdDateLabel)")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+
+            Text(item.displayTitle)
+                .font(.system(size: 22, weight: .bold))
+                .foregroundStyle(.primary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            if let summary = item.previewSummary?.trimmingCharacters(in: .whitespacesAndNewlines), !summary.isEmpty {
+                Text(summary)
+                    .font(.body)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            if !item.tags.isEmpty {
+                HStack(spacing: 14) {
+                    ForEach(item.tags, id: \.self) { tag in
+                        Text("# \(tagDisplayName(tag))")
+                    }
+                }
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+            }
+        }
+        .padding(20)
+        .frame(width: 360, alignment: .leading)
+        .background(Color(.secondarySystemBackground))
+    }
+}
+
+/// Puts a save's link on the pasteboard, with a tick under the finger and an
+/// announcement for VoiceOver.
+@MainActor
+func copyLink(_ url: URL) {
+    UIPasteboard.general.url = url
+    UINotificationFeedbackGenerator().notificationOccurred(.success)
+    UIAccessibility.post(notification: .announcement, argument: "Link copied")
 }

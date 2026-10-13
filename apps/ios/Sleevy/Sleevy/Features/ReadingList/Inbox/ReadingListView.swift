@@ -12,39 +12,22 @@ struct ReadingListView: View {
     @State private var isReadingListScrolled = false
     @State private var capturePlacement: CapturePlacement = .inlineRow
     @Environment(\.colorScheme) private var colorScheme
-    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
 
     var body: some View {
         let snapshot = store.snapshot(for: .inbox)
 
         GeometryReader { geometry in
-            readingList(
-                snapshot: snapshot,
-                emptyStateHeight: geometry.size.height,
-                // Just deep enough to hold the large title and subtitle with
-                // breathing room — the first row should sit a normal distance
-                // below the title, not below a 16:9 hero.
-                headerCardHeight: ScreenLayout.headerCardHeight(
-                    width: geometry.size.width,
-                    topInset: geometry.safeAreaInsets.top,
-                    isRegularWidth: horizontalSizeClass == .regular
-                ),
-                subtitle: navigationSubtitleText(unreadCount: snapshot.items.count),
-                headerTopInset: geometry.safeAreaInsets.top
-            )
+            readingList(snapshot: snapshot, emptyStateHeight: geometry.size.height * 0.7)
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
-        // AppBackground is the Web Companion's content colour in dark mode
-        // (--content in apps/web/src/styles/base.css), not pure black, and the
-        // AccentColor is the web's --accent, so the app and the web match.
-        .background(Color(.appBackground))
-        .scrollBounceBehavior(.always, axes: .vertical)
+        .background(Color(.systemBackground))
         .refreshable {
             await store.refresh()
         }
         .navigationTitle("Inbox")
         .navigationBarTitleDisplayMode(.large)
+        .modifier(NavigationSubtitleIfAvailable(subtitle: navigationSubtitleText(unreadCount: snapshot.items.count)))
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
@@ -62,16 +45,8 @@ struct ReadingListView: View {
         }
     }
 
-    private func readingList(
-        snapshot: RetrievalSnapshot,
-        emptyStateHeight: CGFloat,
-        headerCardHeight: CGFloat,
-        subtitle: String?,
-        headerTopInset: CGFloat
-    ) -> some View {
+    private func readingList(snapshot: RetrievalSnapshot, emptyStateHeight: CGFloat) -> some View {
         List {
-            ListSubtitleRow(subtitle: subtitle)
-
             if store.isLoading,
                snapshot.coverage == .loading,
                snapshot.items.isEmpty,
@@ -104,9 +79,9 @@ struct ReadingListView: View {
                                 Label("Remove", systemImage: "trash")
                             }
                         }
-                        .listRowInsets(EdgeInsets(top: 0, leading: 18, bottom: 0, trailing: 18))
+                        .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 0, trailing: 20))
                         .listRowBackground(Color.clear)
-                        .listRowSeparatorTint(.primary.opacity(0.08))
+                        .listRowSeparator(.hidden)
                     }
                 }
             }
@@ -118,47 +93,49 @@ struct ReadingListView: View {
                         .foregroundStyle(.red)
                 }
                 .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
             }
 
-            ForEach(snapshot.items) { item in
-                SavedItemRow(item: item, showsUnreadIndicator: false) {
-                    await markOpened(item)
-                } onToggleRead: {
-                    await setRead(item, isRead: !item.isRead)
-                } onDelete: {
-                    await store.delete(item)
-                }
-                .swipeActions(edge: .leading, allowsFullSwipe: true) {
-                    Button {
-                        Task {
-                            await setRead(item, isRead: !item.isRead)
-                        }
-                    } label: {
-                        Label(
-                            item.isRead ? "Unread" : "Read",
-                            systemImage: item.isRead ? "circle" : "checkmark.circle"
-                        )
+            // Grouped by the day the save arrived, as a plain list of rows
+            // with a quiet heading over each day rather than sticky sections.
+            ForEach(InboxDay.groups(snapshot.items)) { group in
+                ListGroupHeading(title: group.day.title)
+
+                ForEach(group.items) { item in
+                    SavedItemRow(item: item, showsUnreadIndicator: false) {
+                        await markOpened(item)
+                    } onToggleRead: {
+                        await setRead(item, isRead: !item.isRead)
+                    } onDelete: {
+                        await store.delete(item)
                     }
-                    .tint(item.isRead ? .orange : .green)
-                }
-                .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                    Button(role: .destructive) {
-                        Task {
-                            await store.delete(item)
+                    .swipeActions(edge: .leading, allowsFullSwipe: true) {
+                        Button {
+                            Task {
+                                await setRead(item, isRead: !item.isRead)
+                            }
+                        } label: {
+                            Label(
+                                item.isRead ? "Unread" : "Read",
+                                systemImage: item.isRead ? "circle" : "checkmark.circle"
+                            )
                         }
-                    } label: {
-                        Label("Delete", systemImage: "trash")
+                        .tint(item.isRead ? .orange : .green)
                     }
+                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                        Button(role: .destructive) {
+                            Task {
+                                await store.delete(item)
+                            }
+                        } label: {
+                            Label("Delete", systemImage: "trash")
+                        }
+                    }
+                    .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 0, trailing: 20))
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
                 }
-                .listRowInsets(EdgeInsets(top: 0, leading: 18, bottom: 0, trailing: 18))
-                .listRowBackground(Color.clear)
-                .listRowSeparatorTint(.primary.opacity(0.08))
-                // No line between the header card and the first row.
-                .listRowSeparator(item.id == snapshot.items.first?.id ? .hidden : .automatic, edges: .top)
             }
-        }
-        .stretchyHeaderCard(height: headerCardHeight, topInset: headerTopInset) { context in
-            InboxHeaderCard(height: context.height, isVisible: context.isVisible)
         }
         .safeAreaInset(edge: .top, spacing: 0) {
             if isCaptureCapsuleOpen && capturePlacement == .pinnedInset {
@@ -171,7 +148,7 @@ struct ReadingListView: View {
             }
         }
         .onScrollGeometryChange(for: Bool.self) { geometry in
-            geometry.contentOffset.y > 8
+            geometry.contentOffset.y + geometry.contentInsets.top > 8
         } action: { _, isScrolled in
             isReadingListScrolled = isScrolled
         }
@@ -187,11 +164,15 @@ struct ReadingListView: View {
     }
 
     private func markOpened(_ item: SavedItem) async {
+        // Taken before the save leaves the Inbox, so the Reader View can
+        // still step to its neighbours.
+        let sequence = store.snapshot(for: .inbox).items.map(\.id)
+
         withAnimation(.snappy(duration: 0.26)) {
             store.prepareForAnimatedReadStateChange(item)
         }
 
-        await openSavedItem(item)
+        await openSavedItem(item, sequence)
     }
 
     private func setRead(_ item: SavedItem, isRead: Bool) async {
@@ -301,24 +282,48 @@ private enum CapturePlacement {
     case pinnedInset
 }
 
-/// The brand card behind the Inbox large title. It spans the physical
-/// top, leading, and trailing edges, scrolls away with the content, and
-/// stretches on pull-down so the top edge never opens a seam.
-/// The card behind the Inbox's large title. The counts render inside the
-/// card, the way a folder's do — the system `navigationSubtitle` builds a
-/// shorter bar, which placed the Inbox title higher than a folder's.
-private struct InboxHeaderCard: View {
-    let height: CGFloat
-    let isVisible: Bool
+/// The days the Inbox groups its saves under: today, yesterday, and
+/// everything before that.
+enum InboxDay: Hashable {
+    case today
+    case yesterday
+    case earlier
 
-    var body: some View {
-        AuroraBackground(isVisible: isVisible)
-            .frame(height: height)
-            .frame(maxWidth: .infinity)
-            .clipShape(.rect(
-                bottomLeadingRadius: 28,
-                bottomTrailingRadius: 28,
-                style: .continuous
-            ))
+    var title: String {
+        switch self {
+        case .today: "Today"
+        case .yesterday: "Yesterday"
+        case .earlier: "Earlier"
+        }
+    }
+
+    struct Group: Identifiable {
+        let day: InboxDay
+        let items: [SavedItem]
+
+        var id: InboxDay { day }
+    }
+
+    /// The saves in their own order, cut where the day changes.
+    static func groups(_ items: [SavedItem], calendar: Calendar = .current) -> [Group] {
+        var groups: [Group] = []
+        for item in items {
+            let day: InboxDay = if calendar.isDateInToday(item.lastSavedAt) {
+                .today
+            } else if calendar.isDateInYesterday(item.lastSavedAt) {
+                .yesterday
+            } else {
+                .earlier
+            }
+
+            if let last = groups.last, last.day == day {
+                groups[groups.count - 1] = Group(day: day, items: last.items + [item])
+            } else if let index = groups.firstIndex(where: { $0.day == day }) {
+                groups[index] = Group(day: day, items: groups[index].items + [item])
+            } else {
+                groups.append(Group(day: day, items: [item]))
+            }
+        }
+        return groups
     }
 }

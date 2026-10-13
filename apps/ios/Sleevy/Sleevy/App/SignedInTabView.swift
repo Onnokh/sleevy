@@ -41,11 +41,11 @@ struct SignedInTabView: View {
                             route.destination(store: store, session: session)
                         }
                         .environment(\.pushRoute) { sleevyPath.append($0) }
-                        .environment(\.openSavedItem) { item in await openItem(item) { sleevyPath.append($0) } }
+                        .environment(\.openSavedItem) { item, sequence in await openItem(item, in: sequence) { sleevyPath.append($0) } }
                 }
             }
 
-            Tab("Library", systemImage: "rectangle.stack.fill", value: AppTab.library) {
+            Tab("Library", systemImage: "books.vertical", value: AppTab.library) {
                 NavigationStack(path: $libraryPath) {
                     LibraryView(store: store)
                         .accountToolbar(session: session) {
@@ -57,7 +57,7 @@ struct SignedInTabView: View {
                             route.destination(store: store, session: session)
                         }
                         .environment(\.pushRoute) { libraryPath.append($0) }
-                        .environment(\.openSavedItem) { item in await openItem(item) { libraryPath.append($0) } }
+                        .environment(\.openSavedItem) { item, sequence in await openItem(item, in: sequence) { libraryPath.append($0) } }
                 }
             }
 
@@ -68,12 +68,13 @@ struct SignedInTabView: View {
                             route.destination(store: store, session: session)
                         }
                         .environment(\.pushRoute) { searchPath.append($0) }
-                        .environment(\.openSavedItem) { item in await openItem(item) { searchPath.append($0) } }
+                        .environment(\.openSavedItem) { item, sequence in await openItem(item, in: sequence) { searchPath.append($0) } }
                 }
             }
         }
         .environment(profileLoader)
         .environment(profileStore)
+        .environment(\.moveToFolder, moveToFolderAction)
         .task {
             // Folder cards suppress their published marker while the profile
             // is private, so the record must be known outside the profile page.
@@ -101,17 +102,32 @@ struct SignedInTabView: View {
     /// otherwise the browser, exactly as before the Reader View existed. The
     /// push happens on the stack the tap came from, so the article lands in the
     /// tab the reader was already in.
-    private func openItem(_ item: SavedItem, push: @MainActor (AppRoute) -> Void) async {
+    private func openItem(
+        _ item: SavedItem,
+        in sequence: [SavedItem.ID] = [],
+        push: @MainActor (AppRoute) -> Void
+    ) async {
         guard opensInReader(item, readerViewDisabled: appSettings.isReaderViewDisabled) else {
             await store.markOpened(item)
             return
         }
 
-        push(.reader(id: item.id))
+        push(.reader(id: item.id, sequence: sequence))
         // The same Open Action either way (ADR 0021): reading it here counts as
         // reading it. `recordOpen` skips the browser launch that `markOpened`
         // would do, because the reader is already looking at the article.
         await store.recordOpen(item)
+    }
+
+    /// The Move to Folder submenu every row and the Reader View offer.
+    private var moveToFolderAction: MoveToFolderAction {
+        MoveToFolderAction(folders: store.folders) { item, folder in
+            do {
+                try await store.move(item, to: folder)
+            } catch {
+                store.libraryErrorMessage = error.localizedDescription
+            }
+        }
     }
 
     private static let deepLinkLogger = Logger(subsystem: "app.sleevy", category: "deep-link")
@@ -194,8 +210,16 @@ struct SignedInTabView: View {
         case .reader:
             selectedTab = .sleevy
             if let itemID = DemoMode.featuredReadableItemID {
-                sleevyPath = [.reader(id: itemID)]
+                sleevyPath = [.reader(id: itemID, sequence: DemoMode.inboxItemIDs)]
             }
+        case .tag:
+            selectedTab = .library
+            libraryPath = [.tag(DemoMode.featuredTag)]
+        case .settings:
+            selectedTab = .sleevy
+            sleevyPath = [.settings]
+        case .signIn:
+            break
         }
     }
 

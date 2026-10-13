@@ -10,7 +10,7 @@ struct LibraryFilterSheet: View {
     var body: some View {
         NavigationStack {
             List {
-                filterSection("Tags", options: tags, selection: $filter.tag, systemImage: "number")
+                filterSection("Tags", options: tags, selection: $filter.tag, systemImage: "number", name: tagDisplayName)
                 filterSection("Sources", options: sources, selection: $filter.source, systemImage: "tray.and.arrow.down")
                 filterSection("Types", options: types, selection: $filter.type, systemImage: "doc.text")
 
@@ -42,7 +42,8 @@ struct LibraryFilterSheet: View {
         _ title: String,
         options: [LibraryFilterOption],
         selection: Binding<String?>,
-        systemImage: String
+        systemImage: String,
+        name: @escaping (String) -> String = { $0 }
     ) -> some View {
         if !options.isEmpty {
             Section(title) {
@@ -51,7 +52,7 @@ struct LibraryFilterSheet: View {
                         selection.wrappedValue = selection.wrappedValue == option.value ? nil : option.value
                     } label: {
                         HStack(spacing: 12) {
-                            Label(option.value, systemImage: systemImage)
+                            Label(name(option.value), systemImage: systemImage)
                                 .labelStyle(.titleAndIcon)
 
                             Spacer()
@@ -81,7 +82,7 @@ struct ActiveLibraryFilters: View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
                 if let tag = filter.tag {
-                    FilterChip(label: "Tag", value: tag) {
+                    FilterChip(label: "Tag", value: tagDisplayName(tag)) {
                         filter.tag = nil
                     }
                 }

@@ -166,9 +166,6 @@ final class PublicProfileLoader {
 /// Items grouped by month.
 @MainActor
 struct MyProfileView: View {
-    /// Breathing room between the navigation bar and the avatar's top.
-    private static let avatarAllowance: CGFloat = 24
-
     @Environment(PublicProfileLoader.self) private var loader
     @Environment(ProfileStore.self) private var profileStore
     @Environment(AuthStore.self) private var authStore
@@ -180,7 +177,7 @@ struct MyProfileView: View {
     @State private var visibilityError: String?
 
     var body: some View {
-        GeometryReader { geometry in
+        Group {
             switch profileStore.phase {
             case .loading:
                 ProgressView("Loading your profile...")
@@ -192,13 +189,11 @@ struct MyProfileView: View {
                     description: Text("Could not load your public profile. Pull to retry.")
                 )
             case .loaded:
-                profileList(headerTopInset: geometry.safeAreaInsets.top)
+                profileList
             }
         }
-        // Outside the header-card background, so the card paints on top of it.
-        .background(Color(.appBackground))
-        // No navigation title: the hero card carries the identity, and only
-        // the floating back button overlays it.
+        .background(Color(.systemBackground))
+        // No navigation title: the avatar and the handle carry the identity.
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -262,14 +257,16 @@ struct MyProfileView: View {
         }
     }
 
-    private func profileList(headerTopInset: CGFloat) -> some View {
-        // The card ends halfway down the avatar, which straddles the card's
-        // bottom edge; handle and total sit below it on the page.
-        let headerCardHeight = headerTopInset + Self.avatarAllowance + profileAvatarSize / 2
-
-        return List {
+    private var profileList: some View {
+        List {
             Section {
-                VStack(spacing: 4) {
+                VStack(spacing: 6) {
+                    ProfileAvatar(
+                        name: session.displayName,
+                        imageURL: session.provider == .google ? authStore.googleUserProfile?.imageURL : nil
+                    )
+                    .padding(.bottom, 8)
+
                     if let handle = profileStore.profile?.handle {
                         Text("@\(handle)")
                             .font(.system(size: 24, weight: .bold))
@@ -277,14 +274,13 @@ struct MyProfileView: View {
 
                     if profileStore.isPublic, let count = loader.profile?.publicSavedItemCount {
                         Text("\(count) Sleeved")
-                            .font(.system(size: 15, weight: .medium))
+                            .font(.system(size: 15))
                             .foregroundStyle(.secondary)
                     }
                 }
                 .frame(maxWidth: .infinity)
-                .listRowInsets(EdgeInsets(top: 0, leading: 18, bottom: 14, trailing: 18))
-                // The first row under the hero card; the card hangs from it.
-                .stretchyHeaderAnchor(rank: 0)
+                .listRowInsets(EdgeInsets(top: 8, leading: 20, bottom: 14, trailing: 20))
+                .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
 
                 Button(action: handleVisibilityTap) {
@@ -295,6 +291,8 @@ struct MyProfileView: View {
                 .buttonStyle(.prominent)
                 .controlSize(.large)
                 .disabled(isTurningOff)
+                .frame(maxWidth: 420)
+                .frame(maxWidth: .infinity)
                 .listRowInsets(EdgeInsets(top: 4, leading: 24, bottom: 16, trailing: 24))
                 .listRowBackground(Color.clear)
                 .listRowSeparator(.hidden)
@@ -314,24 +312,6 @@ struct MyProfileView: View {
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
         .scrollBounceBehavior(.always, axes: .vertical)
-        // The shared header-card mechanic (see `stretchyHeaderCard`); the
-        // extra margin also clears the avatar's bottom half hanging under
-        // the card.
-        .stretchyHeaderCard(
-            height: headerCardHeight,
-            topInset: headerTopInset,
-            extraTopMargin: profileAvatarSize / 2 + 14
-        ) { context in
-            ProfileHeroCard(height: context.height, isVisible: context.isVisible, sideInsets: context.sideInsets) {
-                ProfileAvatar(
-                    name: session.displayName,
-                    imageURL: session.provider == .google ? authStore.googleUserProfile?.imageURL : nil
-                )
-            }
-        }
-        // No forced scheme: the arc field is a dark slab only in dark mode,
-        // and see-through pastel in light mode, so the back button and menu
-        // read correctly from the real scheme.
         // Favicons warm as soon as items arrive, off the scroll path.
         .task(id: loader.items) {
             await FaviconPrefetcher.warm(
@@ -374,21 +354,16 @@ struct MyProfileView: View {
             }
 
             ForEach(monthSections, id: \.title) { section in
-                Section {
-                    ForEach(section.items) { item in
-                        PublicSavedItemRow(item: item)
-                            .listRowInsets(EdgeInsets(top: 0, leading: 18, bottom: 0, trailing: 18))
-                            .listRowBackground(Color.clear)
-                            .listRowSeparatorTint(.primary.opacity(0.08))
-                            .task {
-                                await loader.loadMoreIfNeeded(current: item)
-                            }
-                    }
-                } header: {
-                    Text(section.title)
-                        .font(.system(size: 13, weight: .semibold))
-                        .kerning(1.1)
-                        .foregroundStyle(.secondary)
+                ListGroupHeading(title: section.title)
+
+                ForEach(section.items) { item in
+                    PublicSavedItemRow(item: item)
+                        .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 0, trailing: 20))
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                        .task {
+                            await loader.loadMoreIfNeeded(current: item)
+                        }
                 }
             }
 
@@ -452,14 +427,14 @@ struct MyProfileView: View {
         let items: [PublicSavedItem]
     }
 
-    /// The published items grouped into "AUGUST 2026"-style sections, newest
+    /// The published items grouped into "August 2026"-style sections, newest
     /// month first; the API already orders items newest first within it.
     private var monthSections: [MonthSection] {
         var sections: [MonthSection] = []
         var currentKey: String?
 
         for item in loader.items {
-            let title = item.savedAt.formatted(.dateTime.month(.wide).year()).uppercased()
+            let title = item.savedAt.formatted(.dateTime.month(.wide).year())
             if title != currentKey {
                 sections.append(MonthSection(title: title, items: []))
                 currentKey = title
@@ -476,48 +451,10 @@ struct MyProfileView: View {
 
 // MARK: - Header pieces
 
-/// The avatar's diameter; the header card ends at its vertical center.
-private let profileAvatarSize: CGFloat = 96
+/// The avatar's diameter.
+private let profileAvatarSize: CGFloat = 88
 
-/// The card at the top of the profile — the Inbox header card's sibling,
-/// full-bleed from the top and side edges with rounded bottom corners.
-/// Where the Inbox gets the aurora, the profile gets the arc: a slow bow
-/// of periwinkle light from the folder cards' shader family. The avatar
-/// overlays the card's bottom edge, half in and half out, and rides along
-/// when a pull-down stretches the card.
-private struct ProfileHeroCard<Avatar: View>: View {
-    let height: CGFloat
-    let isVisible: Bool
-    let sideInsets: EdgeInsets
-    @ViewBuilder let avatar: Avatar
-
-    var body: some View {
-        FolderCardGradient(
-            palette: .blue,
-            shape: 0.5,
-            seed: 26,
-            animated: isVisible,
-            style: .arc
-        )
-        .frame(height: height)
-        .frame(maxWidth: .infinity)
-        .clipShape(.rect(
-            bottomLeadingRadius: 28,
-            bottomTrailingRadius: 28,
-            style: .continuous
-        ))
-        // After the clip, so the hanging half is not cut off.
-        .overlay(alignment: .bottom) {
-            // Centered on the content, not on the card's wider paint.
-            avatar
-                .offset(y: profileAvatarSize / 2)
-                .padding(sideInsets)
-        }
-    }
-}
-
-/// The circular avatar that straddles the header card's bottom edge, ringed
-/// so it reads as sitting on top of the card, like a traditional profile.
+/// The circular avatar at the top of the profile.
 private struct ProfileAvatar: View {
     let name: String
     let imageURL: URL?
@@ -539,9 +476,6 @@ private struct ProfileAvatar: View {
         }
         .frame(width: profileAvatarSize, height: profileAvatarSize)
         .clipShape(Circle())
-        .overlay(
-            Circle().strokeBorder(Color(.appBackground), lineWidth: 4)
-        )
         .accessibilityHidden(true)
     }
 
@@ -555,9 +489,9 @@ private struct ProfileAvatar: View {
 
 // MARK: - Item row
 
-/// The Inbox row's twin: same favicon, title, host, and recency label, so
-/// the profile page reads like the rest of the app. Only the actions differ —
-/// a public item just opens, copies, or shares.
+/// The Inbox row's twin: the favicon and the title on one line, so the
+/// profile page reads like the rest of the app. Only the actions differ — a
+/// public item just opens, copies, or shares.
 private struct PublicSavedItemRow: View {
     let item: PublicSavedItem
 
@@ -566,45 +500,34 @@ private struct PublicSavedItemRow: View {
             guard let url = URL(string: item.originalUrl) else { return }
             UIApplication.shared.open(url)
         } label: {
-            HStack(alignment: .top, spacing: 12) {
+            HStack(spacing: 12) {
                 SavedItemFavicon(
                     faviconURL: item.faviconUrl.flatMap(URL.init(string:)),
-                    monogram: String(displayHost.prefix(1)).uppercased()
+                    monogram: String(displayHost.prefix(1)).uppercased(),
+                    size: 26
                 )
+                .clipShape(.rect(cornerRadius: 6, style: .continuous))
 
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(item.title ?? item.originalUrl)
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(.primary)
-                        .lineLimit(1)
-                        .multilineTextAlignment(.leading)
-
-                    Text(displayHost)
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(.secondary)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-
-                Text(item.savedAt.compactRecencyLabel)
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(.secondary)
-                    .monospacedDigit()
-                    .padding(.top, 2)
+                Text(item.title ?? item.originalUrl)
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(.primary)
+                    .lineLimit(1)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
             .contentShape(Rectangle())
-            .padding(.vertical, 14)
+            .padding(.vertical, 10)
         }
         .buttonStyle(.plain)
         .contextMenu {
             if let url = URL(string: item.originalUrl) {
+                ShareLink(item: url, preview: SharePreview(item.title ?? item.host)) {
+                    Label("Share", systemImage: "square.and.arrow.up")
+                }
+
                 Button {
                     UIPasteboard.general.url = url
                 } label: {
-                    Label("Copy Link", systemImage: "doc.on.doc")
-                }
-
-                ShareLink(item: url, preview: SharePreview(item.title ?? item.host)) {
-                    Label("Share", systemImage: "square.and.arrow.up")
+                    Label("Copy Link", systemImage: "link")
                 }
             }
         }
