@@ -91,7 +91,7 @@ struct CaptureCapsuleRow: View {
                             .frame(minWidth: 38, minHeight: 24)
                     }
                 }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(.prominent)
                 .controlSize(.small)
                 .disabled(!canSave || isSaving)
             }

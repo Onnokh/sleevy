@@ -399,7 +399,7 @@ struct ReaderView: View {
                         phase = .loading
                         Task { await loadContent() }
                     }
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(.prominent)
                 }
 
                 // The prominent action is whichever one is likely to work: try
@@ -410,7 +410,7 @@ struct ReaderView: View {
                         .buttonStyle(.bordered)
                 } else {
                     Button("Open in Browser") { openOriginal() }
-                        .buttonStyle(.borderedProminent)
+                        .buttonStyle(.prominent)
                 }
             }
         }

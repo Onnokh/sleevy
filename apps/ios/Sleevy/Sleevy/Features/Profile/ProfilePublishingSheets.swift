@@ -82,7 +82,7 @@ struct PublicizeProfileSheet: View {
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 6)
             }
-            .buttonStyle(.borderedProminent)
+            .buttonStyle(.prominent)
             .disabled(isPublishing)
             .padding(.top, 4)
         }
@@ -237,7 +237,7 @@ struct HandleForm: View {
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 6)
             }
-            .buttonStyle(.borderedProminent)
+            .buttonStyle(.prominent)
             .disabled(isSaveDisabled)
         }
     }
