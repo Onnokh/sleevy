@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { execFile } from "node:child_process";
-import { mkdir, mkdtemp, readFile, rm, copyFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { promisify } from "node:util";
 import { dirname, join, resolve } from "node:path";
@@ -109,6 +109,40 @@ const artboards = {
   ],
 };
 
+// The iPhone Duo backgrounds are made locally with compose-duo.swift, not
+// exported from Figma. Wide shots show the inner display, tall ones the cover.
+const duoInner = { width: 2853, height: 2007 };
+const duoCover = { width: 1398, height: 2034 };
+
+function duoHeadline(headline, subline) {
+  const box = { x: 200, width: 2453 };
+  const texts = [{ key: headline, ...box, y: 345, fontSize: 120, weight: 700, color: "#ffffff" }];
+  if (subline) texts.push({ key: subline, ...box, y: 495, fontSize: 103, weight: 500, color: "#929297" });
+  return texts;
+}
+
+// Scales an artboard's text the way compose-duo.swift scales its background:
+// to cover the canvas, centered, anchored at the top.
+function fitTexts(artboard, canvas) {
+  const scale = Math.max(canvas.width / artboard.width, canvas.height / artboard.height);
+  const offsetX = (canvas.width - artboard.width * scale) / 2;
+  return artboard.texts.map((text) => ({
+    ...text,
+    x: text.x * scale + offsetX,
+    y: text.y * scale,
+    width: text.width * scale,
+    fontSize: text.fontSize * scale,
+  }));
+}
+
+artboards["iphone-duo"] = [
+  { index: 1, ...duoInner, texts: duoHeadline("unfold", "beside") },
+  { index: 2, ...duoCover, texts: [] },
+  { index: 3, ...duoInner, texts: duoHeadline("organize", "folders") },
+  { index: 4, ...duoInner, texts: duoHeadline("oneTap") },
+  { index: 5, ...duoCover, texts: fitTexts(artboards.ipad[4], duoCover) },
+];
+
 const fontFamily = ".SF NS";
 const fontFamilies = {
   ja: "Hiragino Sans",
@@ -137,69 +171,28 @@ function fontFamilyForLocale(locale) {
   return fontFamilies[locale] ?? fontFamily;
 }
 
-async function measureTextWidth(value, fontSize, weight, kerning, family) {
-  if (!value) return 0;
-  const { stdout } = await execFileAsync("magick", [
-    "-background",
-    "none",
-    "-family",
-    family,
-    "-weight",
-    String(weight),
-    "-pointsize",
-    String(fontSize),
-    "-kerning",
-    String(kerning),
-    "-format",
-    "%w",
-    `label:${value}`,
-    "info:",
-  ]);
-  const width = Number.parseFloat(stdout.trim());
-  if (!Number.isFinite(width)) throw new Error(`Could not measure localized text: ${value}`);
-  return width;
-}
-
+// Core Text draws the text (see text-overlay.swift): ImageMagick without a
+// shaping engine reverses Arabic and Hebrew, breaks Indic and Thai marks, and
+// draws nothing for a script its font lacks.
 async function renderOverlay(artboard, locale, output) {
-  const args = ["-size", `${artboard.width}x${artboard.height}`, "xc:none"];
-  const specs = [];
-  const family = fontFamilyForLocale(locale);
   const localeTranslations = translations[locale] ?? translations.en;
-
-  for (const spec of artboard.texts) {
-    const value = localeTranslations?.[spec.key];
-    if (value == null) throw new Error(`Missing ${locale}.${spec.key}`);
-    const lines = value.split("\n");
-    const kerning = spec.fontSize * trackingRatio;
-    const measuredWidths = await Promise.all(lines.map((line) => measureTextWidth(line, spec.fontSize, spec.weight, kerning, family)));
-    const widestTrackedLine = Math.max(...measuredWidths, 0);
-    const usableWidth = spec.width * textSafeArea;
-    const scale = widestTrackedLine > usableWidth ? usableWidth / widestTrackedLine : 1;
-    const fontSize = spec.fontSize * scale;
-    const lineHeight = fontSize * 1.02;
-    const centerX = spec.x + spec.width / 2;
-    specs.push({ spec, lines, fontSize, lineHeight, centerX });
-  }
-
-  for (const { spec, lines, fontSize, lineHeight, centerX } of specs) {
-    const kerning = fontSize * trackingRatio;
-    for (const [index, line] of lines.entries()) {
-      const top = spec.y - fontSize * 0.1 + index * lineHeight;
-      const horizontalOffset = centerX - artboard.width / 2;
-      args.push(
-        "-family", family,
-        "-weight", String(spec.weight),
-        "-pointsize", String(fontSize),
-        "-fill", spec.color,
-        "-kerning", String(kerning),
-        "-gravity", "North",
-        "-annotate", `+${horizontalOffset}+${top}`, line,
-      );
-    }
-  }
-
-  args.push(output);
-  await execFileAsync("magick", args);
+  const texts = artboard.texts.map(({ key, ...spec }) => {
+    const value = localeTranslations?.[key];
+    if (value == null) throw new Error(`Missing ${locale}.${key}`);
+    return { value, ...spec };
+  });
+  const spec = {
+    width: artboard.width,
+    height: artboard.height,
+    output,
+    family: fontFamilyForLocale(locale),
+    tracking: trackingRatio,
+    safeArea: textSafeArea,
+    texts,
+  };
+  const specPath = `${output}.json`;
+  await writeFile(specPath, JSON.stringify(spec));
+  await execFileAsync(textOverlay, [specPath]);
 }
 
 async function ensureMagick() {
@@ -210,28 +203,38 @@ async function ensureMagick() {
   }
 }
 
-const requestedLocales = process.argv.slice(2).filter((arg) => !arg.startsWith("--"));
+const args = process.argv.slice(2);
+const requestedLocales = args.filter((arg) => !arg.startsWith("--"));
 const locales = requestedLocales.length > 0 ? requestedLocales : ["en", "nl"];
+const requestedDevices = args.filter((arg) => arg.startsWith("--device=")).map((arg) => arg.slice("--device=".length));
+const devices = requestedDevices.length > 0 ? requestedDevices : Object.keys(artboards);
+for (const device of devices) {
+  if (!artboards[device]) throw new Error(`Unknown device: ${device}. Use one of ${Object.keys(artboards).join(", ")}.`);
+}
 await ensureMagick();
 const temp = await mkdtemp(join(tmpdir(), "sleevy-app-store-")).catch(() => null);
 if (!temp) throw new Error("Could not create a temporary render directory.");
+const textOverlay = join(temp, "text-overlay");
+await execFileAsync("swiftc", ["-O", join(scriptDir, "text-overlay.swift"), "-o", textOverlay]);
 
 try {
   for (const locale of locales) {
     if (!translations[locale] && !translations.en) throw new Error(`No translations configured for locale: ${locale}`);
-    for (const [device, deviceArtboards] of Object.entries(artboards)) {
+    for (const device of devices) {
       const outputDir = join(root, device, locale);
       await mkdir(outputDir, { recursive: true });
-      for (const artboard of deviceArtboards) {
+      for (const artboard of artboards[device]) {
         const input = join(backgrounds, device, `${String(artboard.index).padStart(2, "0")}.png`);
         const output = join(outputDir, `${String(artboard.index).padStart(2, "0")}.png`);
+        // App Store Connect rejects screenshots with an alpha channel, and the
+        // Figma backgrounds have one (fully opaque), so drop it.
         if (artboard.texts.length === 0) {
-          await copyFile(input, output);
+          await execFileAsync("magick", [input, "-alpha", "off", output]);
           continue;
         }
         const overlay = join(temp, `${device}-${locale}-${artboard.index}.png`);
         await renderOverlay(artboard, locale, overlay);
-        await execFileAsync("magick", [input, "-background", "none", overlay, "-compose", "over", "-composite", output]);
+        await execFileAsync("magick", [input, "-background", "none", overlay, "-compose", "over", "-composite", "-alpha", "off", output]);
       }
     }
   }
@@ -239,4 +242,4 @@ try {
   await rm(temp, { recursive: true, force: true });
 }
 
-console.log(`Rendered ${locales.length} locale(s) × 2 devices × 5 screenshots.`);
+console.log(`Rendered ${locales.length} locale(s) × ${devices.join(", ")}.`);
