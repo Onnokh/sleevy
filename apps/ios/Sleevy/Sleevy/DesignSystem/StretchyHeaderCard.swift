@@ -8,6 +8,11 @@ struct StretchyHeaderContext {
     /// False once the card is fully scrolled away; animated fields use this
     /// to pause.
     let isVisible: Bool
+    /// The side safe-area insets the card paints under. Zero in portrait on
+    /// most iPhones; the notch side in landscape, and the system rail beside
+    /// the content on the iPhone Duo. Content drawn on the card pads by
+    /// these to stay centered on the screen's content.
+    let sideInsets: EdgeInsets
 }
 
 extension View {
@@ -142,23 +147,36 @@ private struct StretchyHeaderBackground<Header: View>: View {
     }
 
     var body: some View {
-        ZStack(alignment: .top) {
-            // The card's top edge, read in the same coordinates as the anchor
-            // row; the card must not assume it sits at the window's top.
-            Color.clear
-                .frame(height: 0)
-                .onGeometryChange(for: CGFloat.self) { geometry in
-                    geometry.frame(in: .global).minY
-                } action: { top in
-                    model.cardTop = top
-                }
+        // The card spans the side safe areas too, so it runs under the notch
+        // in landscape and under the iPhone Duo's system rail instead of
+        // stopping short of them. Only the card ignores the safe area: a
+        // reader that ignores it reports zero insets.
+        GeometryReader { proxy in
+            ZStack(alignment: .top) {
+                // The card's top edge, read in the same coordinates as the anchor
+                // row; the card must not assume it sits at the window's top.
+                Color.clear
+                    .frame(height: 0)
+                    .onGeometryChange(for: CGFloat.self) { geometry in
+                        geometry.frame(in: .global).minY
+                    } action: { top in
+                        model.cardTop = top
+                    }
 
-            header(StretchyHeaderContext(
-                height: baseHeight + max(0, shift),
-                isVisible: shift > -baseHeight
-            ))
-            .offset(y: min(0, shift))
+                header(StretchyHeaderContext(
+                    height: baseHeight + max(0, shift),
+                    isVisible: shift > -baseHeight,
+                    sideInsets: EdgeInsets(
+                        top: 0,
+                        leading: proxy.safeAreaInsets.leading,
+                        bottom: 0,
+                        trailing: proxy.safeAreaInsets.trailing
+                    )
+                ))
+                .offset(y: min(0, shift))
+            }
+            .frame(maxWidth: .infinity, alignment: .top)
+            .ignoresSafeArea(edges: [.top, .horizontal])
         }
-        .ignoresSafeArea(edges: .top)
     }
 }

@@ -322,7 +322,7 @@ struct MyProfileView: View {
             topInset: headerTopInset,
             extraTopMargin: profileAvatarSize / 2 + 14
         ) { context in
-            ProfileHeroCard(height: context.height, isVisible: context.isVisible) {
+            ProfileHeroCard(height: context.height, isVisible: context.isVisible, sideInsets: context.sideInsets) {
                 ProfileAvatar(
                     name: session.displayName,
                     imageURL: session.provider == .google ? authStore.googleUserProfile?.imageURL : nil
@@ -488,6 +488,7 @@ private let profileAvatarSize: CGFloat = 96
 private struct ProfileHeroCard<Avatar: View>: View {
     let height: CGFloat
     let isVisible: Bool
+    let sideInsets: EdgeInsets
     @ViewBuilder let avatar: Avatar
 
     var body: some View {
@@ -507,7 +508,10 @@ private struct ProfileHeroCard<Avatar: View>: View {
         ))
         // After the clip, so the hanging half is not cut off.
         .overlay(alignment: .bottom) {
-            avatar.offset(y: profileAvatarSize / 2)
+            // Centered on the content, not on the card's wider paint.
+            avatar
+                .offset(y: profileAvatarSize / 2)
+                .padding(sideInsets)
         }
     }
 }
