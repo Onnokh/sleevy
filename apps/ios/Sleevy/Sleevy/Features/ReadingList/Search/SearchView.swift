@@ -33,7 +33,7 @@ struct SearchView: View {
                             Label("Try Again", systemImage: "arrow.clockwise")
                         }
                     }
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(.prominent)
                     .disabled(isRetryingLoad)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)

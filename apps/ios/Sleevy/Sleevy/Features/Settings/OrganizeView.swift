@@ -356,7 +356,7 @@ struct OrganizeView: View {
                 Button(action: primary.2) {
                     Text(primary.0).frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(.prominent)
                 .controlSize(.large)
                 .disabled(primary.1)
             }

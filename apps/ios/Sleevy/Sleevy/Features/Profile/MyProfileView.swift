@@ -292,7 +292,7 @@ struct MyProfileView: View {
                         .font(.system(size: 15, weight: .semibold))
                         .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.borderedProminent)
+                .buttonStyle(.prominent)
                 .controlSize(.large)
                 .disabled(isTurningOff)
                 .listRowInsets(EdgeInsets(top: 4, leading: 24, bottom: 16, trailing: 24))
