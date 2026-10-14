@@ -418,8 +418,41 @@ struct SavedItemPreviewCard: View {
             }
         }
         .padding(20)
-        .frame(width: 360, alignment: .leading)
+        .frame(width: Self.width, alignment: .leading)
         .background(Color(.secondarySystemBackground))
+        // A landscape iPhone has no room for the card: the system shrinks the
+        // preview's frame and keeps its aspect ratio. Scale the card down with
+        // the frame, or it is cut off on every side.
+        .modifier(ShrinkToOfferedWidth(width: Self.width))
+    }
+
+    private static let width: CGFloat = 360
+}
+
+/// Lays its content out `width` wide, and draws it scaled down into a
+/// narrower frame, the way the system would scale a snapshot.
+private struct ShrinkToOfferedWidth: ViewModifier {
+    let width: CGFloat
+
+    func body(content: Content) -> some View {
+        FixedWidthLayout(width: width) { content }
+            .visualEffect { content, proxy in
+                content.scaleEffect(min(1, proxy.size.width / width), anchor: .topLeading)
+            }
+    }
+
+    private struct FixedWidthLayout: Layout {
+        let width: CGFloat
+
+        func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+            let natural = subviews[0].sizeThatFits(ProposedViewSize(width: width, height: nil))
+            guard let offered = proposal.width, offered < width else { return natural }
+            return CGSize(width: offered, height: natural.height * offered / width)
+        }
+
+        func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+            subviews[0].place(at: bounds.origin, proposal: ProposedViewSize(width: width, height: nil))
+        }
     }
 }
 
