@@ -52,7 +52,12 @@ struct ReadingListView: View {
                snapshot.items.isEmpty,
                store.pendingSavedItems.isEmpty {
                 ReadingListLoadingRow(height: emptyStateHeight)
-            } else if snapshot.items.isEmpty && store.pendingSavedItems.isEmpty && !isCaptureCapsuleOpen {
+            } else if snapshot.coverage.hasLoaded,
+                      snapshot.items.isEmpty,
+                      store.pendingSavedItems.isEmpty,
+                      !isCaptureCapsuleOpen {
+                // Not before the first load: All Caught Up would flash at
+                // launch, before the saves arrive.
                 EmptyReadingListRow(height: emptyStateHeight)
             }
 

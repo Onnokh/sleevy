@@ -41,7 +41,8 @@ struct FolderLibraryView: View {
 
             // Not while the Folder loads: the empty state would flash before
             // its saves arrive.
-            if projection.items.isEmpty, hasLoaded {
+            if projection.items.isEmpty,
+               store.snapshot(for: .folder(currentFolder.id)).coverage.hasLoaded {
                 ContentUnavailableView(
                     filter.isActive ? "No Matching Items" : "Folder is Empty",
                     systemImage: filter.isActive ? "line.3.horizontal.decrease.circle" : "folder",
@@ -85,13 +86,6 @@ struct FolderLibraryView: View {
 
     private var currentFolder: Folder {
         store.folders.first(where: { $0.id == folder.id }) ?? folder
-    }
-
-    private var hasLoaded: Bool {
-        switch store.snapshot(for: .folder(currentFolder.id)).coverage {
-        case .notRequested, .loading: false
-        case .cached, .complete, .failed, .stale: true
-        }
     }
 
     /// "12 saves · 3 unread", dropping the unread part once everything is

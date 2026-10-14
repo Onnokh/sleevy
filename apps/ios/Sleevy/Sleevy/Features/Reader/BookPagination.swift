@@ -152,8 +152,8 @@ extension NSAttributedString.Key {
 }
 
 /// The article's Markdown as one attributed string, styled as book pages:
-/// justified, hyphenated prose with indented paragraphs, and headings that
-/// open a little space above them.
+/// hyphenated prose with indented paragraphs, and headings that open a
+/// little space above them.
 enum BookText {
     struct Built {
         let text: NSAttributedString
@@ -326,7 +326,9 @@ enum BookText {
 
         switch block {
         case .paragraph:
-            style.alignment = .justified
+            // Ragged right, not justified: a page is too narrow to justify
+            // without wide gaps, and where a long word will not break, the
+            // system spaces out the letters of the line.
             style.hyphenationFactor = 1
             // A book indents a paragraph that follows another one, and
             // starts flush after a heading, a list or a quote, with a little
