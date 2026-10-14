@@ -79,7 +79,7 @@ struct SignedInTabView: View {
             // Folder cards suppress their published marker while the profile
             // is private, so the record must be known outside the profile page.
             await profileStore.load()
-            openDemoScreenIfNeeded()
+            await openDemoScreenIfNeeded()
         }
         .onChange(of: scenePhase) { _, newPhase in
             handleScenePhaseChange(newPhase)
@@ -189,7 +189,11 @@ struct SignedInTabView: View {
     /// Marketing-capture mode opens straight on the screen named by
     /// `SLEEVY_DEMO_SCREEN`, so each App Store screenshot is one launch rather
     /// than a scripted sequence of taps.
-    private func openDemoScreenIfNeeded() {
+    ///
+    /// A pushed screen waits for its saves first, as a widget tap on a Saved
+    /// Item does. Pushed too early, the Reader View stays on Item Unavailable,
+    /// and a Folder View's list grows under its large title and collapses it.
+    private func openDemoScreenIfNeeded() async {
         guard let screen = DemoMode.initialScreen else { return }
 
         switch screen {
@@ -200,6 +204,7 @@ struct SignedInTabView: View {
         case .folder:
             selectedTab = .library
             if let folderID = DemoMode.featuredFolderID {
+                await store.loadIfNeeded(for: .folder(folderID))
                 libraryPath = [.folder(id: folderID)]
             }
         case .profile:
@@ -210,10 +215,12 @@ struct SignedInTabView: View {
         case .reader:
             selectedTab = .sleevy
             if let itemID = DemoMode.featuredReadableItemID {
+                await store.loadIfNeeded()
                 sleevyPath = [.reader(id: itemID, sequence: DemoMode.inboxItemIDs)]
             }
         case .tag:
             selectedTab = .library
+            await store.loadIfNeeded(for: .completeLibrary)
             libraryPath = [.tag(DemoMode.featuredTag)]
         case .settings:
             selectedTab = .sleevy
