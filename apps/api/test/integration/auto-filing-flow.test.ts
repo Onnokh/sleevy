@@ -37,6 +37,7 @@ const folderStub = (
 const jevChoosing = (pick: (candidates: readonly FilingCandidate<string>[]) => string | undefined, calls: JevCall[]) =>
   Layer.succeed(JevClassifier, JevClassifier.of({
     enabled: true,
+    contentCheck: () => Effect.succeed(Option.none()),
     tags: () => Effect.succeed(Option.none()),
     folder: folderStub((subject, candidates) =>
       Effect.sync(() => {
@@ -221,6 +222,7 @@ describe("auto-filing integration flow", () => {
     const outcome = await runIntegration(
       Layer.succeed(JevClassifier, JevClassifier.of({
         enabled: true,
+        contentCheck: () => Effect.succeed(Option.none()),
         tags: () => Effect.succeed(Option.none()),
         folder: folderStub(() =>
           Effect.promise(async () => {

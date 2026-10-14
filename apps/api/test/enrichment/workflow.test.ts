@@ -17,7 +17,11 @@ import {
   AiEnricherError,
   type AiEnrichmentInput,
 } from "../../src/modules/ai/AiEnricher.js"
-import { JevClassifier } from "../../src/modules/ai/JevClassifier.js"
+import {
+  JevClassifier,
+  type ContentCheck,
+  type TagInput,
+} from "../../src/modules/ai/JevClassifier.js"
 import { TypeSafeError } from "../../src/modules/ai/TypeSafeClient.js"
 import { LinkContentRepository } from "../../src/modules/content/LinkContentRepository.js"
 import {
@@ -120,6 +124,8 @@ const workflowLayer = (input: {
   readonly aiTags?: readonly Topic[] | undefined
   readonly aiPreview?: string | undefined
   readonly aiFails?: boolean | undefined
+  readonly check?: ContentCheck | undefined
+  readonly onCheckInput?: ((input: TagInput) => void) | undefined
   readonly onAiInput?: ((input: AiEnrichmentInput) => void) | undefined
   readonly onStart?: (() => void) | undefined
   readonly readableHtml?: string | undefined
@@ -217,6 +223,13 @@ const workflowLayer = (input: {
         JevClassifier,
         JevClassifier.of({
           enabled: true,
+          contentCheck: (checkInput) =>
+            Effect.suspend(() => {
+              input.onCheckInput?.(checkInput)
+              return input.aiFails
+                ? Effect.fail(new TypeSafeError({ cause: "upstream is down" }))
+                : Effect.succeed(Option.some(input.check ?? { readable: true, explicit: false }))
+            }),
           tags: () =>
             input.aiFails
               ? Effect.fail(new TypeSafeError({ cause: "upstream is down" }))
@@ -244,6 +257,7 @@ describe("EnrichmentWorkflow", () => {
         expect(finished?.job.status).toBe("succeeded")
         expect(finished?.job.stages.map((stage) => `${stage.stage}:${stage.status}`)).toEqual([
           "metadata:succeeded",
+          "content-check:succeeded",
           "readable-content:skipped",
           "tagging:succeeded",
           "preview-summary:succeeded",
@@ -272,6 +286,7 @@ describe("EnrichmentWorkflow", () => {
       expect(aiInputs.length).toBe(1)
       expect(finished?.job.stages.map((stage) => `${stage.stage}:${stage.status}`)).toEqual([
         "metadata:succeeded",
+        "content-check:succeeded",
         "readable-content:skipped",
         "tagging:succeeded",
         "preview-summary:succeeded",
@@ -309,6 +324,7 @@ describe("EnrichmentWorkflow", () => {
       expect(finished?.job.status).toBe("partial")
       expect(finished?.job.stages.map((stage) => `${stage.stage}:${stage.status}`)).toEqual([
         "metadata:succeeded",
+        "content-check:failed",
         "readable-content:skipped",
         "tagging:failed",
         "preview-summary:failed",
@@ -351,6 +367,7 @@ describe("EnrichmentWorkflow", () => {
       expect(finished?.job.status).toBe("succeeded")
       expect(finished?.job.stages.map((stage) => `${stage.stage}:${stage.status}`)).toEqual([
         "metadata:succeeded",
+        "content-check:succeeded",
         "readable-content:skipped",
         "tagging:skipped",
         "preview-summary:skipped",
@@ -384,6 +401,7 @@ describe("EnrichmentWorkflow", () => {
       expect(finished?.job.status).toBe("succeeded")
       expect(finished?.job.stages.map((stage) => `${stage.stage}:${stage.status}`)).toEqual([
         "metadata:succeeded",
+        "content-check:succeeded",
         "readable-content:skipped",
         "tagging:succeeded",
         "preview-summary:skipped",
@@ -413,6 +431,7 @@ describe("EnrichmentWorkflow", () => {
 
       expect(finished?.job.stages.map((stage) => `${stage.stage}:${stage.status}`)).toEqual([
         "metadata:succeeded",
+        "content-check:succeeded",
         "readable-content:succeeded",
         "tagging:succeeded",
         "preview-summary:succeeded",
@@ -493,6 +512,7 @@ describe("EnrichmentWorkflow", () => {
       expect(finished).toBeDefined()
       expect(finished?.job.stages.map((stage) => `${stage.stage}:${stage.status}`)).toEqual([
         "metadata:succeeded",
+        "content-check:succeeded",
         "readable-content:failed",
         "tagging:succeeded",
         "preview-summary:succeeded",
@@ -510,6 +530,93 @@ describe("EnrichmentWorkflow", () => {
         contentStoreFails: true,
         aiTags: ["typescript"],
         aiPreview: "How Readability scores a page.",
+        onFinish: (result) => {
+          finished = result
+        },
+      })),
+    )
+  })
+
+  // A page Jev finds sexually explicit keeps the metadata its saver sees, but
+  // nothing of its prose is stored or sent on to the language model.
+  it.effect("keeps no prose and asks no AI about a page the Content Check finds explicit", () => {
+    const stored: ExtractedArticle[] = []
+    let asked = false
+    let finished: FinishedEnrichment | undefined
+
+    return Effect.gen(function* () {
+      const workflow = yield* EnrichmentWorkflow
+      yield* workflow.enrich(linkId)
+
+      expect(stored).toEqual([])
+      expect(asked).toBe(false)
+      expect(finished?.metadata.title).toBe("Extraction")
+      expect(finished?.enrichment.hasReadableContent).toBe(false)
+      expect(finished?.enrichment.tags).toEqual([])
+      expect(finished?.enrichment.previewSummary).toBeUndefined()
+      expect(finished?.job.status).toBe("succeeded")
+      expect(finished?.job.stages.map((stage) => `${stage.stage}:${stage.status}`)).toEqual([
+        "metadata:succeeded",
+        "content-check:succeeded",
+        "readable-content:skipped",
+        "tagging:skipped",
+        "preview-summary:skipped",
+      ])
+    }).pipe(
+      Effect.provide(workflowLayer({
+        readableHtml: articlePage,
+        check: { readable: true, explicit: true },
+        aiTags: ["typescript"],
+        aiPreview: "A summary nobody should see.",
+        onContentStored: (article) => {
+          stored.push(article)
+        },
+        onAiInput: () => {
+          asked = true
+        },
+        onFinish: (result) => {
+          finished = result
+        },
+      })),
+    )
+  })
+
+  it.effect("keeps no Readable Content for a page that is not prose, but still tags it", () => {
+    const stored: ExtractedArticle[] = []
+    const checked: TagInput[] = []
+    let finished: FinishedEnrichment | undefined
+
+    return Effect.gen(function* () {
+      const workflow = yield* EnrichmentWorkflow
+      yield* workflow.enrich(linkId)
+
+      // The extractor would accept this page; the Content Check overrules it.
+      expect(stored).toEqual([])
+      expect(finished?.enrichment.hasReadableContent).toBe(false)
+      expect(finished?.enrichment.tags).toEqual(["tools"])
+      expect(finished?.job.stages.map((stage) => `${stage.stage}:${stage.status}`)).toEqual([
+        "metadata:succeeded",
+        "content-check:succeeded",
+        "readable-content:skipped",
+        "tagging:succeeded",
+        "preview-summary:succeeded",
+      ])
+
+      // Jev judges the page by what it says, not only by its title.
+      const content = checked[0]?.content
+      expect(content && Option.isSome(content) && content.value).toContain("Readability scores a block")
+    }).pipe(
+      Effect.provide(workflowLayer({
+        readableHtml: articlePage,
+        check: { readable: false, explicit: false },
+        aiTags: ["tools"],
+        aiPreview: "A tool page.",
+        onCheckInput: (value) => {
+          checked.push(value)
+        },
+        onContentStored: (article) => {
+          stored.push(article)
+        },
         onFinish: (result) => {
           finished = result
         },

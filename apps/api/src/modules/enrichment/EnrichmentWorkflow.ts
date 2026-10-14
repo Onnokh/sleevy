@@ -11,7 +11,7 @@ import {
   EnrichmentStageResult,
 } from "../../domain/EnrichmentJob.js"
 import { AiEnricher } from "../ai/AiEnricher.js"
-import { JevClassifier } from "../ai/JevClassifier.js"
+import { JevClassifier, type ContentCheck } from "../ai/JevClassifier.js"
 import { LinkContentRepository } from "../content/LinkContentRepository.js"
 import {
   ReadableContentExtractor,
@@ -158,6 +158,50 @@ export class EnrichmentWorkflow extends Context.Service<EnrichmentWorkflow>()(
             }
           }
 
+          // Extracted Page Content is best effort: AI Enrichment still runs on
+          // metadata alone when the page was not fetched or held no prose. It
+          // is taken from the head of the Readable Content when there is any,
+          // because the extractor has already decided what the article is.
+          const pageContent = (readableMarkdown?: string) =>
+            Result.isSuccess(pageResult)
+              ? Option.match(pageResult.success, {
+                onNone: () => Effect.succeed(Option.none<string>()),
+                onSome: (page) =>
+                  Effect.all([metadataFetcher.extractContent(page, readableMarkdown)], {
+                    mode: "result",
+                  }).pipe(
+                    Effect.map(([result]) =>
+                      Result.isSuccess(result) ? result.success : Option.none<string>(),
+                    ),
+                  ),
+              })
+              : Effect.succeed(Option.none<string>())
+
+          // The Content Check comes before anything keeps the page's prose or
+          // sends it on to the language model. It fails open: without an
+          // answer from Jev, enrichment runs as it did before the check.
+          let check: ContentCheck = { readable: true, explicit: false }
+          {
+            const content = yield* pageContent()
+            const result = yield* runStage<ContentCheck>(
+              "content-check",
+              jev.contentCheck({ link, metadata, content }).pipe(
+                Effect.map(Option.match({
+                  onNone: (): StageResult<ContentCheck> => ({
+                    _tag: "skip",
+                    message: "Jev is not configured.",
+                  }),
+                  onSome: (value): StageResult<ContentCheck> => ({ _tag: "success", value }),
+                })),
+              ),
+              stages,
+            )
+
+            if (Option.isSome(result)) {
+              check = result.value
+            }
+          }
+
           // Readable Content is best effort: it skips rather than fails, so a
           // Link that yields no prose stays exactly as usable as one saved
           // before the Reader View existed. A page the gate rejects stores
@@ -166,7 +210,14 @@ export class EnrichmentWorkflow extends Context.Service<EnrichmentWorkflow>()(
           {
             const result = yield* runStage<ExtractedArticle>(
               "readable-content",
-              Result.isSuccess(pageResult)
+              check.explicit
+                ? skipExplicit<ExtractedArticle>()
+                : !check.readable
+                ? Effect.succeed<StageResult<ExtractedArticle>>({
+                  _tag: "skip",
+                  message: "The Content Check found no prose to read later.",
+                })
+                : Result.isSuccess(pageResult)
                 ? Option.match(pageResult.success, {
                   onNone: () =>
                     Effect.succeed<StageResult<ExtractedArticle>>({
@@ -195,35 +246,23 @@ export class EnrichmentWorkflow extends Context.Service<EnrichmentWorkflow>()(
             }
           }
 
-          // Extracted Page Content is best effort: AI Enrichment still runs on
-          // metadata alone when the page was not fetched or held no prose. It
-          // is taken from the head of the Readable Content when there is any,
-          // because the extractor has already decided what the article is.
-          const content = Result.isSuccess(pageResult)
-            ? yield* Option.match(pageResult.success, {
-              onNone: () => Effect.succeed(Option.none<string>()),
-              onSome: (page) =>
-                Effect.all([metadataFetcher.extractContent(page, readableMarkdown)], {
-                  mode: "result",
-                }).pipe(
-                  Effect.map(([result]) =>
-                    Result.isSuccess(result) ? result.success : Option.none<string>(),
-                  ),
-                ),
-            })
-            : Option.none<string>()
-
           const aiInput = {
             link,
             metadata,
-            content,
+            content: yield* pageContent(readableMarkdown),
           }
 
           // Tags come from Jev as typed answers and the Preview Summary from a
           // text model, so the two calls are independent and run side by side.
-          // Each stage fails or skips on its own.
+          // Each stage fails or skips on its own. An explicit page makes
+          // neither call, so its prose never reaches the language model.
           const [tagResult, summaryResult] = yield* Effect.all(
-            [jev.tags(aiInput), aiEnricher.enrich(aiInput)],
+            check.explicit
+              ? [
+                Effect.succeed(Option.none<readonly Topic[]>()),
+                Effect.succeed({ summary: Option.none<string>() }),
+              ]
+              : [jev.tags(aiInput), aiEnricher.enrich(aiInput)],
             { mode: "result", concurrency: 2 },
           )
 
@@ -246,7 +285,9 @@ export class EnrichmentWorkflow extends Context.Service<EnrichmentWorkflow>()(
           {
             const result = yield* runStage<readonly Topic[]>(
               "tagging",
-              aiStage(tagResult, "No Tag fit the link, or Jev is not configured."),
+              check.explicit
+                ? skipExplicit<readonly Topic[]>()
+                : aiStage(tagResult, "No Tag fit the link, or Jev is not configured."),
               stages,
             )
 
@@ -265,7 +306,9 @@ export class EnrichmentWorkflow extends Context.Service<EnrichmentWorkflow>()(
             // dropped, so a job accounts for every stage either way.
             const result = yield* runStage<string>(
               "preview-summary",
-              linkEnrichment.type === "post"
+              check.explicit
+                ? skipExplicit<string>()
+                : linkEnrichment.type === "post"
                 ? Effect.succeed<StageResult<string>>({
                   _tag: "skip",
                   message: "A post is its own preview, so it takes no Preview Summary.",
@@ -322,6 +365,12 @@ export class EnrichmentWorkflow extends Context.Service<EnrichmentWorkflow>()(
     Layer.provide(LinkContentRepository.defaultLayer),
   )
 }
+
+const skipExplicit = <A>(): Effect.Effect<StageResult<A>> =>
+  Effect.succeed({
+    _tag: "skip",
+    message: "The Content Check found the page sexually explicit.",
+  })
 
 const pageResultToOption = <A>(
   result: Result.Result<Option.Option<A>, unknown>,
