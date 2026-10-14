@@ -44,6 +44,7 @@ const doubles = (
     })),
     Layer.succeed(JevClassifier, JevClassifier.of({
       enabled: true,
+      contentCheck: () => Effect.succeed(Option.none()),
       tags: () => Effect.succeed(Option.none()),
       folder: ((subject: FilingSubject, candidates: readonly FilingCandidate<string>[]) =>
         Effect.succeed(Option.fromUndefinedOr(file(subject, candidates)))) as JevClassifier["Service"]["folder"],

@@ -78,6 +78,22 @@ describe("JevClassifier", () => {
     expect(tags).toEqual(Option.none())
   })
 
+  test("passes the Content Check on Jev's answers at even odds or better", async () => {
+    const asked: Asked[] = []
+    const check = await run(
+      () => ({
+        readable: { type: "noul", noul: 0.12 },
+        explicit: { type: "noul", noul: 0.97 },
+      }),
+      (jev) => jev.contentCheck({ link, metadata: Option.none(), content: Option.some("Page text") }),
+      asked,
+    )
+
+    expect(check).toEqual(Option.some({ readable: false, explicit: true }))
+    expect(Object.keys(asked[0]?.questions ?? {})).toEqual(["readable", "explicit"])
+    expect(asked[0]?.state).toMatchObject({ page_content: "Page text" })
+  })
+
   test("files only into a Folder chosen with confidence, and shows Jev what each Folder holds", async () => {
     const asked: Asked[] = []
     const sure = await run(() => choice("Rust", 0.98), (jev) => jev.folder(subject, folders), asked)
