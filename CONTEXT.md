@@ -400,7 +400,7 @@ A lightweight Library browsing surface that reuses Saved Item list UI across the
 _Avoid_: Knowledge base, advanced search
 
 **Home Tab**:
-The native iOS tab label for the Inbox.
+The native iOS tab for the Inbox, labeled "Recents" with a clock icon. It comes after the Library Tab, and the app opens on the Library Tab.
 _Avoid_: Queue Tab, Library Tab
 
 **All Caught Up**:
@@ -627,6 +627,7 @@ _Avoid_: Deep link, route argument, UI test step
 - The **Web Companion** represents Folder navigation with **Web Folder Routes**, leaving query state available for sorting or filtering within a Folder View.
 - The **Web Companion** creates Folders from the Library sidebar and exposes rename and delete through a Folder contextual menu.
 - The **Web Companion** shows its Library sidebar as a standing column on a wide viewport and as a **Sidebar Sheet** — an off-canvas panel opened from a floating menu button — on a narrow one, with the same rows in both.
+- In a window at least 768 points wide — the iPhone Duo held wide — the **Native iOS App** puts a **Library Sidebar** beside the content in place of its tab bar, drawn as the Web Companion's sidebar: the mark, the **Public Profile** and Settings, Recents, the **Library** and Search, then the Folders, then the Tags, each with its count. The Tags are closed until the reader opens them, and stay as the reader leaves them. Creased like a book, the sidebar is the left page and the content the right, divided on the hinge; while a **Reader View** is open, the sidebar steps aside. Each time the window turns wide, the sidebar is open, as at launch. What a row opens is the root of the content column, not pushed on the **Library**; turning the device to tall puts a Folder or a Tag back on the **Library**, so the reader keeps their place. Beside the sidebar, open or closed, the **Library** leaves out its Folder strip.
 - Each **Account** has one email address, and no two Accounts share one.
 - An **Account** can have a Google **Sign-In Identity**, an Apple one, or both.
 - Sign-in finds the **Account** by its **Sign-In Identity** first, then by email. A new Google or Apple identity with the same verified email joins that Account automatically.
@@ -800,6 +801,8 @@ _Avoid_: Deep link, route argument, UI test step
 - V1 does not include reminders or push notifications.
 - Each **Saved Item** has a **Read State**.
 - **Unread Dot** is the v1 visual indicator for unread **Read State**.
+- The **Native iOS App**'s lists of Saved Items do not show **Read State**: every title is the same bright colour, with no **Unread Dot**. A row's swipe actions and menu still change **Read State**, and a Library list can filter to only unread or only read Saved Items. Its rows also carry no mark for a Saved Item that opens at its **Original URL**. The **Unread Widget** keeps the **Unread Dot**.
+- The **Native iOS App**'s **Library** lists — the Library root, a **Folder View**, and a Tag — put their Saved Items under date headings while they are sorted by date: Today, Yesterday, This Week, Last Week, This Month, Last Month, and Earlier. Sorted by title or by **Read State**, they show no headings.
 - A **Saved Item** becomes read when the user opens it.
 - Opening a **Saved Item** that has **Readable Content** opens the **Reader View**; opening one without it sends the user to its **Original URL** in the browser.
 - The **Reader View** always offers the **Original URL**, because extraction loses tables, embeds, and figure captions.

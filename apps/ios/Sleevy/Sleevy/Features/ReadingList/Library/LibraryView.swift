@@ -1,9 +1,9 @@
 import SwiftUI
 
-/// The Library home: the Folders and the Tags as a sidebar, with counts, and
-/// under them the Saved Items that are in no Folder (the No Folder Filter).
-/// Those have no heading of their own: they are simply what the Library holds
-/// outside its Folders.
+/// The Library home: the Saved Items that are in no Folder (the No Folder
+/// Filter), under one compact strip of Folders. The saves have
+/// no heading of their own: they are simply what the Library holds outside its
+/// Folders.
 @MainActor
 struct LibraryView: View {
     @Environment(\.pushRoute) private var pushRoute
@@ -13,9 +13,8 @@ struct LibraryView: View {
     @State private var isShowingFilters = false
     @State private var folderEditor: FolderEditor?
     @State private var folderToDelete: Folder?
-    @State private var showsFolders = true
-    @State private var showsTags = true
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.showsLibrarySidebar) private var showsLibrarySidebar
 
     var body: some View {
         let projection = store.libraryProjection(
@@ -38,16 +37,21 @@ struct LibraryView: View {
                 ProgressView("Loading your library...")
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
-                libraryList(projection: projection, complete: complete)
+                libraryList(projection: projection)
             }
         }
         .background(Color(.systemBackground))
         .navigationTitle("Library")
         .navigationBarTitleDisplayMode(.large)
         .modifier(NavigationSubtitleIfAvailable(subtitle: savesText(complete.destinationCount)))
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                LibrarySortMenu(sort: $sort, filter: $filter, isShowingFilters: $isShowingFilters)
+        .toolbarPreferringVerticalBar {
+            ToolbarItem(placement: .primaryAction) {
+                LibrarySortMenu(
+                    sort: $sort,
+                    filter: $filter,
+                    isShowingFilters: $isShowingFilters,
+                    tags: complete.tags
+                )
             }
         }
         .sheet(isPresented: $isShowingFilters) {
@@ -72,95 +76,79 @@ struct LibraryView: View {
         }
     }
 
-    private func libraryList(projection: LibraryProjection, complete: LibraryProjection) -> some View {
+    private func libraryList(projection: LibraryProjection) -> some View {
         List {
-            SidebarHeading(title: "Folders", isExpanded: $showsFolders)
-
-            if showsFolders {
-                ForEach(store.folders) { folder in
-                    FolderRow(
-                        folder: folder,
-                        itemCount: projection.folderCounts[folder.id, default: 0]
-                    ) {
-                        folderEditor = .rename(folder)
-                    } onDelete: {
-                        folderToDelete = folder
-                    } onSetPublished: { isPublished in
-                        Task {
-                            do {
-                                try await store.setFolderPublished(folder, isPublished: isPublished)
-                            } catch {
-                                store.libraryErrorMessage = error.localizedDescription
+            // One section, so the first date heading sits close under
+            // the chips: the space between groups would push it down.
+            Section {
+                // Folders are ways in, not the content: one compact strip, so
+                // the saves start near the top. Tags are in the sort menu.
+                // Beside the Library Sidebar, the sidebar lists them.
+                if !showsLibrarySidebar {
+                    ChipStrip {
+                        ForEach(store.folders) { folder in
+                            FolderChip(
+                                folder: folder,
+                                itemCount: projection.folderCounts[folder.id, default: 0]
+                            ) {
+                                folderEditor = .rename(folder)
+                            } onDelete: {
+                                folderToDelete = folder
+                            } onSetPublished: { isPublished in
+                                Task {
+                                    do {
+                                        try await store.setFolderPublished(folder, isPublished: isPublished)
+                                    } catch {
+                                        store.libraryErrorMessage = error.localizedDescription
+                                    }
+                                }
                             }
                         }
-                    }
-                }
 
-                Button {
-                    folderEditor = .create
-                } label: {
-                    SidebarRow(systemImage: "plus", title: "New Folder")
-                        .foregroundStyle(.secondary)
-                }
-                .buttonStyle(.plain)
-                .sidebarRowStyle()
-            }
-
-            if !complete.tags.isEmpty {
-                SidebarHeading(title: "Tags", isExpanded: $showsTags)
-
-                if showsTags {
-                    ForEach(complete.tags, id: \.value) { tag in
                         Button {
-                            pushRoute(.tag(tag.value))
+                            folderEditor = .create
                         } label: {
-                            SidebarRow(systemImage: "number", title: tagDisplayName(tag.value), count: tag.count)
+                            LibraryChip(title: "New Folder", tint: Color(.systemGray)) {
+                                Image(systemName: "plus")
+                            }
+                            .foregroundStyle(.secondary)
                         }
                         .buttonStyle(.plain)
-                        .sidebarRowStyle()
+                    }
+                }
+
+                if let errorMessage = store.libraryErrorMessage {
+                    Text(errorMessage)
+                        .font(.footnote)
+                        .foregroundStyle(.red)
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                }
+
+                if filter.isActive {
+                    ActiveLibraryFilters(filter: $filter)
+                        .listRowInsets(EdgeInsets(top: 8, leading: 20, bottom: 8, trailing: 20))
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+
+                    if projection.items.isEmpty {
+                        ContentUnavailableView(
+                            "No Matching Items",
+                            systemImage: "line.3.horizontal.decrease.circle",
+                            description: Text("Try changing or clearing your filters.")
+                        )
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
                     }
                 }
             }
+            .listSectionSpacing(ListRhythm.leadSpacing)
 
-            if let errorMessage = store.libraryErrorMessage {
-                Text(errorMessage)
-                    .font(.footnote)
-                    .foregroundStyle(.red)
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-            }
-
-            // The No Folder Filter: what the Library holds outside its
-            // Folders, set apart by space rather than by a name.
-            Color.clear
-                .frame(height: 14)
-                .listRowInsets(EdgeInsets())
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
-
-            if filter.isActive {
-                ActiveLibraryFilters(filter: $filter)
-                    .listRowInsets(EdgeInsets(top: 8, leading: 20, bottom: 8, trailing: 20))
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-
-                if projection.items.isEmpty {
-                    ContentUnavailableView(
-                        "No Matching Items",
-                        systemImage: "line.3.horizontal.decrease.circle",
-                        description: Text("Try changing or clearing your filters.")
-                    )
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-                }
-            }
-
-            SavedItemListRows(items: projection.items, store: store)
+            SavedItemListRows(items: projection.items, store: store, groupsByDate: sort.isByDate)
         }
         .listStyle(.plain)
+        .groupedSavesList()
         .scrollContentBackground(.hidden)
-        .animation(.snappy(duration: 0.24), value: showsFolders)
-        .animation(.snappy(duration: 0.24), value: showsTags)
     }
 
     private func savesText(_ count: Int) -> String? {
@@ -169,89 +157,54 @@ struct LibraryView: View {
     }
 }
 
-/// A sidebar section's heading: its name and a chevron that folds it away.
-struct SidebarHeading: View {
-    let title: String
-    @Binding var isExpanded: Bool
+/// The horizontally scrolling row of Folder chips in the Library home.
+struct ChipStrip<Content: View>: View {
+    @ViewBuilder var content: Content
 
     var body: some View {
-        Button {
-            isExpanded.toggle()
-        } label: {
-            HStack(spacing: 6) {
-                Text(title)
-                    .font(.system(size: 15, weight: .semibold))
-                Image(systemName: "chevron.down")
-                    .font(.system(size: 11, weight: .semibold))
-                    .rotationEffect(.degrees(isExpanded ? 0 : -90))
+        ScrollView(.horizontal) {
+            HStack(spacing: 8) {
+                content
             }
-            .foregroundStyle(.secondary)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .contentShape(.rect)
+            .padding(.horizontal, 20)
         }
-        .buttonStyle(.plain)
-        .listRowInsets(EdgeInsets(top: 20, leading: 20, bottom: 6, trailing: 20))
+        .scrollIndicators(.hidden)
+        .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 4, trailing: 0))
         .listRowBackground(Color.clear)
         .listRowSeparator(.hidden)
-        .accessibilityAddTraits(.isHeader)
-        .accessibilityValue(isExpanded ? "Expanded" : "Collapsed")
     }
 }
 
-/// One line of the Library sidebar: an outline symbol, a name, an optional
-/// marker after the name, and a count at the trailing edge.
-struct SidebarRow<Marker: View>: View {
-    let systemImage: String
+/// A chip in the Folder strip: a tinted capsule with a round badge before
+/// the name.
+struct LibraryChip<Badge: View>: View {
     let title: String
-    var count: Int?
-    @ViewBuilder var marker: Marker
+    let tint: Color
+    @ViewBuilder var badge: Badge
 
     var body: some View {
-        HStack(spacing: 14) {
-            Image(systemName: systemImage)
-                .font(.system(size: 17))
-                .foregroundStyle(.secondary)
-                .frame(width: 24)
+        HStack(spacing: 8) {
+            badge
+                .font(.system(size: 14))
+                .frame(width: 28, height: 28)
+                .background(tint.opacity(0.35), in: .circle)
 
-            HStack(spacing: 6) {
-                Text(title)
-                    .font(.system(size: 17))
-                    .lineLimit(1)
-                marker
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-
-            if let count {
-                Text("\(count)")
-                    .font(.system(size: 17))
-                    .monospacedDigit()
-                    .foregroundStyle(.secondary)
-            }
+            Text(title)
+                .font(.system(size: 15, weight: .semibold))
+                .lineLimit(1)
         }
-        .padding(.vertical, 11)
-        .contentShape(.rect)
+        .padding(.leading, 6)
+        .padding(.trailing, 14)
+        .padding(.vertical, 6)
+        .background(tint.opacity(0.14), in: .capsule)
+        .contentShape(.capsule)
     }
 }
 
-extension SidebarRow where Marker == EmptyView {
-    init(systemImage: String, title: String, count: Int? = nil) {
-        self.init(systemImage: systemImage, title: title, count: count) { EmptyView() }
-    }
-}
-
-extension View {
-    /// The insets and the bare background every sidebar row shares.
-    func sidebarRowStyle() -> some View {
-        listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 0, trailing: 20))
-            .listRowBackground(Color.clear)
-            .listRowSeparator(.hidden)
-    }
-}
-
-/// One Folder in the Library sidebar. Tap opens its Folder View; the
-/// Folder's other actions are behind a long-press. A globe marks a Published
-/// Folder.
-struct FolderRow: View {
+/// One Folder in the Library home's Folder strip, in its emoji and colour.
+/// Tap opens its Folder View; the Folder's other actions are behind a
+/// long-press.
+struct FolderChip: View {
     let folder: Folder
     let itemCount: Int
     let onRename: @MainActor () -> Void
@@ -264,17 +217,16 @@ struct FolderRow: View {
         Button {
             pushRoute(.folder(id: folder.id))
         } label: {
-            SidebarRow(systemImage: "folder", title: folder.name, count: itemCount) {
-                if folder.isPublished {
-                    Image(systemName: "globe")
-                        .font(.system(size: 12))
-                        .foregroundStyle(.tertiary)
-                        .accessibilityHidden(true)
+            LibraryChip(title: folder.name, tint: Color(palette.mid)) {
+                if let emoji = folder.emoji, !emoji.isEmpty {
+                    Text(emoji)
+                } else {
+                    Image(systemName: "folder.fill")
+                        .foregroundStyle(Color(palette.highlight))
                 }
             }
         }
         .buttonStyle(.plain)
-        .sidebarRowStyle()
         .accessibilityLabel(folder.name)
         .accessibilityValue(accessibilityCountLabel)
         .contextMenu {
@@ -301,6 +253,11 @@ struct FolderRow: View {
         }
     }
 
+    /// The Folder's colour, as the web app and the Unread Widget show it.
+    private var palette: FolderCardPalette {
+        FolderCardPalette.named(folder.color)
+    }
+
     private var accessibilityCountLabel: String {
         let count = itemCount == 1 ? "1 saved item" : "\(itemCount) saved items"
         return folder.isPublished ? "\(count), on your public profile" : count
@@ -308,16 +265,34 @@ struct FolderRow: View {
 }
 
 /// The rows of a list of Saved Items with their swipe actions: the Library
-/// home, a Folder View, a Tag and Search all list saves the same way.
+/// home, a Folder View, a Tag and Search all list saves the same way. Sorted
+/// by date, a list can put the saves under date headings, as Recents does.
 struct SavedItemListRows: View {
     @Environment(\.openSavedItem) private var openSavedItem
     let items: [SavedItem]
     let store: ReadingListStore
-    var showsUnreadIndicator = true
+    var groupsByDate = false
 
     var body: some View {
-        ForEach(items) { item in
-            SavedItemRow(item: item, showsUnreadIndicator: showsUnreadIndicator) {
+        if groupsByDate {
+            let groups = SaveDateGroup.groups(items)
+            ForEach(groups) { group in
+                Section {
+                    rows(group.items)
+                } header: {
+                    ListGroupHeading(title: group.span.title)
+                }
+            }
+        } else {
+            rows(items)
+        }
+    }
+
+    private func rows(_ slice: [SavedItem]) -> some View {
+        ForEach(slice) { item in
+            SavedItemRow(item: item) {
+                // The whole list, not one group: the Reader View steps on
+                // past a heading.
                 await openSavedItem(item, items.map(\.id))
             } onToggleRead: {
                 await store.setRead(item, isRead: !item.isRead)
@@ -343,5 +318,11 @@ struct SavedItemListRows: View {
             .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)
         }
+    }
+}
+
+private extension Color {
+    init(_ rgb: SIMD3<Float>) {
+        self.init(red: Double(rgb.x), green: Double(rgb.y), blue: Double(rgb.z))
     }
 }

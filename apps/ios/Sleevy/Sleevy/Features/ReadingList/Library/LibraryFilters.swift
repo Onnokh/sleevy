@@ -98,6 +98,12 @@ struct ActiveLibraryFilters: View {
                         filter.type = nil
                     }
                 }
+
+                if let readState = filter.readState {
+                    FilterChip(label: "Show", value: readState.title) {
+                        filter.readState = nil
+                    }
+                }
             }
         }
     }

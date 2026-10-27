@@ -49,8 +49,8 @@ struct SavedItemFavicon: View {
                 faviconFallback
             }
         }
+        // No padding of its own: the row around it sets the spacing.
         .frame(width: size, height: size)
-        .padding(.vertical, 4)
     }
 
     private var faviconURL: URL? {
@@ -67,10 +67,17 @@ struct SavedItemFavicon: View {
         }
     }
 
+    /// The site's first letter on a tile the size of a favicon. Without the
+    /// tile, a row with no favicon looks emptier than the rows around it,
+    /// and the list looks unevenly spaced.
     private var faviconFallback: some View {
-        Text(monogram)
-            .font(.system(size: 16, weight: .semibold, design: .rounded))
-            .foregroundStyle(.secondary)
+        RoundedRectangle(cornerRadius: size * 0.23, style: .continuous)
+            .fill(Color(.secondarySystemFill))
+            .overlay {
+                Text(monogram)
+                    .font(.system(size: size * 0.55, weight: .semibold, design: .rounded))
+                    .foregroundStyle(.secondary)
+            }
     }
 }
 

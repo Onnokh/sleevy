@@ -206,24 +206,17 @@ private struct PendingSavedItemMonogram: View {
 }
 
 /// One Saved Item as one line: the favicon and the title. The UI around it
-/// is monochrome, so the favicon is the only colour in the row.
+/// is monochrome, so the favicon is the only colour in the row. Read State
+/// does not show: every title is the same bright colour. The swipe actions
+/// and the menu still change it.
 ///
 /// Touch and hold shows the Preview Summary above the actions, so the
 /// reader can decide what to do with a save without opening it.
 struct SavedItemRow: View {
-    @Environment(AppSettings.self) private var appSettings
     let item: SavedItem
-    var showsUnreadIndicator = true
     let onOpen: () async -> Void
     let onToggleRead: () async -> Void
     let onDelete: () async -> Void
-
-    /// Whether opening this row leaves the app. Deliberately not just
-    /// `!hasReaderView(item)`: the badge is a difference between rows, so it
-    /// only means anything while some rows read here and others do not.
-    private var leaves: Bool {
-        !appSettings.isReaderViewDisabled && !hasReaderView(item)
-    }
 
     var body: some View {
         Button {
@@ -236,31 +229,13 @@ struct SavedItemRow: View {
                     .clipShape(.rect(cornerRadius: 6, style: .continuous))
 
                 Text(item.displayTitle)
-                    .font(.system(size: 17, weight: .semibold))
-                    .foregroundStyle(item.isRead && showsUnreadIndicator ? .secondary : .primary)
+                    .font(.callout.weight(.medium))
+                    .foregroundStyle(.primary)
                     .lineLimit(1)
                     .frame(maxWidth: .infinity, alignment: .leading)
-
-                // This one leaves: no article was extracted, so opening it
-                // goes to the site in the browser. Shown only while the two
-                // destinations are mixed. Mirrors the Saved Card in the Web
-                // Companion.
-                if leaves {
-                    Image(systemName: "arrow.up.forward")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(.tertiary)
-                        .accessibilityLabel("Opens at its original URL")
-                }
-
-                if showsUnreadIndicator && !item.isRead {
-                    Circle()
-                        .fill(Color.primary)
-                        .frame(width: 7, height: 7)
-                        .accessibilityLabel("Unread")
-                }
             }
             .contentShape(Rectangle())
-            .padding(.vertical, 10)
+            .padding(.vertical, ListRhythm.rowPadding)
         }
         .buttonStyle(.plain)
         .contextMenu {

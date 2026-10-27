@@ -4,9 +4,33 @@ nonisolated struct LibraryFilter: Hashable, Sendable {
     var tag: String?
     var source: String?
     var type: String?
+    /// Only unread or only read saves. The rows do not show Read State, so
+    /// this is how a Library list tells them apart.
+    var readState: ReadStateFilter?
 
     var isActive: Bool {
-        tag != nil || source != nil || type != nil
+        tag != nil || source != nil || type != nil || readState != nil
+    }
+}
+
+nonisolated enum ReadStateFilter: String, CaseIterable, Identifiable, Hashable, Sendable {
+    case unread
+    case read
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .unread: "Unread"
+        case .read: "Read"
+        }
+    }
+
+    func matches(_ item: SavedItem) -> Bool {
+        switch self {
+        case .unread: !item.isRead
+        case .read: item.isRead
+        }
     }
 }
 
@@ -47,6 +71,11 @@ nonisolated enum LibrarySort: String, CaseIterable, Identifiable, Hashable, Send
         case .unread:
             "Unread First"
         }
+    }
+
+    /// Whether the saves come in date order, so date headings can cut them.
+    var isByDate: Bool {
+        self == .newest || self == .oldest
     }
 }
 
@@ -89,6 +118,7 @@ extension RetrievalProjector {
                     (filter.tag == nil || item.tags.contains(filter.tag ?? ""))
                         && (filter.source == nil || item.sourceGroup == filter.source)
                         && (filter.type == nil || item.type == filter.type)
+                        && (filter.readState?.matches(item) ?? true)
                 }
                 .sorted(using: sort),
             destinationCount: destinationItems.count,

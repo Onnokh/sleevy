@@ -310,6 +310,7 @@ struct MyProfileView: View {
             }
         }
         .listStyle(.plain)
+        .groupedSavesList()
         .scrollContentBackground(.hidden)
         .scrollBounceBehavior(.always, axes: .vertical)
         // Favicons warm as soon as items arrive, off the scroll path.
@@ -354,16 +355,18 @@ struct MyProfileView: View {
             }
 
             ForEach(monthSections, id: \.title) { section in
-                ListGroupHeading(title: section.title)
-
-                ForEach(section.items) { item in
-                    PublicSavedItemRow(item: item)
-                        .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 0, trailing: 20))
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
-                        .task {
-                            await loader.loadMoreIfNeeded(current: item)
-                        }
+                Section {
+                    ForEach(section.items) { item in
+                        PublicSavedItemRow(item: item)
+                            .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 0, trailing: 20))
+                            .listRowBackground(Color.clear)
+                            .listRowSeparator(.hidden)
+                            .task {
+                                await loader.loadMoreIfNeeded(current: item)
+                            }
+                    }
+                } header: {
+                    ListGroupHeading(title: section.title)
                 }
             }
 
@@ -515,7 +518,7 @@ private struct PublicSavedItemRow: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
             .contentShape(Rectangle())
-            .padding(.vertical, 10)
+            .padding(.vertical, ListRhythm.rowPadding)
         }
         .buttonStyle(.plain)
         .contextMenu {

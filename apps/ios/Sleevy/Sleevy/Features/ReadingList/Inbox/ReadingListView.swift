@@ -20,16 +20,17 @@ struct ReadingListView: View {
             readingList(snapshot: snapshot, emptyStateHeight: geometry.size.height * 0.7)
         }
         .listStyle(.plain)
+        .groupedSavesList()
         .scrollContentBackground(.hidden)
         .background(Color(.systemBackground))
         .refreshable {
             await store.refresh()
         }
-        .navigationTitle("Inbox")
+        .navigationTitle("Recents")
         .navigationBarTitleDisplayMode(.large)
         .modifier(NavigationSubtitleIfAvailable(subtitle: navigationSubtitleText(unreadCount: snapshot.items.count)))
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
+        .toolbarPreferringVerticalBar {
+            ToolbarItem(placement: .primaryAction) {
                 Button {
                     toggleCaptureCapsule()
                 } label: {
@@ -101,44 +102,47 @@ struct ReadingListView: View {
                 .listRowSeparator(.hidden)
             }
 
-            // Grouped by the day the save arrived, as a plain list of rows
-            // with a quiet heading over each day rather than sticky sections.
-            ForEach(InboxDay.groups(snapshot.items)) { group in
-                ListGroupHeading(title: group.day.title)
-
-                ForEach(group.items) { item in
-                    SavedItemRow(item: item, showsUnreadIndicator: false) {
-                        await markOpened(item)
-                    } onToggleRead: {
-                        await setRead(item, isRead: !item.isRead)
-                    } onDelete: {
-                        await store.delete(item)
-                    }
-                    .swipeActions(edge: .leading, allowsFullSwipe: true) {
-                        Button {
-                            Task {
-                                await setRead(item, isRead: !item.isRead)
-                            }
-                        } label: {
-                            Label(
-                                item.isRead ? "Unread" : "Read",
-                                systemImage: item.isRead ? "circle" : "checkmark.circle"
-                            )
+            // Grouped by the day the save arrived. Each day's heading stays at
+            // the top while its saves scroll, until the next day pushes it out.
+            let days = InboxDay.groups(snapshot.items)
+            ForEach(days) { group in
+                Section {
+                    ForEach(group.items) { item in
+                        SavedItemRow(item: item) {
+                            await markOpened(item)
+                        } onToggleRead: {
+                            await setRead(item, isRead: !item.isRead)
+                        } onDelete: {
+                            await store.delete(item)
                         }
-                        .tint(item.isRead ? .orange : .green)
-                    }
-                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                        Button(role: .destructive) {
-                            Task {
-                                await store.delete(item)
+                        .swipeActions(edge: .leading, allowsFullSwipe: true) {
+                            Button {
+                                Task {
+                                    await setRead(item, isRead: !item.isRead)
+                                }
+                            } label: {
+                                Label(
+                                    item.isRead ? "Unread" : "Read",
+                                    systemImage: item.isRead ? "circle" : "checkmark.circle"
+                                )
                             }
-                        } label: {
-                            Label("Delete", systemImage: "trash")
+                            .tint(item.isRead ? .orange : .green)
                         }
+                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                            Button(role: .destructive) {
+                                Task {
+                                    await store.delete(item)
+                                }
+                            } label: {
+                                Label("Delete", systemImage: "trash")
+                            }
+                        }
+                        .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 0, trailing: 20))
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
                     }
-                    .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 0, trailing: 20))
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
+                } header: {
+                    ListGroupHeading(title: group.day.title)
                 }
             }
         }

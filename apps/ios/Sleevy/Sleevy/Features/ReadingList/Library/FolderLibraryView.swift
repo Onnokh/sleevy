@@ -18,48 +18,53 @@ struct FolderLibraryView: View {
         )
 
         List {
-            ListSubtitleRow(subtitle: navigationSubtitleText(
-                total: projection.destinationCount,
-                unread: projection.unreadDestinationCount,
-                isPublished: currentFolder.isPublished
-            ))
+            // One section, so the first date heading sits close under
+            // the filters: the space between groups would push it down.
+            Section {
+                if filter.isActive {
+                    ActiveLibraryFilters(filter: $filter)
+                        .listRowInsets(EdgeInsets(top: 8, leading: 20, bottom: 8, trailing: 20))
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                }
 
-            if filter.isActive {
-                ActiveLibraryFilters(filter: $filter)
-                    .listRowInsets(EdgeInsets(top: 8, leading: 20, bottom: 8, trailing: 20))
+                if let errorMessage = store.libraryErrorMessage {
+                    Text(errorMessage)
+                        .font(.footnote)
+                        .foregroundStyle(.red)
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                }
+
+                // Not while the Folder loads: the empty state would flash before
+                // its saves arrive.
+                if projection.items.isEmpty,
+                   store.snapshot(for: .folder(currentFolder.id)).coverage.hasLoaded {
+                    ContentUnavailableView(
+                        filter.isActive ? "No Matching Items" : "Folder is Empty",
+                        systemImage: filter.isActive ? "line.3.horizontal.decrease.circle" : "folder",
+                        description: Text(filter.isActive ? "Try changing or clearing your filters." : "Move saved items here from your Library.")
+                    )
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
+                }
             }
+            .listSectionSpacing(ListRhythm.leadSpacing)
 
-            if let errorMessage = store.libraryErrorMessage {
-                Text(errorMessage)
-                    .font(.footnote)
-                    .foregroundStyle(.red)
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-            }
-
-            // Not while the Folder loads: the empty state would flash before
-            // its saves arrive.
-            if projection.items.isEmpty,
-               store.snapshot(for: .folder(currentFolder.id)).coverage.hasLoaded {
-                ContentUnavailableView(
-                    filter.isActive ? "No Matching Items" : "Folder is Empty",
-                    systemImage: filter.isActive ? "line.3.horizontal.decrease.circle" : "folder",
-                    description: Text(filter.isActive ? "Try changing or clearing your filters." : "Move saved items here from your Library.")
-                )
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
-            }
-
-            SavedItemListRows(items: projection.items, store: store)
+            SavedItemListRows(items: projection.items, store: store, groupsByDate: sort.isByDate)
         }
         .listStyle(.plain)
+        .groupedSavesList()
         .scrollContentBackground(.hidden)
         .background(Color(.systemBackground))
         .navigationTitle(currentFolder.name)
         .navigationBarTitleDisplayMode(.large)
-        .toolbar {
+        .modifier(NavigationSubtitleIfAvailable(subtitle: navigationSubtitleText(
+            total: projection.destinationCount,
+            unread: projection.unreadDestinationCount,
+            isPublished: currentFolder.isPublished
+        )))
+        .toolbarPreferringVerticalBar {
             ToolbarItem(placement: .topBarTrailing) {
                 LibrarySortMenu(sort: $sort, filter: $filter, isShowingFilters: $isShowingFilters)
             }
@@ -92,11 +97,11 @@ struct FolderLibraryView: View {
     /// read, and the whole subtitle while the folder is empty. A Published
     /// Folder says so.
     private func navigationSubtitleText(total: Int, unread: Int, isPublished: Bool) -> String? {
-        guard total > 0 else { return isPublished ? "On your profile" : nil }
+        guard total > 0 else { return isPublished ? "Public" : nil }
 
         let saves = total == 1 ? "1 save" : "\(total) saves"
         let counts = unread > 0 ? "\(saves) · \(unread) unread" : saves
-        return isPublished ? "\(counts) · On your profile" : counts
+        return isPublished ? "\(counts) · Public" : counts
     }
 }
 
@@ -122,36 +127,41 @@ struct TagLibraryView: View {
         let unread = projection.items.count { !$0.isRead }
 
         return List {
-            ListSubtitleRow(subtitle: projection.items.isEmpty ? nil : {
-                let saves = projection.items.count == 1 ? "1 save" : "\(projection.items.count) saves"
-                return unread > 0 ? "\(saves) · \(unread) unread" : saves
-            }())
+            // One section, so the first date heading sits close under
+            // the filters: the space between groups would push it down.
+            Section {
+                if filter.isActive {
+                    ActiveLibraryFilters(filter: $filter)
+                        .listRowInsets(EdgeInsets(top: 8, leading: 20, bottom: 8, trailing: 20))
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                }
 
-            if filter.isActive {
-                ActiveLibraryFilters(filter: $filter)
-                    .listRowInsets(EdgeInsets(top: 8, leading: 20, bottom: 8, trailing: 20))
+                if projection.items.isEmpty {
+                    ContentUnavailableView(
+                        "No Saves",
+                        systemImage: "number",
+                        description: Text("Saves with this Tag appear here.")
+                    )
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
+                }
             }
+            .listSectionSpacing(ListRhythm.leadSpacing)
 
-            if projection.items.isEmpty {
-                ContentUnavailableView(
-                    "No Saves",
-                    systemImage: "number",
-                    description: Text("Saves with this Tag appear here.")
-                )
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
-            }
-
-            SavedItemListRows(items: projection.items, store: store)
+            SavedItemListRows(items: projection.items, store: store, groupsByDate: sort.isByDate)
         }
         .listStyle(.plain)
+        .groupedSavesList()
         .scrollContentBackground(.hidden)
         .background(Color(.systemBackground))
         .navigationTitle(tagDisplayName(tag))
         .navigationBarTitleDisplayMode(.large)
-        .toolbar {
+        .modifier(NavigationSubtitleIfAvailable(subtitle: projection.items.isEmpty ? nil : {
+            let saves = projection.items.count == 1 ? "1 save" : "\(projection.items.count) saves"
+            return unread > 0 ? "\(saves) · \(unread) unread" : saves
+        }()))
+        .toolbarPreferringVerticalBar {
             ToolbarItem(placement: .topBarTrailing) {
                 LibrarySortMenu(sort: $sort, filter: $filter, isShowingFilters: $isShowingFilters)
             }
@@ -177,11 +187,14 @@ struct TagLibraryView: View {
     }
 }
 
-/// Sort and Filters for a list of saves, as one toolbar menu.
+/// Sort, Read State and Filters for a list of saves, as one toolbar menu.
 struct LibrarySortMenu: View {
+    @Environment(\.pushRoute) private var pushRoute
     @Binding var sort: LibrarySort
     @Binding var filter: LibraryFilter
     @Binding var isShowingFilters: Bool
+    /// Tags to open from the menu, each in its Tag View. Empty hides them.
+    var tags: [LibraryFilterOption] = []
 
     var body: some View {
         Menu {
@@ -192,6 +205,30 @@ struct LibrarySortMenu: View {
             }
 
             Divider()
+
+            Picker("Show", selection: $filter.readState) {
+                Text("All Saves").tag(ReadStateFilter?.none)
+                ForEach(ReadStateFilter.allCases) { readState in
+                    Text(readState.title).tag(Optional(readState))
+                }
+            }
+
+            Divider()
+
+            if !tags.isEmpty {
+                Menu {
+                    ForEach(tags) { tag in
+                        Button {
+                            pushRoute(.tag(tag.value))
+                        } label: {
+                            Text(tagDisplayName(tag.value))
+                            Text(tag.count == 1 ? "1 save" : "\(tag.count) saves")
+                        }
+                    }
+                } label: {
+                    Label("Tags", systemImage: "number")
+                }
+            }
 
             Button {
                 isShowingFilters = true
