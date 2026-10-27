@@ -64,11 +64,8 @@ struct SignedInTabView: View {
                     .sidebarColumn(level: readerSequence.map { _ in
                         SidebarLevel(title: readerListTitle, back: closeReader)
                     })
-                    // A range that stays the same, so only the ideal width
-                    // changes on the fold. A single width is also the
-                    // minimum and the maximum, and a jump in those hides
-                    // the sidebar for a moment.
-                    .navigationSplitViewColumnWidth(min: 240, ideal: sidebarWidth, max: max(windowWidth / 2, 280))
+                    // One width, so the divider does not drag.
+                    .navigationSplitViewColumnWidth(sidebarWidth)
                 } detail: {
                     if let sidebarDestination {
                         sidebarDestinationStack(sidebarDestination)
@@ -213,7 +210,8 @@ struct SignedInTabView: View {
     /// Creased like a book, the sidebar is the left page and the content
     /// the right, divided on the hinge.
     private var sidebarWidth: CGFloat {
-        isCreased ? windowWidth / 2 : 280
+        // Not before the window has a width: a column of zero hides.
+        isCreased && windowWidth > 0 ? windowWidth / 2 : 280
     }
 
     /// The path of the stack in the content column.

@@ -44,6 +44,13 @@ struct ReaderView: View {
     @State private var scrub: OutlineScrub?
     /// The section the scrubber last asked for; the article goes to it.
     @State private var scrubTarget: String?
+    /// The wheel's stop the scrubber turned to, kept until the reader scrolls
+    /// by hand. The arithmetic can name its neighbour, as for a short section
+    /// or one near the end, and the wheel would settle there.
+    @State private var pinnedStop: Int?
+    /// The reader is above the first section, at the wheel's first stop: the
+    /// article's title.
+    @State private var isAboveOutline = true
     /// Which side of the screen the vertical bar is on, or nil where there is
     /// none.
     @State private var barEdge: HorizontalEdge?
@@ -92,6 +99,7 @@ struct ReaderView: View {
     /// content itself, so a section's top is its offset into the article and
     /// not its position on screen.
     private static let articleSpace = "reader.article"
+    private static let topID = "reader.top"
 
     /// An article and everything derived from it, worked out once when it
     /// arrives rather than on every pass of the body.
@@ -187,21 +195,16 @@ struct ReaderView: View {
         .overlay { scrubDeck }
         .animation(.smooth(duration: 0.35), value: isCreased)
         .onCreaseChange { isCreased = $0 }
+        // At the top of the vertical bar: the rest of it is the outline
+        // scrubber's.
         .verticalBarToolbar(isEnabled: hasVerticalBar) {
-            ToolbarItem(placement: .bottomBar) {
-                Menu {
-                    textSizeControls
-                } label: {
-                    Label("Text Size", systemImage: "textformat.size")
-                }
-            }
-            ToolbarItem(placement: .bottomBar) {
+            ToolbarItem(placement: .topBarTrailing) {
                 moreMenu
             }
         }
         .outlineScrubber(
-            outline: loadedOutline,
-            activeIndex: activeIndex,
+            outline: wheelStops,
+            activeIndex: wheelStop,
             onScrub: scrubbed,
             onEdgeChange: { barEdge = $0 }
         )
@@ -338,11 +341,14 @@ struct ReaderView: View {
             // Centred where the pane is wider than the column and there is no
             // rail, as when the sidebar closes beside it.
             .frame(maxWidth: .infinity)
-            // No animation: the article keeps up with the finger, and a scroll
-            // still easing towards one section when the finger is on the next
-            // reads as lag.
+            // Scrolled, not jumped, so the reader sees which way the article
+            // went. A turn on to the next section takes over from a scroll
+            // still on its way.
             .onChange(of: scrubTarget) { _, target in
-                if let target { proxy.scrollTo(target, anchor: .top) }
+                guard let target else { return }
+                withAnimation(.smooth(duration: 0.3)) {
+                    proxy.scrollTo(target, anchor: .top)
+                }
             }
         }
     }
@@ -352,13 +358,31 @@ struct ReaderView: View {
         return []
     }
 
+    /// The scrubber's stops: the article's title, then its sections, so the
+    /// wheel goes back to the top as well.
+    private var wheelStops: ArticleOutline {
+        guard case .loaded(let article) = phase, !article.outline.isEmpty else { return [] }
+        let title = OutlineEntry(
+            id: Self.topID,
+            title: article.content.title ?? item?.displayTitle ?? "",
+            line: 0,
+            excerpt: ""
+        )
+        return [title] + article.outline
+    }
+
+    private var wheelStop: Int {
+        pinnedStop ?? (isAboveOutline ? 0 : activeIndex + 1)
+    }
+
     /// The deck of section cards beside the scrubber, level with the pointed
     /// mark, on the side of the bar the article is on. Not while the book's
     /// outline is open: the whole outline is on the page already.
     @ViewBuilder
     private var scrubDeck: some View {
         GeometryReader { geometry in
-            if let scrub, let barEdge, loadedOutline.indices.contains(scrub.index) {
+            let stops = wheelStops
+            if let scrub, let barEdge, stops.indices.contains(scrub.index) {
                 let origin = geometry.frame(in: .global).origin
                 let gap: CGFloat = 12
                 let half = OutlineDeck.width / 2
@@ -369,7 +393,7 @@ struct ReaderView: View {
                 // the first and last sections are not cut off.
                 let y = min(max(scrub.markY - origin.y, 110), geometry.size.height - 110)
 
-                OutlineDeck(outline: loadedOutline, frontIndex: scrub.index)
+                OutlineDeck(outline: stops, frontIndex: scrub.index)
                     .position(x: x - origin.x, y: y)
                     .animation(OutlineDeck.travel, value: y)
                     .transition(.opacity.animation(.easeOut(duration: 0.14)))
@@ -425,6 +449,7 @@ struct ReaderView: View {
             .padding(.horizontal, Self.columnPadding)
             .padding(.top, 6)
             .padding(.bottom, 48)
+            .id(Self.topID)
             .coordinateSpace(.named(Self.articleSpace))
         }
         .onScrollGeometryChange(for: ScrollGeometry.self) { $0 } action: { _, geometry in
@@ -434,6 +459,9 @@ struct ReaderView: View {
             viewportHeight = geometry.containerSize.height
             contentHeight = geometry.contentSize.height
             updateActiveEntry(article.outline)
+        }
+        .onScrollPhaseChange { _, phase in
+            if phase == .interacting, pinnedStop != nil { pinnedStop = nil }
         }
     }
 
@@ -508,8 +536,9 @@ struct ReaderView: View {
         }
     }
 
-    /// Everything else the reader can do with the save. The vertical bar is
-    /// shorter, so with it Mark Read and Move to Folder are in here too.
+    /// The text size, and everything else the reader can do with the save.
+    /// The vertical bar holds only this menu, so with it Mark Read and Move
+    /// to Folder are in here too.
     private var moreMenu: some View {
         Menu {
             if hasVerticalBar, let item {
@@ -520,9 +549,7 @@ struct ReaderView: View {
                 Divider()
             }
 
-            if !hasVerticalBar {
-                textSizeControls
-            }
+            textSizeControls
 
             Button("Open in Browser", systemImage: "safari") { openOriginal() }
             ShareLink(item: url) {
@@ -544,6 +571,9 @@ struct ReaderView: View {
         }
     }
 
+    /// Smaller, the size now, and larger, as in Safari's page menu: a menu
+    /// cannot hold a slider. A tap on the size sets the default size again.
+    /// The menu stays open, so the reader can tap more than one step.
     private var textSizeControls: some View {
         ControlGroup {
             Button {
@@ -554,6 +584,14 @@ struct ReaderView: View {
             .disabled(textSizeStep <= Self.textSizeSteps.lowerBound)
 
             Button {
+                textSizeStep = 0
+            } label: {
+                Text(textScale, format: .percent.precision(.fractionLength(0)))
+            }
+            .accessibilityLabel("Default Text Size")
+            .accessibilityValue(Text(textScale, format: .percent.precision(.fractionLength(0))))
+
+            Button {
                 textSizeStep = min(textSizeStep + 1, Self.textSizeSteps.upperBound)
             } label: {
                 Label("Larger Text", systemImage: "textformat.size.larger")
@@ -562,6 +600,10 @@ struct ReaderView: View {
         } label: {
             Text("Text Size")
         }
+        // Icons only: the default style puts a title under each icon, and the
+        // size has no icon, so the row does not line up.
+        .controlGroupStyle(.compactMenu)
+        .menuActionDismissBehavior(.disabled)
     }
 
     // MARK: - Behaviour
@@ -597,6 +639,8 @@ struct ReaderView: View {
         phase = .loading
         sectionTops = [:]
         activeIndex = 0
+        pinnedStop = nil
+        isAboveOutline = true
         scrollTop = 0
 
         if let next = store.savedItem(id: id) {
@@ -620,8 +664,9 @@ struct ReaderView: View {
             return
         }
         scrub = next.frame == .zero ? nil : next
-        if next.index != activeIndex {
-            scrubTarget = loadedOutline[next.index].id
+        if next.index != wheelStop {
+            scrubTarget = wheelStops[next.index].id
+            pinnedStop = next.index
         }
     }
 
@@ -643,6 +688,10 @@ struct ReaderView: View {
         // of every gesture, and answering each one would rebuild the article.
         if next != activeIndex {
             activeIndex = next
+        }
+        let isAbove = next == 0 && tops[0] - scrollTop > readingLine
+        if isAbove != isAboveOutline {
+            isAboveOutline = isAbove
         }
     }
 
