@@ -215,6 +215,10 @@ _Avoid_: On-device AI, manual categorization
 TypeSafe's Jev model, which answers typed questions (yes/no or a choice among options) about a Link instead of writing text. Sleevy asks it which Tags fit a Link and which Folder fits a Saved Item.
 _Avoid_: LLM tagging, AI provider, Luna
 
+**Content Check**:
+A Jev Classifier check made during Enrichment, before Readable Content is kept or AI Enrichment runs. It answers two yes/no questions about the page: is it prose to read later (a blog post, article, or docs), and is it sexually explicit.
+_Avoid_: Moderation, safety filter, content filter, blocklist
+
 **Extracted Page Content**:
 The opening slice of a page's prose, without the site chrome, given to AI Enrichment so a Preview Summary and Tag can rest on what the page says. Taken from the head of the Readable Content when a Link has any.
 _Avoid_: Reading text, scraped text, full text, Readable Content
@@ -750,6 +754,10 @@ _Avoid_: Deep link, route argument, UI test step
 - **Enrichment Tags** are chosen by **AI Enrichment** in v1 without hard-rule hints.
 - **AI Enrichment** asks the **Jev Classifier** for **Enrichment Tags** and a language model for the **Preview Summary** in parallel. The tagging and preview-summary stages of the **Enrichment Job** fail and skip independently.
 - The **Jev Classifier** answers one yes/no question per **Tag**, so a **Link** can get several **Enrichment Tags** or none.
+- The **Content Check** runs after **Hard Metadata** and before **Readable Content** and **AI Enrichment**.
+- A **Link** the **Content Check** finds sexually explicit keeps its **Hard Metadata**, but gets no **Readable Content**, no **Enrichment Tags**, and no **Preview Summary**, and its page text is not sent to the language model.
+- A **Link** the **Content Check** does not find to be prose to read later gets no **Readable Content**, but still gets **Enrichment Tags** and a **Preview Summary**.
+- The **Content Check** fails open: when the **Jev Classifier** is unavailable or not configured, **Enrichment** runs as if the page passed.
 - **Type** is assigned with **Hard Metadata** during capture rather than waiting for an **Enrichment Job**.
 - Saved Item list rows may show a calm **Type Icon** for the **Type**.
 - A newly captured **Saved Item** appears immediately and later receives **Hydration** as **Enrichment** completes.

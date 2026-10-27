@@ -31,6 +31,20 @@ const TAG_SCOPES: Readonly<Record<Topic, string>> = {
 const TAG_THRESHOLD = 0.5
 
 /**
+ * A Content Check answer holds at even odds or better. Not yet tuned against a
+ * sample of real saves, unlike the Folder bar below.
+ */
+const CONTENT_CHECK_THRESHOLD = 0.5
+
+/** Jev's verdict on a page before Sleevy keeps its prose or sends it on. */
+export type ContentCheck = {
+  /** The page is prose a person saves to read later: a blog post, article, or docs. */
+  readonly readable: boolean
+  /** The page is pornographic or sexually explicit. */
+  readonly explicit: boolean
+}
+
+/**
  * The share of the Choice a Folder needs before a Saved Item is filed in it.
  * Filing in the wrong Folder hides the item where the person will not look, so
  * the bar sits well above the winner merely being the likeliest. Tuned against
@@ -104,9 +118,9 @@ const noneOption = (names: ReadonlySet<string>) => {
 }
 
 /**
- * The typed judgments Sleevy asks of Jev: which Tags fit a Link, and which of
- * an Account's own Folders a Saved Item belongs in. Both answer nothing when
- * TypeSafe is not configured.
+ * The typed judgments Sleevy asks of Jev: whether a page passes the Content
+ * Check, which Tags fit a Link, and which of an Account's own Folders a Saved
+ * Item belongs in. Each answers nothing when TypeSafe is not configured.
  */
 export class JevClassifier extends Context.Service<JevClassifier>()(
   "@app/modules/ai/JevClassifier",
@@ -148,6 +162,30 @@ export class JevClassifier extends Context.Service<JevClassifier>()(
 
       return {
         enabled: client.enabled,
+
+        contentCheck: Effect.fn("JevClassifier.contentCheck")(function* (input: TagInput) {
+          if (!client.enabled) return Option.none<ContentCheck>()
+
+          const answers = yield* client.ask(tagState(input), {
+            readable: {
+              type: "noul",
+              instructions:
+                "Is the saved link a blog post, article, essay, or documentation page: prose a person saves to read later?",
+              criteria: {
+                false: "A video, image gallery, shop, search results, listing, or app page",
+              },
+            },
+            explicit: {
+              type: "noul",
+              instructions: "Is the saved link pornographic or sexually explicit?",
+            },
+          })
+
+          const holds = (key: string) =>
+            ((answers[key] as TypeSafeNoulAnswer | undefined)?.noul ?? 0) >= CONTENT_CHECK_THRESHOLD
+
+          return Option.some<ContentCheck>({ readable: holds("readable"), explicit: holds("explicit") })
+        }),
 
         tags: Effect.fn("JevClassifier.tags")(function* (input: TagInput) {
           if (!client.enabled) return Option.none<readonly Topic[]>()

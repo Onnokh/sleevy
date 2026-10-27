@@ -143,6 +143,37 @@ artboards["iphone-duo"] = [
   { index: 5, ...duoCover, texts: fitTexts(artboards.ipad[4], duoCover) },
 ];
 
+// The creative asset videos (Asset Library, not screenshots): glass-loop.swift's
+// moving glass with one still layer on top, from compose-creative.swift (the
+// mark or the phone), plus the text. 01 is the 21:9 product page header; it
+// shows only the brand, so it renders once and not per locale. 02 is the 3:2
+// search results video. The App Store crops both per device. The header keeps
+// its brand inside the art safe area (1646x661 centered). The search text runs
+// past its safe area (2168x1030 centered): inside it, the text is too small to
+// read in search results.
+// Only `--device=creative-video` renders them; the loops take minutes.
+const creativeVideos = [
+  {
+    index: 1,
+    width: 3840,
+    height: 1646,
+    tracking: -0.03,
+    layer: { mark: { path: "apps/web/public/logo-mark-white.svg", x: 1920, y: 530, height: 250 } },
+    texts: [{ value: "Sleevy", x: 1097, y: 830, width: 1646, fontSize: 230, weight: 700, color: "#ffffff" }],
+  },
+  {
+    index: 2,
+    width: 3840,
+    height: 2560,
+    safeArea: 1,
+    layer: { devices: [{ capture: "inbox.png", x: 2400, y: 360, width: 1360 }] },
+    texts: [
+      { key: "tapToSave", x: 420, y: 1020, width: 1700, fontSize: 250, weight: 700, color: "#ffffff" },
+      { key: "readAnywhere", x: 420, y: 1330, width: 1700, fontSize: 180, weight: 500, color: "#b4b6c8" },
+    ],
+  },
+];
+
 const fontFamily = ".SF NS";
 const fontFamilies = {
   ja: "Hiragino Sans",
@@ -177,17 +208,18 @@ function fontFamilyForLocale(locale) {
 async function renderOverlay(artboard, locale, output) {
   const localeTranslations = translations[locale] ?? translations.en;
   const texts = artboard.texts.map(({ key, ...spec }) => {
-    const value = localeTranslations?.[key];
+    // A text with its own `value` (the brand) is not translated.
+    const value = spec.value ?? localeTranslations?.[key];
     if (value == null) throw new Error(`Missing ${locale}.${key}`);
-    return { value, ...spec };
+    return { ...spec, value };
   });
   const spec = {
     width: artboard.width,
     height: artboard.height,
     output,
     family: fontFamilyForLocale(locale),
-    tracking: trackingRatio,
-    safeArea: textSafeArea,
+    tracking: artboard.tracking ?? trackingRatio,
+    safeArea: artboard.safeArea ?? textSafeArea,
     texts,
   };
   const specPath = `${output}.json`;
@@ -203,14 +235,62 @@ async function ensureMagick() {
   }
 }
 
+async function renderCreativeVideos(locales) {
+  const glassLoop = join(temp, "glass-loop");
+  const composeCreative = join(temp, "compose-creative");
+  await execFileAsync("swiftc", ["-O", join(scriptDir, "glass-loop.swift"), "-o", glassLoop]);
+  await execFileAsync("swiftc", ["-O", join(scriptDir, "compose-creative.swift"), "-o", composeCreative]);
+  for (const video of creativeVideos) {
+    const name = String(video.index).padStart(2, "0");
+    const loop = join(temp, `loop-${name}.mp4`);
+    await execFileAsync(glassLoop, [String(video.width), String(video.height), loop]);
+
+    const { mark, devices = [] } = video.layer;
+    const layer = join(temp, `layer-${name}.png`);
+    const layerSpec = {
+      width: video.width,
+      height: video.height,
+      output: layer,
+      mark: mark && { ...mark, path: join(projectRoot, mark.path) },
+      devices: devices.map((device) => ({ ...device, capture: join(backgrounds, "creative-video", device.capture) })),
+    };
+    await writeFile(`${layer}.json`, JSON.stringify(layerSpec));
+    await execFileAsync(composeCreative, [`${layer}.json`]);
+
+    // Text that is all fixed values (the brand) is the same in every locale.
+    const localized = video.texts.some((text) => text.value == null);
+    for (const locale of localized ? locales : [null]) {
+      const text = join(temp, `text-${name}-${locale ?? "all"}.png`);
+      const overlay = join(temp, `overlay-${name}-${locale ?? "all"}.png`);
+      await renderOverlay(video, locale ?? "en", text);
+      await execFileAsync("magick", [layer, text, "-background", "none", "-compose", "over", "-composite", overlay]);
+      const outputDir = locale ? join(root, "creative-video", locale) : join(root, "creative-video");
+      await mkdir(outputDir, { recursive: true });
+      // H.264 with the loop's silent audio track: App Store Connect wants
+      // one, and plays the video muted.
+      await execFileAsync("ffmpeg", [
+        "-y", "-loglevel", "error", "-i", loop, "-i", overlay,
+        "-filter_complex", "[0:v][1:v]overlay=0:0:format=auto,format=yuv420p[v]",
+        "-map", "[v]", "-map", "0:a",
+        "-c:v", "libx264", "-profile:v", "high", "-preset", "medium", "-crf", "14",
+        "-color_primaries", "bt709", "-color_trc", "bt709", "-colorspace", "bt709",
+        "-c:a", "copy", "-movflags", "+faststart", join(outputDir, `${name}.mp4`),
+      ]);
+    }
+  }
+}
+
 const args = process.argv.slice(2);
 const requestedLocales = args.filter((arg) => !arg.startsWith("--"));
 const locales = requestedLocales.length > 0 ? requestedLocales : ["en", "nl"];
 const requestedDevices = args.filter((arg) => arg.startsWith("--device=")).map((arg) => arg.slice("--device=".length));
 const devices = requestedDevices.length > 0 ? requestedDevices : Object.keys(artboards);
 for (const device of devices) {
-  if (!artboards[device]) throw new Error(`Unknown device: ${device}. Use one of ${Object.keys(artboards).join(", ")}.`);
+  if (!artboards[device] && device !== "creative-video") {
+    throw new Error(`Unknown device: ${device}. Use one of ${[...Object.keys(artboards), "creative-video"].join(", ")}.`);
+  }
 }
+const imageDevices = devices.filter((device) => artboards[device]);
 await ensureMagick();
 const temp = await mkdtemp(join(tmpdir(), "sleevy-app-store-")).catch(() => null);
 if (!temp) throw new Error("Could not create a temporary render directory.");
@@ -220,7 +300,7 @@ await execFileAsync("swiftc", ["-O", join(scriptDir, "text-overlay.swift"), "-o"
 try {
   for (const locale of locales) {
     if (!translations[locale] && !translations.en) throw new Error(`No translations configured for locale: ${locale}`);
-    for (const device of devices) {
+    for (const device of imageDevices) {
       const outputDir = join(root, device, locale);
       await mkdir(outputDir, { recursive: true });
       for (const artboard of artboards[device]) {
@@ -238,6 +318,7 @@ try {
       }
     }
   }
+  if (devices.includes("creative-video")) await renderCreativeVideos(locales);
 } finally {
   await rm(temp, { recursive: true, force: true });
 }

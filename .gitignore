@@ -55,3 +55,6 @@ apps/web/.tanstack/
 
 # Local research notes
 docs/research/
+
+# Creative asset videos are ~50 MB each; render.mjs --device=creative-video makes them.
+app-store-screenshots/creative-video/
