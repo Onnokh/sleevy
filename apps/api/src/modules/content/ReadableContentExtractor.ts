@@ -17,7 +17,8 @@ type TurndownNode = {
   readonly textContent?: string | null
   readonly childNodes?: ArrayLike<TurndownNode>
   readonly getAttribute?: (name: string) => string | null
-  readonly querySelector?: (selectors: string) => unknown
+  readonly querySelector?: (selectors: string) => TurndownNode | null
+  readonly querySelectorAll?: (selectors: string) => ArrayLike<TurndownNode>
 }
 
 export type ExtractedArticle = {
@@ -122,6 +123,43 @@ const languageOf = (node: TurndownNode | null | undefined): string => {
   )
   return match?.[1]?.toLowerCase() ?? ""
 }
+
+/** A caption that is the name of a file, and nothing else: "review.ts". */
+const FILE_NAME = /^[\w@./-]+\.[a-z0-9]+$/i
+
+const enclosingFigure = (node: TurndownNode): TurndownNode | undefined => {
+  let parent = node.parentNode
+  while (parent) {
+    if (parent.nodeName === "FIGURE") return parent
+    parent = parent.parentNode
+  }
+  return undefined
+}
+
+/**
+ * The file a block of code is from, where the page names it in the caption of
+ * a figure around the one block — the label a code viewer draws on its frame.
+ */
+const fileNameOf = (pre: TurndownNode): string | undefined => {
+  const figure = enclosingFigure(pre)
+  if (!figure || figure.querySelectorAll?.("pre").length !== 1) return undefined
+  const caption = figure.querySelector?.("figcaption")?.textContent?.trim() ?? ""
+  return FILE_NAME.test(caption) ? caption : undefined
+}
+
+/**
+ * What a figure shows other than text. A figure with none of these is a
+ * picture the page drew in markup and CSS, or animates with script.
+ */
+const FIGURE_MEDIA = "img, picture, video, audio, iframe, pre, table, blockquote, math"
+
+/**
+ * Prose rather than a label: several words that end as a sentence does. The
+ * labels of a drawn figure are a name or a value — "Fix flaky test",
+ * "~6906ms" — and none of them stops on a full stop.
+ */
+const isSentence = (text: string): boolean =>
+  words(text).length >= 4 && /[.!?]["')’”]?$/.test(text)
 
 /**
  * Elements a page draws one line of code with. Sites that do not put newlines
@@ -269,10 +307,56 @@ const createTurndown = () => {
         node.firstChild?.nodeName === "CODE"
           ? (node.firstChild as TurndownNode)
           : (node as TurndownNode)
-      const language = languageOf(code) || languageOf(node)
+      // A file name gives the language when the highlighter left none, and
+      // goes after it as the block's title: the first word of a fence's info
+      // is its language, and the rest is free for a renderer to read.
+      const fileName = fileNameOf(node)
+      const language =
+        languageOf(code) || languageOf(node) || (fileName?.split(".").pop()?.toLowerCase() ?? "")
+      const info = fileName ? `${language} title="${fileName}"` : language
       const text = codeText(code).replace(/\n+$/, "")
       const fence = fenceFor(text)
-      return `\n\n${fence}${language}\n${text}\n${fence}\n\n`
+      return `\n\n${fence}${info}\n${text}\n${fence}\n\n`
+    },
+  })
+
+  // The file name a code viewer draws on its frame. The code block carries it
+  // as its title, and left as a caption it is a lone paragraph above the code.
+  turndown.addRule("codeFileName", {
+    filter: (node) => {
+      if (node.nodeName !== "FIGCAPTION") return false
+      const pre = enclosingFigure(node)?.querySelector?.("pre")
+      return pre ? fileNameOf(pre) !== undefined : false
+    },
+    replacement: () => "",
+  })
+
+  // A picture drawn in markup: an animated mockup of an app, or a chart of
+  // styled `div`s. Its words are the labels on its buttons and rows, and they
+  // reached the reader as paragraphs of their own — "SessionNew session",
+  // "~/app", "Fix flaky upload testinterrupted" — between two paragraphs of
+  // prose. One page carried four such figures, and another from the same
+  // site carried six.
+  //
+  // The page's own sign that a figure is a picture is the `aria-label` it
+  // gives the whole of it, which is what a screen reader says in place of
+  // the labels. That is alt text, which the Reader View does not show for an
+  // image either, so the labels go. A sentence the figure says beside them
+  // stays — "Snapshot restore reduced the launch path by about 53 times." is
+  // the finding the chart draws. A figure of styled `div`s with no such label
+  // is a chart whose words are often its data, and it stays whole.
+  turndown.addRule("drawnFigure", {
+    filter: (node) =>
+      node.nodeName === "FIGURE" &&
+      Boolean(node.getAttribute?.("aria-label")?.trim()) &&
+      !node.querySelector?.(FIGURE_MEDIA),
+    replacement: (_content, node) => {
+      const sentences = Array.from(node.querySelectorAll?.("p") ?? [])
+        .map((paragraph) => (paragraph.textContent ?? "").replace(/\s+/g, " ").trim())
+        .filter(isSentence)
+      return sentences.length === 0
+        ? ""
+        : `\n\n${sentences.map((sentence) => turndown.escape(sentence)).join("\n\n")}\n\n`
     },
   })
 
@@ -387,6 +471,49 @@ const joinBrokenLines = (html: string): string => {
   return root.innerHTML
 }
 
+/** Two code spans with one space between them, and no backtick escaped. */
+const CODE_RUN = /(?<![`\\])`([^`\n]+)` `([^`\n]+)`(?!`)/g
+
+/**
+ * Join a command the page set one word to a `code` element into one span.
+ *
+ * A page that sets its prose a word at a time wraps each word of a command in
+ * its own element, so "run `opencode upgrade --major`" came out as three code
+ * spans, `opencode` `upgrade` `--major`, and the Reader View drew each one as
+ * a chip of its own. Two code spans with only a space between them are one
+ * piece of code in any prose: two separate terms have a word or a comma
+ * between them.
+ *
+ * This works on the Markdown, because the HTML wraps each `code` in a span of
+ * its own and the space between them in another. Lines inside a fenced
+ * block are code already, and are left as they are.
+ */
+const joinCodeRuns = (markdown: string): string => {
+  let fence: string | undefined
+  return markdown
+    .split("\n")
+    .map((line) => {
+      const marker = line.match(/^(`{3,}|~{3,})/)?.[1]
+      if (marker && !fence) {
+        fence = marker
+        return line
+      }
+      if (fence) {
+        if (line.trim().startsWith(fence) && /^[`~]+$/.test(line.trim())) fence = undefined
+        return line
+      }
+
+      // Once per pair: a run of three joins the first two, then the third.
+      let joined = line
+      for (;;) {
+        const next = joined.replace(CODE_RUN, "`$1 $2`")
+        if (next === joined) return joined
+        joined = next
+      }
+    })
+    .join("\n")
+}
+
 const nonBlank = (value: string | null | undefined): string | undefined => {
   const trimmed = value?.trim()
   return trimmed && trimmed.length > 0 ? trimmed : undefined
@@ -404,7 +531,7 @@ export class ReadableContentExtractor extends Context.Service<ReadableContentExt
        * does not get.
        */
       const toMarkdown = (html: string) =>
-        turndown.turndown(joinBrokenLines(html)).trim()
+        joinCodeRuns(turndown.turndown(joinBrokenLines(html)).trim())
 
       return {
         /**
