@@ -49,19 +49,21 @@ struct SignedInTabView: View {
                     // toolbar, and the mark then flies in each time the
                     // column changes lists.
                     ZStack {
-                        // The Reader View's list of articles, in the same
-                        // column, so it opens, closes and divides on the hinge
-                        // as the Library Sidebar does.
-                        if isReading {
+                        // The Reader View's list of articles, a level down in
+                        // the same column, so it opens, closes and divides on
+                        // the hinge as the Library Sidebar does.
+                        if let sequence = readerSequence {
                             ReadableItemsSidebar(
-                                items: store.snapshot(for: .libraryRoot).items.filter(hasReaderView),
+                                items: store.readableItems(in: sequence),
                                 selectedID: readingID
                             ) { readingID = $0.id }
                         } else {
                             LibrarySidebar(store: store, selection: sidebarSelection)
                         }
                     }
-                    .sidebarColumn()
+                    .sidebarColumn(level: readerSequence.map { _ in
+                        SidebarLevel(title: readerListTitle, back: closeReader)
+                    })
                     // A range that stays the same, so only the ideal width
                     // changes on the fold. A single width is also the
                     // minimum and the maximum, and a jump in those hides
@@ -214,19 +216,62 @@ struct SignedInTabView: View {
         isCreased ? windowWidth / 2 : 280
     }
 
-    /// Whether a Reader View is on screen in the content column.
-    private var isReading: Bool {
-        let path: [AppRoute] = if sidebarDestination != nil {
-            sidebarPath
-        } else {
-            switch selectedTab {
-            case .sleevy: sleevyPath
-            case .library: libraryPath
-            case .search: searchPath
+    /// The path of the stack in the content column.
+    private var contentPath: [AppRoute] {
+        if sidebarDestination != nil { return sidebarPath }
+        switch selectedTab {
+        case .sleevy: return sleevyPath
+        case .library: return libraryPath
+        case .search: return searchPath
+        }
+    }
+
+    /// The list the Reader View on screen was opened from, or nil when no
+    /// Reader View is on screen.
+    private var readerSequence: [SavedItem.ID]? {
+        for route in contentPath {
+            if case .reader(_, let sequence) = route { return sequence }
+        }
+        return nil
+    }
+
+    /// The name of the list the Reader View was opened from: the screen under
+    /// it on the stack, or the sidebar row the stack starts from.
+    private var readerListTitle: String {
+        let path = contentPath
+        let index = path.firstIndex(where: \.isReader) ?? 0
+        let under = index > 0 ? path[index - 1] : sidebarDestination
+
+        switch under {
+        case .folder(let id): return store.folders.first { $0.id == id }?.name ?? "Folder"
+        case .tag(let tag): return tagDisplayName(tag)
+        case .myProfile: return "Public Profile"
+        case .settings: return "Settings"
+        default: break
+        }
+        switch selectedTab {
+        case .sleevy: return "Recents"
+        case .library: return "Library"
+        case .search: return "Search"
+        }
+    }
+
+    /// Closes the Reader View and what was pushed on it, back to the list it
+    /// was opened from.
+    private func closeReader() {
+        func close(_ path: inout [AppRoute]) {
+            if let index = path.firstIndex(where: \.isReader) {
+                path.removeSubrange(index...)
             }
         }
-        return path.contains { route in
-            if case .reader = route { true } else { false }
+        if sidebarDestination != nil {
+            close(&sidebarPath)
+        } else {
+            switch selectedTab {
+            case .sleevy: close(&sleevyPath)
+            case .library: close(&libraryPath)
+            case .search: close(&searchPath)
+            }
         }
     }
 
@@ -489,6 +534,12 @@ private struct AccountToolbarModifier: ViewModifier {
                     .accessibilityLabel("\(session.displayName) account")
                 }
             }
+    }
+}
+
+private extension AppRoute {
+    var isReader: Bool {
+        if case .reader = self { true } else { false }
     }
 }
 

@@ -30,18 +30,40 @@ extension View {
     }
 
     /// What every view in the sidebar column has: the web's sidebar colour,
-    /// and the mark on the line of the sidebar button, which the split view
-    /// keeps in one place and at one size, open or closed.
-    func sidebarColumn() -> some View {
+    /// and on the line of the sidebar button, which the split view keeps in
+    /// one place and at one size, open or closed, the mark — or, a level
+    /// down, the way back and the name of the list.
+    func sidebarColumn(level: SidebarLevel? = nil) -> some View {
         background(Color(.surface))
             .toolbar {
+                if let level {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button("Back", systemImage: "chevron.backward", action: level.back)
+                    }
+                }
+                // One item for the mark and the name, so a change of level
+                // changes its text and does not fly a new item in.
                 ToolbarItem(placement: .topBarLeading) {
-                    SidebarBrand()
+                    if let level {
+                        Text(level.title)
+                            .font(.title3.weight(.semibold))
+                            .fixedSize()
+                            .accessibilityAddTraits(.isHeader)
+                    } else {
+                        SidebarBrand()
+                    }
                 }
                 .sharedBackgroundHiddenIfAvailable()
             }
             .navigationBarTitleDisplayMode(.inline)
     }
+}
+
+/// A list one level down in the sidebar column, under the Library Sidebar:
+/// the list a Reader View was opened from.
+struct SidebarLevel {
+    let title: String
+    let back: () -> Void
 }
 
 /// A small, faint heading over a group of rows in a sidebar list, with what

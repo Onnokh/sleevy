@@ -162,10 +162,9 @@ struct ReaderView: View {
         store.savedItem(id: selectedID)
     }
 
-    /// Every Saved Item the reader could move to from here: the Library, kept
-    /// to the ones that have a Reader View so every row leads somewhere.
+    /// Every Saved Item the reader could move to from here.
     private var readableItems: [SavedItem] {
-        store.snapshot(for: .libraryRoot).items.filter(hasReaderView)
+        store.readableItems(in: sequence)
     }
 
     private var isRegularWidth: Bool {
@@ -215,6 +214,10 @@ struct ReaderView: View {
         // top of the last lines of the article, and a reading surface should
         // be the article and nothing else.
         .toolbar(.hidden, for: .tabBar)
+        // In a split view the way back is at the top of the sidebar column,
+        // where the list is. The stack's own button would go in the vertical
+        // bar, at the other side of the screen.
+        .navigationBarBackButtonHidden(sidebarSelection != nil)
         .toolbar {
             if !hasVerticalBar {
                 if sequence.count > 1 {
@@ -252,9 +255,8 @@ struct ReaderView: View {
         .onChange(of: sidebarSelection?.wrappedValue ?? nil) { _, id in
             if let id { select(id) }
         }
-        // The list beside the article is the Library, which the reader may
-        // never have opened — arriving straight here from the Inbox, a widget,
-        // or a capture leaves that scope unread.
+        // Opened from no list — a widget or a capture — the list beside the
+        // article is the Library, which the reader may never have opened.
         .task { await store.loadIfNeeded(for: .libraryRoot) }
     }
 

@@ -17,9 +17,9 @@ extension EnvironmentValues {
 /// that threw the reader out to the browser would break the one promise the
 /// pane makes, which is that reading happens here.
 ///
-/// It is a Library surface whatever it was opened from: the Inbox is the
-/// triage surface for unread Saved Items, and this list keeps the read ones
-/// too, because a reader working down a list should not watch rows vanish
+/// It is the list the article was opened from — a Folder, a Tag, Recents,
+/// Search — as it was at that moment: the Inbox drops a save once it is
+/// read, and a reader working down a list should not watch rows vanish
 /// behind them.
 struct ReadableItemsSidebar: View {
     let items: [SavedItem]
@@ -35,15 +35,9 @@ struct ReadableItemsSidebar: View {
         ScrollViewReader { proxy in
             // Drawn as the Library Sidebar, so the column does not change
             // its look when the reader opens an article from it.
-            List {
-                Section {
-                    ForEach(items) { item in
-                        row(for: item)
-                            .id(item.id)
-                    }
-                } header: {
-                    SidebarHeading("Library")
-                }
+            List(items) { item in
+                row(for: item)
+                    .id(item.id)
             }
             .sidebarList()
             .onAppear {
@@ -73,10 +67,9 @@ struct ReadableItemsSidebar: View {
         } label: {
             Label {
                 VStack(alignment: .leading, spacing: 2) {
-                    // On the text itself: the sidebar's label style sets the
-                    // title's font, and with it drops a weight set around it.
+                    // No bolder title for the row on screen, as on the web: a
+                    // bolder title is wider, and can wrap and move the rows.
                     Text(item.displayTitle)
-                        .fontWeight(isSelected ? .semibold : nil)
                         .lineLimit(2)
                     Text(item.displayDomain)
                         .font(.caption)
