@@ -1,31 +1,20 @@
 import SwiftUI
 
+/// The Library home: the Saved Items that are in no Folder (the No Folder
+/// Filter), under one compact strip of Folders. The saves have
+/// no heading of their own: they are simply what the Library holds outside its
+/// Folders.
 @MainActor
 struct LibraryView: View {
-    @Environment(\.openSavedItem) private var openSavedItem
+    @Environment(\.pushRoute) private var pushRoute
     var store: ReadingListStore
     @State private var filter = LibraryFilter()
     @State private var sort = LibrarySort.newest
     @State private var isShowingFilters = false
     @State private var folderEditor: FolderEditor?
     @State private var folderToDelete: Folder?
-    @State private var itemToMove: SavedItem?
     @Environment(\.colorScheme) private var colorScheme
-    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
-
-    /// Folder cards are a 5:1 banner. One per row fills a phone nicely, but
-    /// across an iPad's width a single card grows into a 200pt slab, so a
-    /// regular-width layout puts two side by side instead.
-    private var folderColumnCount: Int {
-        horizontalSizeClass == .regular ? 2 : 1
-    }
-
-    /// The folders grouped into rows of `folderColumnCount`.
-    private var folderRows: [[Folder]] {
-        stride(from: 0, to: store.folders.count, by: folderColumnCount).map { start in
-            Array(store.folders[start ..< min(start + folderColumnCount, store.folders.count)])
-        }
-    }
+    @Environment(\.showsLibrarySidebar) private var showsLibrarySidebar
 
     var body: some View {
         let projection = store.libraryProjection(
@@ -34,61 +23,35 @@ struct LibraryView: View {
             sort: sort,
             facetOrder: .frequency
         )
+        // The Tags and the count cover the whole Library, Folders included:
+        // a Tag leads to every save that carries it.
+        let complete = store.libraryProjection(
+            for: .completeLibrary,
+            filter: LibraryFilter(),
+            sort: .newest,
+            facetOrder: .name
+        )
 
         Group {
             if store.isLoading && projection.destinationCount == 0 && store.folders.isEmpty {
                 ProgressView("Loading your library...")
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if projection.destinationCount == 0 && store.folders.isEmpty && store.libraryErrorMessage == nil {
-                ContentUnavailableView(
-                    "Library",
-                    systemImage: "books.vertical",
-                    description: Text("Saved reads you organize will appear here.")
-                )
             } else {
                 libraryList(projection: projection)
             }
         }
+        .background(Color(.systemBackground))
         .navigationTitle("Library")
-        .navigationBarTitleDisplayMode(.large)
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    folderEditor = .create
-                } label: {
-                    Image(systemName: "plus")
-                }
-                .accessibilityLabel("New Folder")
-            }
-
-            ToolbarItem(placement: .topBarTrailing) {
-                Menu {
-                    Picker("Sort", selection: $sort) {
-                        ForEach(LibrarySort.allCases) { sort in
-                            Text(sort.title).tag(sort)
-                        }
-                    }
-
-                    Divider()
-
-                    Button {
-                        isShowingFilters = true
-                    } label: {
-                        Label("Filters", systemImage: "line.3.horizontal.decrease.circle")
-                    }
-
-                    if filter.isActive {
-                        Button(role: .destructive) {
-                            filter = LibraryFilter()
-                        } label: {
-                            Label("Clear Filters", systemImage: "xmark.circle")
-                        }
-                    }
-                } label: {
-                    Image(systemName: filter.isActive ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle")
-                        .contentTransition(.symbolEffect(.replace))
-                }
-                .accessibilityLabel(filter.isActive ? "Filters Active" : "Filters")
+        .largeTitleWhereTheBarHasItsOwnLine()
+        .modifier(NavigationSubtitleIfAvailable(subtitle: savesText(complete.destinationCount)))
+        .toolbarPreferringVerticalBar {
+            ToolbarItem(placement: .primaryAction) {
+                LibrarySortMenu(
+                    sort: $sort,
+                    filter: $filter,
+                    isShowingFilters: $isShowingFilters,
+                    tags: complete.tags
+                )
             }
         }
         .sheet(isPresented: $isShowingFilters) {
@@ -99,14 +62,10 @@ struct LibraryView: View {
                 types: projection.types
             )
         }
-        .sheet(item: $itemToMove) { item in
-            MoveToFolderSheet(item: item, folders: store.folders) { destination in
-                try await store.move(item, to: destination)
-            }
-        }
         .folderActions(store: store, editor: $folderEditor, folderToDelete: $folderToDelete)
         .task {
             await store.loadIfNeeded(for: .libraryRoot)
+            await store.loadIfNeeded(for: .completeLibrary)
         }
         // Favicons warm as soon as items arrive, off the scroll path.
         .task(id: projection.items) {
@@ -117,135 +76,294 @@ struct LibraryView: View {
         }
     }
 
-    private func folderCard(_ folder: Folder, projection: LibraryProjection) -> some View {
-        FolderCard(
-            folder: folder,
-            itemCount: projection.folderCounts[folder.id, default: 0]
-        ) {
-            folderEditor = .rename(folder)
-        } onDelete: {
-            folderToDelete = folder
-        } onSetPublished: { isPublished in
-            Task {
-                do {
-                    try await store.setFolderPublished(folder, isPublished: isPublished)
-                } catch {
-                    store.libraryErrorMessage = error.localizedDescription
-                }
-            }
-        }
-        .frame(maxWidth: .infinity)
-    }
-
     private func libraryList(projection: LibraryProjection) -> some View {
         List {
+            // One section, so the first date heading sits close under
+            // the chips: the space between groups would push it down.
             Section {
-                // A stack of slim corona rows, one per folder — full width,
-                // so each folder's field gets room to fan out. Each card is
-                // its own list row: cards sharing a row makes a long-press
-                // lift the whole stack and resolve the first card's menu.
-                ForEach(folderRows, id: \.self) { row in
-                    HStack(spacing: 12) {
-                        ForEach(row) { folder in
-                            folderCard(folder, projection: projection)
-                        }
-
-                        // A lone card on the last row keeps its column width
-                        // instead of stretching across both.
-                        if row.count < folderColumnCount {
-                            ForEach(0 ..< (folderColumnCount - row.count), id: \.self) { _ in
-                                Color.clear.frame(maxWidth: .infinity)
+                // Folders are ways in, not the content: one compact strip, so
+                // the saves start near the top. Tags are in the sort menu.
+                // Beside the Library Sidebar, the sidebar lists them.
+                if !showsLibrarySidebar {
+                    ChipStrip {
+                        ForEach(store.folders) { folder in
+                            FolderChip(
+                                folder: folder,
+                                itemCount: projection.folderCounts[folder.id, default: 0]
+                            ) {
+                                folderEditor = .rename(folder)
+                            } onDelete: {
+                                folderToDelete = folder
+                            } onSetPublished: { isPublished in
+                                Task {
+                                    do {
+                                        try await store.setFolderPublished(folder, isPublished: isPublished)
+                                    } catch {
+                                        store.libraryErrorMessage = error.localizedDescription
+                                    }
+                                }
                             }
                         }
+
+                        Button {
+                            folderEditor = .create
+                        } label: {
+                            LibraryChip(title: "New Folder") {
+                                Image(systemName: "plus")
+                            }
+                            .foregroundStyle(.secondary)
+                        }
+                        .buttonStyle(.plain)
                     }
-                    .listRowInsets(EdgeInsets(
-                        top: row == folderRows.first ? 0 : 12,
-                        leading: 16,
-                        bottom: 0,
-                        trailing: 16
-                    ))
-                    .listRowSeparator(.hidden)
-                    .listRowBackground(Color.clear)
                 }
-            }
 
-            if filter.isActive {
-                Section {
-                    ActiveLibraryFilters(filter: $filter)
-                        .listRowInsets(EdgeInsets(top: 8, leading: 18, bottom: 8, trailing: 18))
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
-                }
-            }
-
-            if let errorMessage = store.libraryErrorMessage {
-                Section {
+                if let errorMessage = store.libraryErrorMessage {
                     Text(errorMessage)
                         .font(.footnote)
                         .foregroundStyle(.red)
-                }
-                .listRowBackground(Color.clear)
-            }
-
-            if projection.items.isEmpty {
-                ContentUnavailableView(
-                    filter.isActive ? "No Matching Items" : "Library is Empty",
-                    systemImage: filter.isActive ? "line.3.horizontal.decrease.circle" : "books.vertical",
-                    description: Text(filter.isActive ? "Try changing or clearing your filters." : "Items without a folder appear here.")
-                )
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
-            }
-
-            if !projection.items.isEmpty {
-                Section {
-                    ForEach(projection.items) { item in
-                        SavedItemRow(item: item) {
-                            await openSavedItem(item)
-                        } onToggleRead: {
-                            await store.setRead(item, isRead: !item.isRead)
-                        } onDelete: {
-                            await store.delete(item)
-                        } onMove: {
-                            itemToMove = item
-                        }
-                        .swipeActions(edge: .leading, allowsFullSwipe: true) {
-                            Button {
-                                Task {
-                                    await store.setRead(item, isRead: !item.isRead)
-                                }
-                            } label: {
-                                Label(
-                                    item.isRead ? "Unread" : "Read",
-                                    systemImage: item.isRead ? "circle" : "checkmark.circle"
-                                )
-                            }
-                            .tint(item.isRead ? .orange : .green)
-                        }
-                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                            Button(role: .destructive) {
-                                Task {
-                                    await store.delete(item)
-                                }
-                            } label: {
-                                Label("Delete", systemImage: "trash")
-                            }
-                        }
-                        .listRowInsets(EdgeInsets(top: 0, leading: 18, bottom: 0, trailing: 18))
                         .listRowBackground(Color.clear)
-                        .listRowSeparatorTint(.white.opacity(0.08))
+                        .listRowSeparator(.hidden)
+                }
+
+                if filter.isActive {
+                    ActiveLibraryFilters(filter: $filter)
+                        .listRowInsets(EdgeInsets(top: 8, leading: 20, bottom: 8, trailing: 20))
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+
+                    if projection.items.isEmpty {
+                        ContentUnavailableView(
+                            "No Matching Items",
+                            systemImage: "line.3.horizontal.decrease.circle",
+                            description: Text("Try changing or clearing your filters.")
+                        )
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
                     }
                 }
             }
+            .listSectionSpacing(ListRhythm.leadSpacing)
+
+            SavedItemListRows(items: projection.items, store: store, groupsByDate: sort.isByDate)
         }
         .listStyle(.plain)
-        .listSectionSpacing(16)
-        .defaultScrollAnchor(.top)
+        .groupedSavesList()
         .scrollContentBackground(.hidden)
-        // One shared distance between the large title and the first content,
-        // matched with Settings so the screens share a rhythm.
-        .contentMargins(.top, ScreenLayout.contentTopSpacing, for: .scrollContent)
-        .background(Color(.appBackground))
     }
 
+    private func savesText(_ count: Int) -> String? {
+        guard count > 0 else { return nil }
+        return count == 1 ? "1 save" : "\(count) saves"
+    }
+}
+
+/// The horizontally scrolling row of Folder chips in the Library home.
+struct ChipStrip<Content: View>: View {
+    @ViewBuilder var content: Content
+
+    var body: some View {
+        ScrollView(.horizontal) {
+            HStack(spacing: 8) {
+                content
+            }
+            .padding(.horizontal, 20)
+        }
+        .scrollIndicators(.hidden)
+        // The chips fade out at the edges, so a strip that runs on past the
+        // screen reads as one that scrolls, not as one cut off.
+        .mask {
+            HStack(spacing: 0) {
+                LinearGradient(colors: [.clear, .black], startPoint: .leading, endPoint: .trailing)
+                    .frame(width: 12)
+                Rectangle()
+                LinearGradient(colors: [.black, .clear], startPoint: .leading, endPoint: .trailing)
+                    .frame(width: 32)
+            }
+        }
+        .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 4, trailing: 0))
+        .listRowBackground(Color.clear)
+        .listRowSeparator(.hidden)
+    }
+}
+
+/// A chip in the Folder strip: the badge, the name and the count on a
+/// capsule in the Folder's colour. The colour is light and the chip is low,
+/// so the strip stays a way in and the saves under it are the content.
+struct LibraryChip<Badge: View>: View {
+    let title: String
+    var count = 0
+    /// The Folder's colours, or nil for a chip that is not a Folder.
+    var palette: FolderCardPalette?
+    @ViewBuilder var badge: Badge
+
+    @Environment(\.colorScheme) private var colorScheme
+
+    var body: some View {
+        HStack(spacing: 6) {
+            badge
+                .font(.system(size: 14))
+
+            Text(title)
+                .font(.system(size: 15, weight: .medium))
+                .lineLimit(1)
+
+            if count > 0 {
+                Text("\(count)")
+                    .font(.system(size: 13))
+                    .monospacedDigit()
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 7)
+        .background(fill, in: .capsule)
+        .overlay { Capsule().strokeBorder(border, lineWidth: 1) }
+        .contentShape(.capsule)
+    }
+
+    /// A Folder's chip is lightly filled with its colour, with an edge in the
+    /// same colour, so each Folder is found by its colour at a glance.
+    private var fill: Color {
+        guard let palette else { return .primary.opacity(0.06) }
+        return Color(palette.mid).opacity(colorScheme == .dark ? 0.24 : 0.16)
+    }
+
+    private var border: Color {
+        guard let palette else { return .primary.opacity(0.08) }
+        return Color(palette.mid).opacity(colorScheme == .dark ? 0.4 : 0.35)
+    }
+}
+
+/// One Folder in the Library home's Folder strip, in its emoji and colour.
+/// Tap opens its Folder View; the Folder's other actions are behind a
+/// long-press.
+struct FolderChip: View {
+    let folder: Folder
+    let itemCount: Int
+    let onRename: @MainActor () -> Void
+    let onDelete: @MainActor () -> Void
+    let onSetPublished: @MainActor (Bool) -> Void
+
+    @Environment(\.pushRoute) private var pushRoute
+
+    var body: some View {
+        Button {
+            pushRoute(.folder(id: folder.id))
+        } label: {
+            LibraryChip(title: folder.name, count: itemCount, palette: FolderCardPalette.named(folder.color)) {
+                FolderBadge(folder: folder, size: 14)
+            }
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(folder.name)
+        .accessibilityValue(accessibilityCountLabel)
+        .contextMenu {
+            Button(action: onRename) {
+                Label("Edit", systemImage: "pencil")
+            }
+
+            // The label states what the action does next, so the stored state
+            // stays legible even while Profile Visibility is private.
+            Button {
+                onSetPublished(!folder.isPublished)
+            } label: {
+                Label(
+                    folder.isPublished ? "Remove from Profile" : "Publish to Profile",
+                    systemImage: "globe"
+                )
+            }
+
+            Divider()
+
+            Button(role: .destructive, action: onDelete) {
+                Label("Delete", systemImage: "trash")
+            }
+        }
+    }
+
+    private var accessibilityCountLabel: String {
+        let count = itemCount == 1 ? "1 saved item" : "\(itemCount) saved items"
+        return folder.isPublished ? "\(count), on your public profile" : count
+    }
+}
+
+/// The rows of a list of Saved Items with their swipe actions: the Library
+/// home, a Folder View, a Tag and Search all list saves the same way. Sorted
+/// by date, a list can put the saves under date headings, as Recents does.
+struct SavedItemListRows: View {
+    @Environment(\.openSavedItem) private var openSavedItem
+    let items: [SavedItem]
+    let store: ReadingListStore
+    var groupsByDate = false
+
+    var body: some View {
+        if groupsByDate {
+            let groups = SaveDateGroup.groups(items)
+            ForEach(groups) { group in
+                Section {
+                    ListGroupHeading(title: group.span.title)
+                    rows(group.items)
+                }
+            }
+        } else {
+            rows(items)
+        }
+    }
+
+    private func rows(_ slice: [SavedItem]) -> some View {
+        ForEach(slice) { item in
+            SavedItemRow(item: item, showsDomain: true) {
+                // The whole list, not one group: the Reader View steps on
+                // past a heading.
+                await openSavedItem(item, items.map(\.id))
+            } onToggleRead: {
+                await store.setRead(item, isRead: !item.isRead)
+            } onDelete: {
+                await store.delete(item)
+            }
+            .swipeActions(edge: .leading, allowsFullSwipe: true) {
+                Button {
+                    Task { await store.setRead(item, isRead: !item.isRead) }
+                } label: {
+                    Label(item.isRead ? "Unread" : "Read", systemImage: item.isRead ? "circle" : "checkmark.circle")
+                }
+                .tint(item.isRead ? .orange : .green)
+            }
+            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                Button(role: .destructive) {
+                    Task { await store.delete(item) }
+                } label: {
+                    Label("Delete", systemImage: "trash")
+                }
+            }
+            .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 0, trailing: 20))
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+        }
+    }
+}
+
+/// A Folder's emoji or, where it has none, a dot in its colour, as the web
+/// app and the Unread Widget show it.
+struct FolderBadge: View {
+    let folder: Folder
+    let size: CGFloat
+
+    var body: some View {
+        if let emoji = folder.emoji, !emoji.isEmpty {
+            Text(emoji)
+                .font(.system(size: size))
+        } else {
+            Circle()
+                .fill(Color(FolderCardPalette.named(folder.color).mid))
+                .frame(width: size * 0.6, height: size * 0.6)
+                .frame(width: size, height: size)
+        }
+    }
+}
+
+private extension Color {
+    init(_ rgb: SIMD3<Float>) {
+        self.init(red: Double(rgb.x), green: Double(rgb.y), blue: Double(rgb.z))
+    }
 }

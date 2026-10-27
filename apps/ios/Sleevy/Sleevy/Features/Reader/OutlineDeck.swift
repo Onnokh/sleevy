@@ -81,6 +81,7 @@ struct OutlineDeck: View {
                 .font(.system(size: 14, weight: .medium))
                 .foregroundStyle(isFront ? .primary : .secondary)
                 .lineLimit(1)
+                .frame(maxWidth: .infinity, alignment: .leading)
 
             Text(entry.excerpt)
                 .font(.system(size: 13))

@@ -139,3 +139,18 @@ extension String {
         return components.joined().uppercased()
     }
 }
+
+/// A Tag as the reader sees it. Tags are stored as lowercase slugs from the
+/// closed vocabulary ("ai", "front-end"); the names are the ones in CONTEXT.md.
+nonisolated func tagDisplayName(_ tag: String) -> String {
+    switch tag.lowercased() {
+    case "ai": "AI"
+    case "tools": "Tools"
+    case "typescript": "TypeScript"
+    case "security": "Security"
+    case "design": "Design"
+    case "backend": "Backend"
+    case "front-end": "Front-end"
+    default: tag.prefix(1).uppercased() + tag.dropFirst()
+    }
+}

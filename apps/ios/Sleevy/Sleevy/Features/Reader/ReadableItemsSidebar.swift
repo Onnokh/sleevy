@@ -1,7 +1,15 @@
 import SwiftUI
 
-/// The articles beside the article: every Saved Item in this scope that has a
-/// Reader View, with the one being read marked.
+extension EnvironmentValues {
+    /// The save on screen in a Reader View whose list of articles is in the
+    /// sidebar column, not beside the article. The column sets it to move the
+    /// reader on; the Reader View sets it when it moves on by itself.
+    @Entry var readerSidebarSelection: Binding<SavedItem.ID?>? = nil
+}
+
+/// The articles beside the article, or in the sidebar column where there is
+/// one: every Saved Item in this scope that has a Reader View, with the one
+/// being read marked.
 ///
 /// Mirrors the list column of the Web Companion's Reader View
 /// (`apps/web/src/pages/saved-item-reader-page.tsx`). Restricted to Saved
@@ -9,45 +17,36 @@ import SwiftUI
 /// that threw the reader out to the browser would break the one promise the
 /// pane makes, which is that reading happens here.
 ///
-/// It is a Library surface whatever it was opened from: the Inbox is the
-/// triage surface for unread Saved Items, and this list keeps the read ones
-/// too, because a reader working down a list should not watch rows vanish
+/// It is the list the article was opened from — a Folder, a Tag, Recents,
+/// Search — as it was at that moment: the Inbox drops a save once it is
+/// read, and a reader working down a list should not watch rows vanish
 /// behind them.
 struct ReadableItemsSidebar: View {
     let items: [SavedItem]
-    let selectedID: SavedItem.ID
+    let selectedID: SavedItem.ID?
     /// Set by the Reader View from the window and the posture, never from the
     /// titles, so the article's measure does not move as the reader steps from
-    /// a short title to a long one.
-    let width: CGFloat
+    /// a short title to a long one. Nil in a sidebar column, which sets its
+    /// own.
+    var width: CGFloat?
     let onSelect: (SavedItem) -> Void
 
     var body: some View {
         ScrollViewReader { proxy in
-            ScrollView {
-                LazyVStack(alignment: .leading, spacing: 2) {
-                    Text("Library")
-                        .font(.system(size: 22, weight: .bold))
-                        .padding(.horizontal, 8)
-                        .padding(.top, 4)
-                        .padding(.bottom, 8)
-
-                    ForEach(items) { item in
-                        row(for: item)
-                            .id(item.id)
-                    }
-                }
-                .padding(.horizontal, 12)
-                // The run-out below the last row, so the final rows can come
-                // to rest clear of the bottom edge.
-                .padding(.bottom, 64)
+            // Drawn as the Library Sidebar, so the column does not change
+            // its look when the reader opens an article from it.
+            List(items) { item in
+                row(for: item)
+                    .id(item.id)
             }
+            .sidebarList()
             .onAppear {
                 // Opening an article from deep in the Library should not leave
                 // its row off the top of the list.
-                proxy.scrollTo(selectedID, anchor: .center)
+                if let selectedID { proxy.scrollTo(selectedID, anchor: .center) }
             }
             .onChange(of: selectedID) { _, id in
+                guard let id else { return }
                 // No anchor, so the list moves the least it can to bring the
                 // row into view — the reader stepping down it should not have
                 // the whole column jump under them.
@@ -66,31 +65,21 @@ struct ReadableItemsSidebar: View {
         return Button {
             onSelect(item)
         } label: {
-            VStack(alignment: .leading, spacing: 3) {
-                Text(item.displayTitle)
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(.primary)
-                    .lineLimit(2)
-                    .multilineTextAlignment(.leading)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                HStack(spacing: 5) {
-                    SavedItemFavicon(item: item, size: 14)
+            Label {
+                VStack(alignment: .leading, spacing: 2) {
+                    // No bolder title for the row on screen, as on the web: a
+                    // bolder title is wider, and can wrap and move the rows.
+                    Text(item.displayTitle)
+                        .lineLimit(2)
                     Text(item.displayDomain)
-                        .font(.system(size: 12))
-                        .foregroundStyle(.secondary)
+                        .font(.caption)
+                        .foregroundStyle(Color(.faint))
                         .lineLimit(1)
                 }
+            } icon: {
+                SavedItemFavicon(item: item, size: 16)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(8)
-            .background(
-                RoundedRectangle(cornerRadius: 6)
-                    .fill(isSelected ? Color.primary.opacity(0.12) : Color.clear)
-            )
-            .contentShape(.rect)
         }
-        .buttonStyle(.plain)
-        .accessibilityAddTraits(isSelected ? [.isSelected, .isButton] : .isButton)
+        .sidebarRow(isSelected: isSelected)
     }
 }

@@ -12,13 +12,16 @@ struct OutlineScrub: Equatable {
 }
 
 /// The Article Outline as a scroll wheel, for the vertical bar a device puts
-/// beside the content (the iPhone Duo's system rail). One mark per section
-/// sits on a drum; the one level with the middle is the section being read.
+/// beside the content (the iPhone Duo's system rail): a thumb wheel whose
+/// ridges roll with the finger past a fixed line across its middle.
 ///
 /// The wheel turns with the finger rather than pointing at where it lands:
 /// every notch of travel clicks it on by one section, with a tick under the
-/// thumb, and the article follows. Past the first or last section it gives a
-/// little and bumps, and on release it settles back onto the notch.
+/// thumb, and the article scrolls there. A finger held at either end of the
+/// wheel keeps it turning, so a long outline needs no second stroke. Past the
+/// first or last section it gives a little and bumps, and on release it
+/// settles onto the notch. A tap opens the Outline Overview, and the wheel is
+/// lit while it is open.
 ///
 /// The wheel only reports where it is; the caller scrolls and draws the deck,
 /// since both are outside the bar.
@@ -29,23 +32,33 @@ struct OutlineScrubber: View {
     /// down, and with nil when it lifts. An adjustable action from VoiceOver
     /// is a scrub with a zero frame and no release.
     let onScrub: (OutlineScrub?) -> Void
+    let isOverviewShown: Bool
+    let onTap: () -> Void
 
     static let width: CGFloat = 44
 
-    /// The finger's travel from one section to the next.
-    private static let notch: CGFloat = 22
-    private static let fullMark: CGFloat = 22
+    /// The finger's travel from one section to the next. The ridges roll the
+    /// same distance, so they stay under the finger.
+    private static let notch: CGFloat = 28
 
     /// Shorter on a short screen: an item the bar cannot fit goes into its
     /// overflow menu, where a wheel is no use.
     private var height: CGFloat {
-        verticalSizeClass == .compact ? 100 : 132
+        verticalSizeClass == .compact ? 120 : 200
     }
 
     /// Where the wheel is, in sections, while a finger turns it: between
-    /// notches mid-turn, and past the ends while it is pulled beyond them.
+    /// notches mid-turn, and a little past the ends while it is pulled beyond
+    /// them.
     @State private var turn: CGFloat?
     @State private var turnStart = 0
+    @State private var travel: CGFloat = 0
+    /// The finger has turned the wheel on a notch, so lifting it is not a
+    /// tap.
+    @State private var hasTurned = false
+    /// Which way a finger held at an end keeps the wheel turning, or 0.
+    @State private var holdDirection = 0
+    @State private var holdTask: Task<Void, Never>?
     @State private var pointed: Int?
     @State private var isPastEnd = false
     @State private var frame = CGRect.zero
@@ -53,26 +66,27 @@ struct OutlineScrubber: View {
     @Environment(\.verticalSizeClass) private var verticalSizeClass
 
     var body: some View {
-        let position = turn ?? CGFloat(activeIndex)
         let shown = pointed ?? activeIndex
-        // The marks sit on a drum seen from the side: they close up and fade
-        // towards the ends, and a quarter turn from the middle is out of sight.
-        let radius = height / 2 - 8
+        let isHeld = turn != nil
 
         ZStack {
-            ForEach(outline.indices, id: \.self) { index in
-                let angle = (CGFloat(index) - position) * Self.notch / radius
-                if abs(angle) < .pi / 2 {
-                    let isShown = index == shown
-                    Capsule()
-                        .fill(isShown ? Color.accentColor : Color.secondary)
-                        .frame(width: Self.fullMark * (isShown ? 1 : 0.64), height: isShown ? 3 : 2)
-                        .opacity(isShown ? 1 : 0.5 * cos(angle))
-                        .offset(y: radius * sin(angle))
-                }
-            }
+            Capsule()
+                .fill(.primary.opacity(isOverviewShown ? 0.14 : 0))
+
+            WheelRidges(
+                position: turn ?? CGFloat(activeIndex),
+                stops: outline.count,
+                spacing: Self.notch / 2,
+                opacity: isHeld || isOverviewShown ? 0.5 : 0.3
+            )
+
+            Capsule()
+                .fill(Color.accentColor)
+                .frame(width: 24, height: 3)
         }
         .frame(width: Self.width, height: height)
+        .animation(.easeOut(duration: 0.15), value: isHeld)
+        .animation(.easeOut(duration: 0.15), value: isOverviewShown)
         .background(WindowFrameReader(probe: probe))
         .contentShape(.rect)
         .gesture(
@@ -80,15 +94,20 @@ struct OutlineScrubber: View {
                 .onChanged { drag in
                     if turn == nil {
                         turnStart = activeIndex
+                        hasTurned = false
                         frame = probe.frame
                     }
-                    turned(by: drag.translation.height)
+                    travel = drag.translation.height
+                    turned(by: travel)
+                    hold(direction: holdDirection(for: drag))
                 }
-                .onEnded { _ in
+                .onEnded { drag in
+                    hold(direction: 0)
                     withAnimation(.spring(duration: 0.3, bounce: 0.2)) { turn = nil }
                     pointed = nil
                     isPastEnd = false
                     onScrub(nil)
+                    if !hasTurned, abs(drag.translation.height) < 6 { onTap() }
                 }
         )
         .sensoryFeedback(.selection, trigger: pointed) { _, new in new != nil }
@@ -96,6 +115,7 @@ struct OutlineScrubber: View {
         .accessibilityElement()
         .accessibilityLabel("Article sections")
         .accessibilityValue(outline.indices.contains(shown) ? outline[shown].title : "")
+        .accessibilityAction { onTap() }
         .accessibilityAdjustableAction { direction in
             let next = switch direction {
             case .increment: activeIndex + 1
@@ -128,12 +148,90 @@ struct OutlineScrubber: View {
 
         let index = Int(min(max(held, 0), last).rounded())
         guard index != pointed else { return }
+        if pointed != nil { hasTurned = true }
         pointed = index
         onScrub(OutlineScrub(index: index, markY: frame.midY, frame: frame))
     }
 
+    /// Which way the finger asks the wheel to keep turning: towards an end it
+    /// is in, and has moved towards. A finger that lands on an end to turn
+    /// the other way is not held there.
+    private func holdDirection(for drag: DragGesture.Value) -> Int {
+        let end: CGFloat = 32
+        if drag.location.y < end, drag.translation.height < 0 { return -1 }
+        if drag.location.y > height - end, drag.translation.height > 0 { return 1 }
+        return 0
+    }
+
+    /// Turns the wheel on one section at a time for as long as the finger
+    /// stays at an end, at the pace of the article's scroll to each one.
+    private func hold(direction: Int) {
+        guard direction != holdDirection else { return }
+        holdDirection = direction
+        holdTask?.cancel()
+        holdTask = nil
+        guard direction != 0 else { return }
+
+        holdTask = Task {
+            while true {
+                try? await Task.sleep(for: .milliseconds(350))
+                guard !Task.isCancelled,
+                      outline.indices.contains((pointed ?? activeIndex) + direction)
+                else { return }
+                turnStart += direction
+                withAnimation(.smooth(duration: 0.25)) { turned(by: travel) }
+            }
+        }
+    }
+
     private static func give(_ overshoot: CGFloat) -> CGFloat {
         0.4 * overshoot / (1 + overshoot)
+    }
+}
+
+/// The wheel's ridges, two to a section, on a drum seen from the side: they
+/// close up and fade towards the ends. They stop at the first and last
+/// stops, with a wider ridge one beyond each, so the reader sees how near an
+/// end is. Drawn from the position as one animatable value, so a ridge never
+/// jumps as the wheel settles.
+private struct WheelRidges: View, Animatable {
+    var position: CGFloat
+    let stops: Int
+    let spacing: CGFloat
+    let opacity: Double
+
+    var animatableData: CGFloat {
+        get { position }
+        set { position = newValue }
+    }
+
+    var body: some View {
+        Canvas { context, size in
+            let radius = size.height / 2 - 6
+            let phase = position * 2
+            let first = Int(phase.rounded(.down))
+            let offset = phase - CGFloat(first)
+            let reach = Int(radius * .pi / 2 / spacing) + 1
+            let lastRidge = 2 * (stops - 1)
+
+            for ridge in -reach...reach {
+                // Counted from the first stop, two to a section.
+                let n = first + ridge
+                guard n >= -1, n <= lastRidge + 1 else { continue }
+                let angle = (CGFloat(ridge) - offset) * spacing / radius
+                guard abs(angle) < .pi / 2 else { continue }
+                let isEnd = n == -1 || n == lastRidge + 1
+                let y = size.height / 2 + radius * sin(angle)
+                // Thinner as it turns away, as an edge seen at a slant.
+                let thickness = (isEnd ? 3 : 2) * cos(angle)
+                let width: CGFloat = isEnd ? 30 : 18
+                let rect = CGRect(x: (size.width - width) / 2, y: y - thickness / 2, width: width, height: thickness)
+                context.fill(
+                    Path(roundedRect: rect, cornerRadius: thickness / 2),
+                    with: .color(.primary.opacity((isEnd ? 1.6 : 1) * opacity * cos(angle)))
+                )
+            }
+        }
     }
 }
 
@@ -166,19 +264,25 @@ private struct WindowFrameReader: UIViewRepresentable {
 }
 
 extension View {
-    /// Puts the scrubber in the vertical bar, where the device has one, and
-    /// reports which side of the screen the bar is on: nil while there is no
-    /// bar, before iOS 27.1, or with no outline to scrub.
+    /// Puts the scrubber in the vertical bar, where the device has one and
+    /// there is an outline to scrub, and reports which side of the screen the
+    /// bar is on: nil while there is no bar, or before iOS 27.1. A tap on it
+    /// opens the Outline Overview beside the bar; a row picked there is
+    /// reported to `onSelect`.
     func outlineScrubber(
         outline: ArticleOutline,
         activeIndex: Int,
+        isOverviewShown: Binding<Bool>,
         onScrub: @escaping (OutlineScrub?) -> Void,
+        onSelect: @escaping (Int) -> Void,
         onEdgeChange: @escaping (HorizontalEdge?) -> Void
     ) -> some View {
         modifier(OutlineScrubberPlacement(
             outline: outline,
             activeIndex: activeIndex,
+            isOverviewShown: isOverviewShown,
             onScrub: onScrub,
+            onSelect: onSelect,
             onEdgeChange: onEdgeChange
         ))
     }
@@ -187,7 +291,9 @@ extension View {
 private struct OutlineScrubberPlacement: ViewModifier {
     let outline: ArticleOutline
     let activeIndex: Int
+    @Binding var isOverviewShown: Bool
     let onScrub: (OutlineScrub?) -> Void
+    let onSelect: (Int) -> Void
     let onEdgeChange: (HorizontalEdge?) -> Void
 
     func body(content: Content) -> some View {
@@ -196,7 +302,9 @@ private struct OutlineScrubberPlacement: ViewModifier {
             content.modifier(VerticalBarScrubber(
                 outline: outline,
                 activeIndex: activeIndex,
+                isOverviewShown: $isOverviewShown,
                 onScrub: onScrub,
+                onSelect: onSelect,
                 onEdgeChange: onEdgeChange
             ))
         } else {
@@ -215,27 +323,37 @@ private struct OutlineScrubberPlacement: ViewModifier {
 private struct VerticalBarScrubber: ViewModifier {
     let outline: ArticleOutline
     let activeIndex: Int
+    @Binding var isOverviewShown: Bool
     let onScrub: (OutlineScrub?) -> Void
+    let onSelect: (Int) -> Void
     let onEdgeChange: (HorizontalEdge?) -> Void
 
     @Environment(\.toolbarVerticalEdge) private var edge
 
-    private var shownEdge: HorizontalEdge? {
-        outline.isEmpty ? nil : edge
-    }
-
     func body(content: Content) -> some View {
         content
             .toolbar {
-                if shownEdge != nil {
+                if let edge, !outline.isEmpty {
                     ToolbarItem(placement: .bottomBar) {
-                        OutlineScrubber(outline: outline, activeIndex: activeIndex, onScrub: onScrub)
+                        OutlineScrubber(
+                            outline: outline,
+                            activeIndex: activeIndex,
+                            onScrub: onScrub,
+                            isOverviewShown: isOverviewShown,
+                            onTap: { isOverviewShown = true }
+                        )
+                        // The arrow points back at the bar, on its side of
+                        // the screen.
+                        .popover(isPresented: $isOverviewShown, arrowEdge: edge == .trailing ? .trailing : .leading) {
+                            OutlineOverview(stops: outline, activeStop: activeIndex, onSelect: onSelect)
+                                .presentationCompactAdaptation(.popover)
+                        }
                     }
                     .axisBehavior(.verticalPreferred)
                     .contentMarginsRemoved()
                 }
             }
-            .onChange(of: shownEdge, initial: true) { _, new in onEdgeChange(new) }
+            .onChange(of: edge, initial: true) { _, new in onEdgeChange(new) }
     }
 }
 #endif

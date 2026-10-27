@@ -109,7 +109,8 @@ final class AuthStore {
         // Marketing-capture mode signs in as the demo Account without a token
         // exchange, so screenshots never show a real reader.
         if DemoMode.isEnabled {
-            session = DemoMode.session
+            // The `signin` capture shows the signed-out landing instead.
+            session = DemoMode.initialScreen == .signIn ? nil : DemoMode.session
             googleUserProfile = nil
             return
         }

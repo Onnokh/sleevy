@@ -132,6 +132,27 @@ struct RetrievalTests {
         #expect(projection.folderCounts.isEmpty)
     }
 
+    @Test func libraryProjectionFiltersByReadStateButKeepsCounts() {
+        let read = SavedItem.fixture(id: "read", isRead: true)
+        let unread = SavedItem.fixture(id: "unread", isRead: false)
+        let index = RetrievalIndex(globalItems: [read, unread], globalCoverage: .complete)
+
+        func items(_ readState: ReadStateFilter?) -> [String] {
+            RetrievalProjector.libraryProjection(
+                for: .libraryRoot,
+                filter: LibraryFilter(readState: readState),
+                sort: .title,
+                facetOrder: .name,
+                in: index
+            ).items.map(\.id)
+        }
+
+        #expect(items(.unread) == ["unread"])
+        #expect(items(.read) == ["read"])
+        #expect(items(nil).sorted() == ["read", "unread"])
+        #expect(LibraryFilter(readState: .unread).isActive)
+    }
+
     @Test func unchangedLibraryProjectionReadsReusePreparedWork() async {
         let environment = RetrievalTestEnvironment()
         environment.network.items["root"] = .fixture(id: "root", isRead: false)

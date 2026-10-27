@@ -22,6 +22,7 @@ nonisolated struct PublicSavedItem: Decodable, Identifiable, Equatable {
     let imageUrl: String?
     let authorName: String?
     let authorHandle: String?
+    let authorAvatarUrl: String?
     let type: String
     let tags: [String]
     let previewSummary: String?
@@ -61,6 +62,7 @@ final class PublicProfileLoader {
     private(set) var handle: String?
     private(set) var profile: PublicProfile?
     private(set) var items: [PublicSavedItem] = []
+    private(set) var activity: ReadingActivity?
     private(set) var isLoadingMore = false
     private var page = 0
     private var totalPages = 1
@@ -70,6 +72,7 @@ final class PublicProfileLoader {
             handle = DemoMode.profile.handle
             profile = DemoMode.publicProfile
             items = DemoMode.publicSavedItems
+            activity = DemoMode.readingActivity
             phase = .loaded
             return
         }
@@ -84,6 +87,7 @@ final class PublicProfileLoader {
         if handle != self.handle {
             profile = nil
             items = []
+            activity = nil
             page = 0
             totalPages = 1
         }
@@ -94,10 +98,13 @@ final class PublicProfileLoader {
         do {
             async let profileFetch: PublicProfile = Self.get("/v1/public/profiles/\(handle)")
             async let itemsFetch: PublicSavedItemsPage = Self.get("/v1/public/profiles/\(handle)/saved-items")
+            // The grid is an extra: without it the page still stands.
+            async let activityFetch: ReadingActivity? = try? Self.get("/v1/public/profiles/\(handle)/activity")
 
             let (profile, firstPage) = try await (profileFetch, itemsFetch)
 
             self.profile = profile
+            activity = await activityFetch ?? activity
             items = firstPage.savedItems
             page = firstPage.page
             totalPages = firstPage.totalPages
@@ -164,23 +171,31 @@ final class PublicProfileLoader {
 /// The in-app twin of the web's /u/{handle} page: the sleeved count, the
 /// member-since date, the Reading Activity grid, and the published Saved
 /// Items grouped by month.
+///
+/// Set like the Reader View, in one column at its measure and in the face
+/// the reader picked: the page is a list of things to read.
 @MainActor
 struct MyProfileView: View {
-    /// Breathing room between the navigation bar and the avatar's top.
-    private static let avatarAllowance: CGFloat = 24
-
     @Environment(PublicProfileLoader.self) private var loader
     @Environment(ProfileStore.self) private var profileStore
     @Environment(AuthStore.self) private var authStore
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     let session: AppSession
     @State private var isPublicizing = false
     @State private var isChangingHandle = false
     @State private var isTurningOff = false
     @State private var visibilityError: String?
+    @AppStorage("readerFont", store: SleevyUserPreferences.defaults)
+    private var font = ReaderFont.serif
+
+    /// A size up where the screen is wide, as in the Reader View.
+    private var type: ReaderType {
+        ReaderType(bodySize: horizontalSizeClass == .regular ? 19 : 18, font: font)
+    }
 
     var body: some View {
-        GeometryReader { geometry in
+        Group {
             switch profileStore.phase {
             case .loading:
                 ProgressView("Loading your profile...")
@@ -192,13 +207,11 @@ struct MyProfileView: View {
                     description: Text("Could not load your public profile. Pull to retry.")
                 )
             case .loaded:
-                profileList(headerTopInset: geometry.safeAreaInsets.top)
+                profileList
             }
         }
-        // Outside the header-card background, so the card paints on top of it.
-        .background(Color(.appBackground))
-        // No navigation title: the hero card carries the identity, and only
-        // the floating back button overlays it.
+        .background(Color(.systemBackground))
+        // No navigation title: the avatar and the handle carry the identity.
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -217,6 +230,16 @@ struct MyProfileView: View {
                             isChangingHandle = true
                         } label: {
                             Label("Change Handle", systemImage: "at")
+                        }
+
+                        // Seldom wanted, so it waits here and not on the page.
+                        // One tap hides the page, as on the web, and the
+                        // handle stays reserved.
+                        if profileStore.isPublic {
+                            Button(action: makePrivate) {
+                                Label("Make Private", systemImage: "lock")
+                            }
+                            .disabled(isTurningOff)
                         }
                     } label: {
                         Image(systemName: "ellipsis.circle")
@@ -262,76 +285,28 @@ struct MyProfileView: View {
         }
     }
 
-    private func profileList(headerTopInset: CGFloat) -> some View {
-        // The card ends halfway down the avatar, which straddles the card's
-        // bottom edge; handle and total sit below it on the page.
-        let headerCardHeight = headerTopInset + Self.avatarAllowance + profileAvatarSize / 2
-
-        return List {
+    private var profileList: some View {
+        List {
             Section {
-                VStack(spacing: 4) {
-                    if let handle = profileStore.profile?.handle {
-                        Text("@\(handle)")
-                            .font(.system(size: 24, weight: .bold))
-                    }
-
-                    if profileStore.isPublic, let count = loader.profile?.publicSavedItemCount {
-                        Text("\(count) Sleeved")
-                            .font(.system(size: 15, weight: .medium))
-                            .foregroundStyle(.secondary)
-                    }
-                }
-                .frame(maxWidth: .infinity)
-                .listRowInsets(EdgeInsets(top: 0, leading: 18, bottom: 14, trailing: 18))
-                // The first row under the hero card; the card hangs from it.
-                .stretchyHeaderAnchor(rank: 0)
-                .listRowSeparator(.hidden)
-
-                Button(action: handleVisibilityTap) {
-                    Text(visibilityButtonTitle)
-                        .font(.system(size: 15, weight: .semibold))
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.prominent)
-                .controlSize(.large)
-                .disabled(isTurningOff)
-                .listRowInsets(EdgeInsets(top: 4, leading: 24, bottom: 16, trailing: 24))
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
+                // The header ends as a card does, so the first month heading
+                // has the same space above it as every other one.
+                header
+                    .padding(.top, 8)
+                    .padding(.bottom, type.cardPadding)
+                    .readerColumn(type)
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
             }
 
             if profileStore.isPublic {
                 publicContent
-            } else {
-                Section {
-                    privateStateView
-                        .listRowInsets(EdgeInsets(top: 0, leading: 24, bottom: 0, trailing: 24))
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
-                }
             }
         }
         .listStyle(.plain)
+        .groupedSavesList()
         .scrollContentBackground(.hidden)
         .scrollBounceBehavior(.always, axes: .vertical)
-        // The shared header-card mechanic (see `stretchyHeaderCard`); the
-        // extra margin also clears the avatar's bottom half hanging under
-        // the card.
-        .stretchyHeaderCard(
-            height: headerCardHeight,
-            topInset: headerTopInset,
-            extraTopMargin: profileAvatarSize / 2 + 14
-        ) { context in
-            ProfileHeroCard(height: context.height, isVisible: context.isVisible, sideInsets: context.sideInsets) {
-                ProfileAvatar(
-                    name: session.displayName,
-                    imageURL: session.provider == .google ? authStore.googleUserProfile?.imageURL : nil
-                )
-            }
-        }
-        // No forced scheme: the arc field is a dark slab only in dark mode,
-        // and see-through pastel in light mode, so the back button and menu
-        // read correctly from the real scheme.
         // Favicons warm as soon as items arrive, off the scroll path.
         .task(id: loader.items) {
             await FaviconPrefetcher.warm(
@@ -363,32 +338,36 @@ struct MyProfileView: View {
         case .loaded:
             if loader.items.isEmpty {
                 Text("Nothing here yet. Publish a folder from its menu, and everything in it shows on your page.")
-                    .font(.subheadline)
+                    .font(.system(size: type.metaSize))
                     .foregroundStyle(.secondary)
-                    .multilineTextAlignment(.center)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 24)
-                    .listRowInsets(EdgeInsets(top: 0, leading: 24, bottom: 0, trailing: 24))
+                    .readerColumn(type)
+                    .listRowInsets(EdgeInsets())
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
             }
 
             ForEach(monthSections, id: \.title) { section in
                 Section {
+                    // Nearer its first card than the card before it, so it
+                    // reads as the start of a group and not the end of one.
+                    Text(section.title)
+                        .font(.system(size: type.headingSize, weight: .semibold))
+                        .foregroundStyle(.secondary)
+                        .accessibilityAddTraits(.isHeader)
+                        .readerColumn(type)
+                        .listRowInsets(EdgeInsets())
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
                     ForEach(section.items) { item in
-                        PublicSavedItemRow(item: item)
-                            .listRowInsets(EdgeInsets(top: 0, leading: 18, bottom: 0, trailing: 18))
+                        PublicSavedItemCard(item: item, type: type)
+                            .readerColumn(type)
+                            .listRowInsets(EdgeInsets())
                             .listRowBackground(Color.clear)
-                            .listRowSeparatorTint(.primary.opacity(0.08))
+                            .listRowSeparator(.hidden)
                             .task {
                                 await loader.loadMoreIfNeeded(current: item)
                             }
                     }
-                } header: {
-                    Text(section.title)
-                        .font(.system(size: 13, weight: .semibold))
-                        .kerning(1.1)
-                        .foregroundStyle(.secondary)
                 }
             }
 
@@ -401,40 +380,130 @@ struct MyProfileView: View {
         }
     }
 
-    private var privateStateView: some View {
-        VStack(spacing: 12) {
-            Image(systemName: "lock")
-                .font(.system(size: 26, weight: .medium))
-                .foregroundStyle(.secondary)
+    /// Who the page is, where the reader's article title would be: the
+    /// newest images as a cover, with the avatar and the handle over its
+    /// foot, then the facts and the year's Reading Activity. A private page
+    /// says so instead, and offers the step that makes it public.
+    private var header: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            identity
 
+            if profileStore.isPublic {
+                publicFacts
+
+                if let activity = loader.activity, let handle = profileStore.profile?.handle {
+                    ReadingActivityBars(activity: activity, handle: handle)
+                        .frame(height: 36)
+                        .padding(.top, type.line)
+                }
+            } else {
+                Text("Private")
+                    .font(.system(size: type.smallSize))
+                    .foregroundStyle(.secondary)
+                    .padding(.top, 10)
+
+                privateNote
+                    .padding(.top, type.line * 0.75)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// The avatar and the handle, over the foot of the cover where there is
+    /// one.
+    @ViewBuilder
+    private var identity: some View {
+        let images = coverImages
+        if images.isEmpty {
+            nameplate
+        } else {
+            ZStack(alignment: .bottomLeading) {
+                ProfileCover(images: images, tileSize: (type.measure / 3).rounded(.up))
+                nameplate
+                    .padding(.horizontal, 4)
+            }
+        }
+    }
+
+    private var nameplate: some View {
+        HStack(spacing: 12) {
+            ProfileAvatar(
+                name: session.displayName,
+                imageURL: session.provider == .google ? authStore.googleUserProfile?.imageURL : nil
+            )
+            // A ring in the page color lifts the avatar off the cover.
+            .overlay { Circle().strokeBorder(Color(.systemBackground), lineWidth: 3) }
+
+            if let handle = profileStore.profile?.handle {
+                Text("@\(handle)")
+                    .font(.system(size: type.handleSize, weight: .bold, design: type.font.design))
+                    .foregroundStyle(.primary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+            }
+        }
+    }
+
+    /// The newest items' images in whole rows of three, at most two rows.
+    /// None where there are fewer than three: a cover with gaps looks broken.
+    private var coverImages: [URL] {
+        let images = loader.items.compactMap { $0.imageUrl.flatMap(URL.init(string:)) }.prefix(6)
+        return Array(images.prefix(images.count / 3 * 3))
+    }
+
+    /// The count and the join date, then the address a visitor types, which
+    /// shares the page from here.
+    @ViewBuilder
+    private var publicFacts: some View {
+        if let profile = loader.profile {
+            Text("\(profile.publicSavedItemCount) Sleeved · Joined \(profile.joinedAt.formatted(.dateTime.month(.abbreviated).year()))")
+                .font(.system(size: type.smallSize))
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+                .padding(.top, 10)
+        }
+
+        if let handle = profileStore.profile?.handle {
+            ShareLink(item: HandleRules.publicProfileURL(handle: handle)) {
+                HStack(spacing: 4) {
+                    Image(systemName: "globe")
+                        .font(.system(size: type.smallSize - 2))
+                    Text(HandleRules.displayProfileURL(handle: handle))
+                        .font(.system(size: type.smallSize))
+                        .lineLimit(1)
+                }
+                .foregroundStyle(.secondary)
+            }
+            .buttonStyle(.plain)
+            .padding(.top, 2)
+        }
+    }
+
+    private var privateNote: some View {
+        VStack(alignment: .leading, spacing: 0) {
             Text(
                 profileStore.profile == nil
                     ? "Choose a handle to hold your page address. Your handle is yours from that moment, and your profile stays private until you make it public yourself."
-                    : "Private. Nobody can reach this address, and your handle stays reserved for you."
+                    : "Nobody can reach this address, and your handle stays reserved for you."
             )
-            .font(.subheadline)
+            .font(.system(size: type.metaSize))
+            .lineSpacing(type.metaSize * 0.25)
             .foregroundStyle(.secondary)
-            .multilineTextAlignment(.center)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, 28)
-    }
 
-    private var visibilityButtonTitle: String {
-        if isTurningOff { return "Turning Off…" }
-        return profileStore.isPublic ? "Make Private" : "Make Public"
-    }
-
-    private func handleVisibilityTap() {
-        if profileStore.isPublic {
-            makePrivate()
-        } else {
-            isPublicizing = true
+            Button {
+                isPublicizing = true
+            } label: {
+                Text("Make Public")
+                    .font(.system(size: type.metaSize, weight: .semibold))
+                    .padding(.horizontal, 4)
+            }
+            .buttonStyle(.prominent)
+            .buttonBorderShape(.capsule)
+            .padding(.top, type.line * 0.75)
         }
     }
 
-    /// Turning the page off is never gated, mirroring the web: one tap hides
-    /// it, and the handle stays reserved.
     private func makePrivate() {
         Task {
             isTurningOff = true
@@ -452,14 +521,14 @@ struct MyProfileView: View {
         let items: [PublicSavedItem]
     }
 
-    /// The published items grouped into "AUGUST 2026"-style sections, newest
+    /// The published items grouped into "August 2026"-style sections, newest
     /// month first; the API already orders items newest first within it.
     private var monthSections: [MonthSection] {
         var sections: [MonthSection] = []
         var currentKey: String?
 
         for item in loader.items {
-            let title = item.savedAt.formatted(.dateTime.month(.wide).year()).uppercased()
+            let title = item.savedAt.formatted(.dateTime.month(.wide).year())
             if title != currentKey {
                 sections.append(MonthSection(title: title, items: []))
                 currentKey = title
@@ -476,51 +545,14 @@ struct MyProfileView: View {
 
 // MARK: - Header pieces
 
-/// The avatar's diameter; the header card ends at its vertical center.
-private let profileAvatarSize: CGFloat = 96
+/// The avatar's diameter.
+private let profileAvatarSize: CGFloat = 56
 
-/// The card at the top of the profile — the Inbox header card's sibling,
-/// full-bleed from the top and side edges with rounded bottom corners.
-/// Where the Inbox gets the aurora, the profile gets the arc: a slow bow
-/// of periwinkle light from the folder cards' shader family. The avatar
-/// overlays the card's bottom edge, half in and half out, and rides along
-/// when a pull-down stretches the card.
-private struct ProfileHeroCard<Avatar: View>: View {
-    let height: CGFloat
-    let isVisible: Bool
-    let sideInsets: EdgeInsets
-    @ViewBuilder let avatar: Avatar
-
-    var body: some View {
-        FolderCardGradient(
-            palette: .blue,
-            shape: 0.5,
-            seed: 26,
-            animated: isVisible,
-            style: .arc
-        )
-        .frame(height: height)
-        .frame(maxWidth: .infinity)
-        .clipShape(.rect(
-            bottomLeadingRadius: 28,
-            bottomTrailingRadius: 28,
-            style: .continuous
-        ))
-        // After the clip, so the hanging half is not cut off.
-        .overlay(alignment: .bottom) {
-            // Centered on the content, not on the card's wider paint.
-            avatar
-                .offset(y: profileAvatarSize / 2)
-                .padding(sideInsets)
-        }
-    }
-}
-
-/// The circular avatar that straddles the header card's bottom edge, ringed
-/// so it reads as sitting on top of the card, like a traditional profile.
+/// The circular avatar at the top of the profile.
 private struct ProfileAvatar: View {
     let name: String
     let imageURL: URL?
+    var size = profileAvatarSize
 
     var body: some View {
         ZStack {
@@ -537,84 +569,91 @@ private struct ProfileAvatar: View {
                 monogram
             }
         }
-        .frame(width: profileAvatarSize, height: profileAvatarSize)
+        .frame(width: size, height: size)
         .clipShape(Circle())
-        .overlay(
-            Circle().strokeBorder(Color(.appBackground), lineWidth: 4)
-        )
         .accessibilityHidden(true)
     }
 
     private var monogram: some View {
         Text(name.initials)
-            .font(.system(size: 30, weight: .semibold))
+            .font(.system(size: (size * 0.34).rounded(), weight: .semibold))
             .foregroundStyle(.secondary)
     }
 }
 
-
-// MARK: - Item row
-
-/// The Inbox row's twin: same favicon, title, host, and recency label, so
-/// the profile page reads like the rest of the app. Only the actions differ —
-/// a public item just opens, copies, or shares.
-private struct PublicSavedItemRow: View {
-    let item: PublicSavedItem
+/// The newest images, three to a row, fading into the page at the foot so
+/// the handle over it stays readable. An image that cannot load leaves its
+/// tile blank, not a hole.
+private struct ProfileCover: View {
+    let images: [URL]
+    /// At least the widest a tile is drawn, so each image fills its tile.
+    let tileSize: CGFloat
 
     var body: some View {
-        Button {
-            guard let url = URL(string: item.originalUrl) else { return }
-            UIApplication.shared.open(url)
-        } label: {
-            HStack(alignment: .top, spacing: 12) {
-                SavedItemFavicon(
-                    faviconURL: item.faviconUrl.flatMap(URL.init(string:)),
-                    monogram: String(displayHost.prefix(1)).uppercased()
-                )
-
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(item.title ?? item.originalUrl)
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(.primary)
-                        .lineLimit(1)
-                        .multilineTextAlignment(.leading)
-
-                    Text(displayHost)
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(.secondary)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-
-                Text(item.savedAt.compactRecencyLabel)
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(.secondary)
-                    .monospacedDigit()
-                    .padding(.top, 2)
-            }
-            .contentShape(Rectangle())
-            .padding(.vertical, 14)
-        }
-        .buttonStyle(.plain)
-        .contextMenu {
-            if let url = URL(string: item.originalUrl) {
-                Button {
-                    UIPasteboard.general.url = url
-                } label: {
-                    Label("Copy Link", systemImage: "doc.on.doc")
-                }
-
-                ShareLink(item: url, preview: SharePreview(item.title ?? item.host)) {
-                    Label("Share", systemImage: "square.and.arrow.up")
-                }
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 3), count: 3), spacing: 3) {
+            ForEach(Array(images.enumerated()), id: \.offset) { _, url in
+                Color(.secondarySystemBackground)
+                    .aspectRatio(1, contentMode: .fit)
+                    .overlay { ProfileThumbnail(url: url, size: tileSize, shape: Rectangle()) }
+                    .clipped()
             }
         }
+        .clipShape(.rect(cornerRadius: 20, style: .continuous))
+        .overlay {
+            LinearGradient(
+                stops: [
+                    .init(color: Color(.systemBackground).opacity(0), location: 0.2),
+                    .init(color: Color(.systemBackground).opacity(0.85), location: 0.8),
+                    .init(color: Color(.systemBackground), location: 1),
+                ],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+        }
+        .accessibilityHidden(true)
     }
+}
 
-    private var displayHost: String {
-        item.host.replacingOccurrences(
-            of: #"^www\."#,
-            with: "",
-            options: .regularExpression
-        )
+// MARK: - Layout
+
+/// The Public Profile's sizes, from the reader's, so the page and the
+/// Reader View share one scale.
+extension ReaderType {
+    /// Where a card is from and what it says: a step under the meta size, so
+    /// the title leads.
+    var smallSize: CGFloat { metaSize - 1 }
+
+    /// The handle: a step over the article title, since it is the title of
+    /// the whole page.
+    var handleSize: CGFloat { (titleSize * 1.15).rounded() }
+
+    /// A month over its cards: smaller than the cards' own labels, and bold
+    /// to make up for it.
+    var headingSize: CGFloat { metaSize - 2 }
+
+    /// Above and below a card's content: half a line, so cards are a line
+    /// apart.
+    var cardPadding: CGFloat { (line / 2).rounded() }
+
+    /// The byline a card opens with, the site or the Link Author: one height
+    /// for a favicon and for an avatar, so a Post Card's text starts where a
+    /// Link Card's title does.
+    var bylineHeight: CGFloat { smallSize + 5 }
+
+    /// Between the byline and the text under it.
+    var bylineGap: CGFloat { 5 }
+
+    /// One leading for every line of text on a card, tighter than the Reader
+    /// View's prose since a card is read at a glance.
+    var cardLineSpacing: CGFloat { (bodySize * 0.12).rounded() }
+}
+
+extension View {
+    /// One column at the reader's measure, margins included, centred where the
+    /// screen is wider. Its rows take no list insets.
+    fileprivate func readerColumn(_ type: ReaderType) -> some View {
+        padding(.horizontal, 20)
+            .frame(maxWidth: type.measure, alignment: .leading)
+            .frame(maxWidth: .infinity)
     }
 }

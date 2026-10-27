@@ -63,37 +63,37 @@ nonisolated extension DemoMode {
         // Unfiled and unread — the top of the Inbox.
         item("craigmod.com", "Fast Software, the Best Software",
              "Software that responds instantly respects the person using it.",
-             minutes: 35),
+             minutes: 35, tags: ["tools", "design"]),
         item("paulgraham.com", "How to Do Great Work",
              "Choose work you have a natural aptitude for and a deep interest in.",
-             hours: 2),
+             hours: 2, tags: ["ai"]),
         item("swiftbysundell.com", "Observation in SwiftUI, explained",
              "How the Observation framework changes the way views track state.",
-             hours: 3, folder: "demo-folder-engineering"),
+             hours: 3, folder: "demo-folder-engineering", tags: ["front-end"]),
         item("quantamagazine.org", "The Year in Math",
              "Proofs that reshaped how mathematicians think about old problems.",
-             hours: 4),
+             hours: 4, tags: ["ai"]),
         item("rauno.me", "Invisible Details of Interaction Design",
              "The small decisions nobody notices until they are missing.",
-             hours: 6, folder: "demo-folder-design"),
+             hours: 6, folder: "demo-folder-design", tags: ["design", "front-end"]),
         item("theverge.com", "The quiet return of the personal website",
              "People are leaving the feeds and building small homes on the web again.",
-             hours: 8),
+             hours: 8, tags: ["front-end"]),
         item("interconnected.org", "Notes on ambient computing",
              "What happens when the computer stops asking for your attention.",
-             hours: 12),
+             hours: 12, tags: ["ai", "design"]),
         item("newyorker.com", "The Art of Doing Nothing",
              "A case for the unscheduled hour.",
              days: 1, folder: "demo-folder-longreads"),
         item("css-tricks.com", "Modern CSS Layout Patterns",
              "Container queries, subgrid, and the end of the layout hack.",
-             days: 1, folder: "demo-folder-design"),
+             days: 1, folder: "demo-folder-design", tags: ["front-end", "design"]),
         item("developer.apple.com", "Meet Liquid Glass",
              "The new material that carries depth across the system.",
-             days: 1, folder: "demo-folder-engineering"),
+             days: 1, folder: "demo-folder-engineering", tags: ["design"]),
         item("arstechnica.com", "The physics of a good espresso",
              "Pressure, grind, and the surprisingly deep science of a small cup.",
-             days: 1),
+             days: 1, tags: ["ai"]),
         item("kottke.org", "A Field Guide to Reading Slowly",
              "Notes on finishing what you start.",
              days: 2),
@@ -102,7 +102,7 @@ nonisolated extension DemoMode {
              days: 2),
         item("37signals.com", "Shipping is a feature",
              "The work is not done until someone else can use it.",
-             days: 2, folder: "demo-folder-engineering"),
+             days: 2, folder: "demo-folder-engineering", tags: ["tools"]),
         item("seriouseats.com", "The Best Weeknight Ragu",
              "Deep flavour in forty minutes, not four hours.",
              days: 2, folder: "demo-folder-recipes"),
@@ -122,16 +122,16 @@ nonisolated extension DemoMode {
         // Already read — depth for the Library and the read/unread contrast.
         item("stratechery.com", "The Attention Economy, Revisited",
              "Where the incentives of the feed break down.",
-             days: 3, isRead: true),
+             days: 3, isRead: true, tags: ["ai"]),
         item("smashingmagazine.com", "Designing for Focus",
              "Interfaces that get out of the way of the work.",
-             days: 4, isRead: true, folder: "demo-folder-design"),
+             days: 4, isRead: true, folder: "demo-folder-design", tags: ["design"]),
         item("daringfireball.net", "On Interface Craft",
              "Why the details are the product.",
-             days: 5, isRead: true, folder: "demo-folder-design"),
+             days: 5, isRead: true, folder: "demo-folder-design", tags: ["design"]),
         item("github.blog", "How we cut build times in half",
              "Caching, parallelism, and measuring the right thing.",
-             days: 6, isRead: true, folder: "demo-folder-engineering"),
+             days: 6, isRead: true, folder: "demo-folder-engineering", tags: ["tools", "backend", "typescript"]),
         item("theguardian.com", "The people who log off",
              "Life after the notification.",
              days: 7, isRead: true, folder: "demo-folder-longreads"),
@@ -146,10 +146,10 @@ nonisolated extension DemoMode {
              days: 10, isRead: true, folder: "demo-folder-travel"),
         item("wired.com", "The Web We Lost",
              "An argument for the open, linkable internet.",
-             days: 11, isRead: true),
+             days: 11, isRead: true, tags: ["security", "backend"]),
         item("hey.com", "Email should be calm",
              "Rethinking the inbox from the ground up.",
-             days: 12, isRead: true),
+             days: 12, isRead: true, tags: ["tools"]),
     ]
 
     /// Builds one fixture Saved Item. The favicon points at a public icon
@@ -163,7 +163,8 @@ nonisolated extension DemoMode {
         hours: Int = 0,
         days: Int = 0,
         isRead: Bool = false,
-        folder folderID: String? = nil
+        folder folderID: String? = nil,
+        tags: [String] = []
     ) -> SavedItem {
         let age = TimeInterval(minutes) * 60 + TimeInterval(hours) * 3600 + TimeInterval(days) * 86_400
         let savedAt = referenceDate.addingTimeInterval(-age)
@@ -187,7 +188,7 @@ nonisolated extension DemoMode {
             canonicalURL: url,
             previewSummary: summary,
             type: "article",
-            tags: [],
+            tags: tags,
             enrichmentStatus: .enriched,
             sourceName: host,
             captureChannel: "ios-share",
@@ -212,9 +213,10 @@ nonisolated extension DemoMode {
     /// row it was opened from. Enough shapes — headings, a list, a quote — to
     /// show that the Reader View renders structure and not just paragraphs.
     static func readableContent(for item: SavedItem) -> ReadableContent {
-        let summary = item.previewSummary ?? ""
         let markdown = """
-        \(summary)
+        Speed is not a number on a benchmark. It is the gap between a thought
+        and the thing on the screen. When that gap closes, a tool stops feeling
+        like a tool, and the work is all that is left.
 
         ## Why it matters
 
@@ -343,12 +345,42 @@ nonisolated extension DemoMode {
                     imageUrl: nil,
                     authorName: nil,
                     authorHandle: nil,
+                    authorAvatarUrl: nil,
                     type: item.type,
                     tags: item.tags,
                     previewSummary: item.previewSummary,
                     savedAt: item.lastSavedAt
                 )
             }
+    }
+
+    /// A year of first captures for the Reading Activity grid, from the day
+    /// `publicProfile` joined: about half the days none, most others one or
+    /// two, a few busy ones, the same on every launch.
+    static var readingActivity: ReadingActivity {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .gmt
+        let format = Date.ISO8601FormatStyle(timeZone: .gmt).year().month().day()
+        let today = calendar.startOfDay(for: referenceDate)
+        let first = calendar.date(byAdding: .day, value: -364, to: today) ?? today
+        let joined = calendar.date(byAdding: .month, value: -8, to: today) ?? first
+
+        let days = (0 ... 364).compactMap { offset -> ReadingActivity.Day? in
+            guard let date = calendar.date(byAdding: .day, value: offset, to: first),
+                  date >= joined
+            else { return nil }
+            let roll = UInt32(truncatingIfNeeded: (offset + 7) &* 2_654_435_761) % 100
+            let count = switch roll {
+            case ..<50: 0
+            case ..<75: 1
+            case ..<90: 2
+            case ..<97: 4
+            default: 8
+            }
+            return count == 0 ? nil : ReadingActivity.Day(date: date.formatted(format), count: count)
+        }
+
+        return ReadingActivity(from: first.formatted(format), to: today.formatted(format), days: days)
     }
 
     static var publicProfile: PublicProfile {
@@ -375,6 +407,9 @@ nonisolated extension DemoMode {
         case profile
         case search
         case reader
+        case tag
+        case settings
+        case signIn = "signin"
     }
 
     static var initialScreen: Screen? {
@@ -386,6 +421,19 @@ nonisolated extension DemoMode {
     /// capture shows a Folder that also appears on the Public Profile.
     static var featuredFolderID: String? {
         folders.first(where: \.isPublished)?.id
+    }
+
+    /// The Tag the `tag` screen opens.
+    static let featuredTag = "design"
+
+    /// The Inbox in its own order, newest first: the list the Reader View
+    /// steps through when the demo opens straight on it, before the store has
+    /// loaded anything.
+    static var inboxItemIDs: [SavedItem.ID] {
+        savedItems
+            .filter { !$0.isRead }
+            .sorted { $0.lastSavedAt > $1.lastSavedAt }
+            .map(\.id)
     }
 
     /// The Saved Item the `reader` screen opens: the first one with a Reader

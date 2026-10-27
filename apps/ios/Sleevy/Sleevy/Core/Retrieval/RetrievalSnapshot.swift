@@ -14,6 +14,15 @@ nonisolated enum RetrievalCoverage: String, Codable, Equatable, Sendable {
     case complete
     case failed
     case stale
+
+    /// Whether a first answer is in, from the cache or the API. Before that,
+    /// an empty list says nothing about what the reader has.
+    var hasLoaded: Bool {
+        switch self {
+        case .notRequested, .loading: false
+        case .cached, .complete, .failed, .stale: true
+        }
+    }
 }
 
 nonisolated struct RetrievalSnapshot: Equatable, Sendable {

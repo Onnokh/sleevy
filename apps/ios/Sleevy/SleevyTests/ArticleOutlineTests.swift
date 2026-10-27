@@ -132,6 +132,36 @@ struct ArticleSectionsTests {
     }
 }
 
+@Suite("HTML blocks")
+struct HTMLBlocksTests {
+    @Test("blanks an HTML block and keeps the line count")
+    func blanksBlock() {
+        let markdown = ["Intro.", "", "<div class=\"infobox\"><table>", "<tr><td>Born</td></tr></table></div>", "", "Prose."]
+            .joined(separator: "\n")
+        let result = withoutHTMLBlocks(markdown)
+
+        #expect(result == ["Intro.", "", "", "", "", "Prose."].joined(separator: "\n"))
+    }
+
+    @Test("blanks a comment up to its end, blank lines included")
+    func blanksComment() {
+        let markdown = ["<!-- one", "", "two -->", "Prose."].joined(separator: "\n")
+
+        #expect(withoutHTMLBlocks(markdown) == ["", "", "", "Prose."].joined(separator: "\n"))
+    }
+
+    @Test("keeps inline markup, autolinks and code")
+    func keepsWhatIsNotABlock() {
+        let markdown = [
+            "A line", "<span>inside a paragraph</span>", "",
+            "<https://example.com>", "",
+            "```html", "<div>an example</div>", "```",
+        ].joined(separator: "\n")
+
+        #expect(withoutHTMLBlocks(markdown) == markdown)
+    }
+}
+
 @Suite("Active outline entry")
 struct ActiveOutlineIndexTests {
     private let tops: [CGFloat] = [1000, 2000, 3000]

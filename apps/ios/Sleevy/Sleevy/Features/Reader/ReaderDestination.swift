@@ -23,3 +23,13 @@ nonisolated func hasReaderView(_ item: SavedItem) -> Bool {
 nonisolated func opensInReader(_ item: SavedItem, readerViewDisabled: Bool) -> Bool {
     !readerViewDisabled && hasReaderView(item)
 }
+
+extension ReadingListStore {
+    /// The saves a Reader View lists: the list it was opened from, or the
+    /// Library when it was opened from no list, kept to the ones that have a
+    /// Reader View so every row leads somewhere.
+    func readableItems(in sequence: [SavedItem.ID]) -> [SavedItem] {
+        let items = sequence.isEmpty ? snapshot(for: .libraryRoot).items : sequence.compactMap(savedItem(id:))
+        return items.filter(hasReaderView)
+    }
+}

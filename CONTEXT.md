@@ -239,6 +239,14 @@ _Avoid_: In-app browser, web view, archive view, detail screen
 The sections of a Readable Content, read out of its Markdown: for each, the heading in plain words, the opening of the section, and an id the Reader View can send the reader to. It is derived, never stored, and the same on every client because the Markdown is.
 _Avoid_: Table of contents, index, navigation, breadcrumbs
 
+**Outline Overview**:
+The whole **Article Outline** at once, opened from a tap on the scroll wheel: the article's title, then every section, with the one being read marked. A row sends the reader to that place, as a turn of the wheel does.
+_Avoid_: Table of contents, bookmarks, contents page
+
+**Sidebar Stack**:
+The rule for the way back in a wide window of the Native iOS App: the sidebar column is a stack, and the way back is at its top. The **Library Sidebar** is the first level. A **Reader View** puts a second level on it: the list the article was opened from, as it was then, with its name where the mark was and a back button before it that closes the Reader View. The vertical bar holds only what can be done with what is on screen, never a way back, and the sidebar button only opens and closes the column.
+_Avoid_: Breadcrumbs, back button in the vertical bar
+
 **Enrichment Job**:
 An asynchronous backend task that performs Enrichment for a Link after capture.
 _Avoid_: Save request, synchronous enrichment
@@ -404,7 +412,7 @@ A lightweight Library browsing surface that reuses Saved Item list UI across the
 _Avoid_: Knowledge base, advanced search
 
 **Home Tab**:
-The native iOS tab label for the Inbox.
+The native iOS tab for the Inbox, labeled "Recents" with a clock icon. It comes after the Library Tab, and the app opens on the Library Tab.
 _Avoid_: Queue Tab, Library Tab
 
 **All Caught Up**:
@@ -631,6 +639,7 @@ _Avoid_: Deep link, route argument, UI test step
 - The **Web Companion** represents Folder navigation with **Web Folder Routes**, leaving query state available for sorting or filtering within a Folder View.
 - The **Web Companion** creates Folders from the Library sidebar and exposes rename and delete through a Folder contextual menu.
 - The **Web Companion** shows its Library sidebar as a standing column on a wide viewport and as a **Sidebar Sheet** — an off-canvas panel opened from a floating menu button — on a narrow one, with the same rows in both.
+- In a window at least 768 points wide — the iPhone Duo held wide — the **Native iOS App** puts a **Library Sidebar** beside the content in place of its tab bar, drawn as the Web Companion's sidebar: the mark, the **Public Profile** and Settings, Recents, the **Library** and Search, then the Folders, then the Tags, each with its count. The Tags are closed until the reader opens them, and stay as the reader leaves them. Creased like a book, the sidebar is the left page and the content the right, divided on the hinge; while a **Reader View** is open, the same column lists the readable Saved Items of the list it was opened from, a level down in the **Sidebar Stack**. Each time the window turns wide, the sidebar is open, as at launch. What a row opens is the root of the content column, not pushed on the **Library**; turning the device to tall puts a Folder or a Tag back on the **Library**, so the reader keeps their place. Beside the sidebar, open or closed, the **Library** leaves out its Folder strip.
 - Each **Account** has one email address, and no two Accounts share one.
 - An **Account** can have a Google **Sign-In Identity**, an Apple one, or both.
 - Sign-in finds the **Account** by its **Sign-In Identity** first, then by email. A new Google or Apple identity with the same verified email joins that Account automatically.
@@ -808,12 +817,14 @@ _Avoid_: Deep link, route argument, UI test step
 - V1 does not include reminders or push notifications.
 - Each **Saved Item** has a **Read State**.
 - **Unread Dot** is the v1 visual indicator for unread **Read State**.
+- The **Native iOS App**'s lists of Saved Items do not show **Read State**: every title is the same bright colour, with no **Unread Dot**. A row's swipe actions and menu still change **Read State**, and a Library list can filter to only unread or only read Saved Items. Its rows also carry no mark for a Saved Item that opens at its **Original URL**. The **Unread Widget** keeps the **Unread Dot**.
+- The **Native iOS App**'s **Library** lists — the Library root, a **Folder View**, and a Tag — put their Saved Items under date headings while they are sorted by date: Today, Yesterday, This Week, Last Week, This Month, Last Month, and Earlier. Sorted by title or by **Read State**, they show no headings.
 - A **Saved Item** becomes read when the user opens it.
 - Opening a **Saved Item** that has **Readable Content** opens the **Reader View**; opening one without it sends the user to its **Original URL** in the browser.
 - The **Reader View** always offers the **Original URL**, because extraction loses tables, embeds, and figure captions.
 - The **Reader View** shows an **Article Outline** beside the article when one can be read from its Markdown, marking the section being read and offering a way into any of them. It is a reading aid rather than a second surface: an article with too few headings to outline simply has none, and the outline never narrows the column of prose it stands beside.
 - On a wide display the **Reader View** shows the **Library**'s readable **Saved Items** beside the article, in a quarter of the window. On a foldable creased like a book, the fold divides the two: the list on one side, the article on the other, so no line of prose crosses the hinge.
-- Where the device puts a vertical bar beside the content (the iPhone Duo's system rail), the **Article Outline** moves out of the gutter into that bar as a scroll wheel. Each notch the reader turns it moves the article one section, and a deck of section cards beside the wheel names the section and its neighbours.
+- Where the device puts a vertical bar beside the content (the iPhone Duo's system rail), the **Article Outline** moves out of the gutter into that bar as a scroll wheel. Each notch the reader turns it scrolls the article one section, and the first notch is the article's title, so the wheel also goes back to the top. A deck of section cards beside the wheel names the section and its neighbours. A tap on the wheel opens the **Outline Overview**.
 - Clients may open the known **Original URL** immediately while asynchronously notifying the API to update **Read State**.
 - The **Open Action** is exposed as `POST /v1/saved-items/{id}/open`.
 - A **Delete Action** removes a **Saved Item** without archive or trash behavior in v1.

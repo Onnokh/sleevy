@@ -10,7 +10,10 @@ extension EnvironmentValues {
     /// deep link would otherwise each need to remember the rule, and they would
     /// drift. Mirrors `useOpenSavedItem` in the Web Companion.
     ///
+    /// The second value is the list the row was in, in its order on screen:
+    /// the Reader View's up and down buttons move through it.
+    ///
     /// The default sends everything to the browser, which is what a preview or
     /// a stack without a Reader destination should do.
-    @Entry var openSavedItem: @MainActor (SavedItem) async -> Void = { _ in }
+    @Entry var openSavedItem: @MainActor (SavedItem, [SavedItem.ID]) async -> Void = { _, _ in }
 }

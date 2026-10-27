@@ -11,7 +11,12 @@ struct NavigationSubtitleIfAvailable: ViewModifier {
             // between branches when the subtitle first resolves would swap
             // the content's structural identity, resetting a pushed list's
             // scroll state and collapsing its large title.
-            content.navigationSubtitle(subtitle ?? "")
+            //
+            // A space, not an empty string: the subtitle's line stays when
+            // there is no subtitle. A line that comes in later makes the
+            // large title taller, but the list under it does not move down,
+            // so the title goes up under the bar and the bar cuts it.
+            content.navigationSubtitle(subtitle ?? " ")
         } else {
             content
         }
