@@ -11,14 +11,14 @@ import SwiftUI
 /// The Original URL is always one tap away, so the Reader View is never a dead
 /// end: an extraction that lost the part you wanted is a tap from the page.
 ///
-/// On an iPhone the article scrolls: its title, where it is from, the Preview
-/// Summary, then the prose. The arrows in the bar step to the save above or
-/// below in the list it was opened from. Where the pane is wide enough — an
-/// iPad — the articles sit beside the article, as in the Web Companion's
-/// Reader View, with the Article Outline in the gutter.
+/// The article scrolls: its title, where it is from, the Preview Summary,
+/// then the prose. The arrows in the bar step to the save above or below in
+/// the list it was opened from. Where the pane is wide enough — an iPad — the
+/// articles sit beside the article, as in the Web Companion's Reader View,
+/// with the Article Outline in the gutter.
 ///
-/// Where the device has a vertical bar — the iPhone Duo — the article is set
-/// as a book instead: see ``BookReader``.
+/// Where the device has a vertical bar — the iPhone Duo — the reader's
+/// actions go in the bar, beside the wheel that turns to a section.
 struct ReaderView: View {
     /// The Saved Item the reader opened. The pane can move on from it without
     /// pushing a new screen, so this is where reading started rather than what
@@ -45,20 +45,15 @@ struct ReaderView: View {
     /// The section the scrubber last asked for; the article goes to it.
     @State private var scrubTarget: String?
     /// Which side of the screen the vertical bar is on, or nil where there is
-    /// none. With a bar, the article is a book.
+    /// none.
     @State private var barEdge: HorizontalEdge?
-    /// The page each section of the book starts on, for the deck.
-    @State private var entryPages: [String: Int] = [:]
-    /// Whether the book's left page is the Article Outline. Kept, as a reader
-    /// who likes the contents page wants it on the next article too.
-    @AppStorage("readerShowsOutline", store: SleevyUserPreferences.defaults)
-    private var showsOutline = false
     /// The reader's type size, in steps from the default.
     @AppStorage("readerTextSize", store: SleevyUserPreferences.defaults)
     private var textSizeStep = 0
     @Environment(\.openURL) private var openURL
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.moveToFolder) private var moveToFolder
+    @Environment(\.readerSidebarSelection) private var sidebarSelection
     @Environment(\.dismiss) private var dismiss
 
     init(openedID: SavedItem.ID, sequence: [SavedItem.ID] = [], store: ReadingListStore) {
@@ -89,10 +84,6 @@ struct ReaderView: View {
     /// The narrowest the list gets, so a small window still shows a title in
     /// two lines rather than four.
     private static let minimumListWidth: CGFloat = 220
-
-    /// The narrowest pane that is set as two pages. Less than this, a page
-    /// would hold too few words a line to read as a book.
-    private static let minimumSpread: CGFloat = 700
 
     /// The type size steps a reader can take from the default.
     private static let textSizeSteps = -2...4
@@ -181,7 +172,7 @@ struct ReaderView: View {
         horizontalSizeClass == .regular
     }
 
-    private var isBook: Bool {
+    private var hasVerticalBar: Bool {
         barEdge != nil
     }
 
@@ -191,24 +182,13 @@ struct ReaderView: View {
 
     var body: some View {
         GeometryReader { geometry in
-            if isBook {
-                bookPane(in: geometry)
-            } else {
-                columns(in: geometry)
-            }
+            columns(in: geometry)
         }
         .background(Color(.systemBackground))
         .overlay { scrubDeck }
         .animation(.smooth(duration: 0.35), value: isCreased)
         .onCreaseChange { isCreased = $0 }
-        .verticalBarToolbar(isEnabled: isBook) {
-            ToolbarItem(placement: .bottomBar) {
-                Toggle(isOn: $showsOutline) {
-                    Label("Outline", systemImage: "list.bullet.indent")
-                }
-                .toggleStyle(.button)
-                .disabled(loadedOutline.isEmpty)
-            }
+        .verticalBarToolbar(isEnabled: hasVerticalBar) {
             ToolbarItem(placement: .bottomBar) {
                 Menu {
                     textSizeControls
@@ -236,7 +216,7 @@ struct ReaderView: View {
         // be the article and nothing else.
         .toolbar(.hidden, for: .tabBar)
         .toolbar {
-            if !isBook {
+            if !hasVerticalBar {
                 if sequence.count > 1 {
                     ToolbarItemGroup(placement: .topBarLeading) {
                         Button {
@@ -267,6 +247,11 @@ struct ReaderView: View {
             }
         }
         .task(id: selectedID) { await loadContent() }
+        .onAppear { sidebarSelection?.wrappedValue = selectedID }
+        .onChange(of: selectedID) { _, id in sidebarSelection?.wrappedValue = id }
+        .onChange(of: sidebarSelection?.wrappedValue ?? nil) { _, id in
+            if let id { select(id) }
+        }
         // The list beside the article is the Library, which the reader may
         // never have opened — arriving straight here from the Inbox, a widget,
         // or a capture leaves that scope unread.
@@ -274,44 +259,6 @@ struct ReaderView: View {
     }
 
     // MARK: - Panes
-
-    /// The article as a book, on two pages where the pane is wide and split
-    /// on the hinge, one page where it is not.
-    ///
-    /// iOS says the hinge is there but not where it is. On the iPhone Duo it
-    /// is the middle of the inner display, so the split is measured from the
-    /// middle of the window, not of the pane: the vertical bar's inset puts
-    /// the pane off centre.
-    @ViewBuilder
-    private func bookPane(in geometry: GeometryProxy) -> some View {
-        let size = geometry.size
-        let leadingEdge = geometry.frame(in: .global).minX
-        let windowWidth = leadingEdge + size.width + geometry.safeAreaInsets.trailing
-        let isSpread = size.width > size.height && size.width >= Self.minimumSpread
-        let hinge = isSpread ? windowWidth / 2 - leadingEdge : nil
-
-        switch phase {
-        case .loading:
-            ProgressView()
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-        case .failed(let failure):
-            unavailable(failure)
-        case .loaded(let article):
-            if let item {
-                BookReader(
-                    article: article,
-                    item: item,
-                    bodySize: (17 * textScale).rounded(),
-                    paneSize: size,
-                    hinge: hinge,
-                    showsOutline: $showsOutline,
-                    target: scrubTarget,
-                    activeIndex: $activeIndex,
-                    entryPages: $entryPages
-                )
-            }
-        }
-    }
 
     /// The scrolling article, with the articles beside it where the pane
     /// leaves room for them.
@@ -335,7 +282,7 @@ struct ReaderView: View {
     /// for one: a quarter of the window, and only while the article keeps a
     /// column beside it.
     private func listWidth(in geometry: GeometryProxy) -> CGFloat? {
-        guard isRegularWidth, readableItems.count > 1 else { return nil }
+        guard sidebarSelection == nil, isRegularWidth, readableItems.count > 1 else { return nil }
 
         let leadingEdge = geometry.frame(in: .global).minX
         let windowWidth = leadingEdge + geometry.size.width + geometry.safeAreaInsets.trailing
@@ -386,6 +333,9 @@ struct ReaderView: View {
                     Spacer(minLength: 0)
                 }
             }
+            // Centred where the pane is wider than the column and there is no
+            // rail, as when the sidebar closes beside it.
+            .frame(maxWidth: .infinity)
             // No animation: the article keeps up with the finger, and a scroll
             // still easing towards one section when the finger is on the next
             // reads as lag.
@@ -406,7 +356,7 @@ struct ReaderView: View {
     @ViewBuilder
     private var scrubDeck: some View {
         GeometryReader { geometry in
-            if let scrub, let barEdge, !(isBook && showsOutline), loadedOutline.indices.contains(scrub.index) {
+            if let scrub, let barEdge, loadedOutline.indices.contains(scrub.index) {
                 let origin = geometry.frame(in: .global).origin
                 let gap: CGFloat = 12
                 let half = OutlineDeck.width / 2
@@ -417,7 +367,7 @@ struct ReaderView: View {
                 // the first and last sections are not cut off.
                 let y = min(max(scrub.markY - origin.y, 110), geometry.size.height - 110)
 
-                OutlineDeck(outline: loadedOutline, frontIndex: scrub.index, pages: isBook ? entryPages : nil)
+                OutlineDeck(outline: loadedOutline, frontIndex: scrub.index)
                     .position(x: x - origin.x, y: y)
                     .animation(OutlineDeck.travel, value: y)
                     .transition(.opacity.animation(.easeOut(duration: 0.14)))
@@ -556,11 +506,11 @@ struct ReaderView: View {
         }
     }
 
-    /// Everything else the reader can do with the save. In the book the bar
-    /// is shorter, so Mark Read and Move to Folder are in here too.
+    /// Everything else the reader can do with the save. The vertical bar is
+    /// shorter, so with it Mark Read and Move to Folder are in here too.
     private var moreMenu: some View {
         Menu {
-            if isBook, let item {
+            if hasVerticalBar, let item {
                 readButton(item)
                 if let moveToFolder {
                     MoveToFolderMenu(item: item, action: moveToFolder)
@@ -568,7 +518,7 @@ struct ReaderView: View {
                 Divider()
             }
 
-            if !isBook {
+            if !hasVerticalBar {
                 textSizeControls
             }
 
@@ -644,7 +594,6 @@ struct ReaderView: View {
         selectedID = id
         phase = .loading
         sectionTops = [:]
-        entryPages = [:]
         activeIndex = 0
         scrollTop = 0
 
@@ -678,7 +627,7 @@ struct ReaderView: View {
     /// uses. A section the layout has not reported yet is not a place the
     /// reader can be, so it never claims the mark.
     private func updateActiveEntry(_ outline: ArticleOutline) {
-        guard !outline.isEmpty, !isBook else { return }
+        guard !outline.isEmpty else { return }
 
         let tops = outline.map { sectionTops[$0.id] ?? .greatestFiniteMagnitude }
         let next = activeOutlineIndex(

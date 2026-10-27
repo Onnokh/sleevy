@@ -29,6 +29,9 @@ struct SignedInTabView: View {
     /// Duo is in its middle.
     @State private var windowWidth: CGFloat = 0
     @State private var isCreased = false
+    /// The save on screen in the Reader View, while the sidebar lists the
+    /// articles.
+    @State private var readingID: SavedItem.ID?
 
     init(session: AppSession, tokenStore: SessionTokenStore, store: ReadingListStore) {
         self.session = session
@@ -42,12 +45,28 @@ struct SignedInTabView: View {
         Group {
             if isWide {
                 NavigationSplitView(columnVisibility: $sidebarVisibility) {
-                    LibrarySidebar(store: store, selection: sidebarSelection)
-                        // A range that stays the same, so only the ideal width
-                        // changes on the fold. A single width is also the
-                        // minimum and the maximum, and a jump in those hides
-                        // the sidebar for a moment.
-                        .navigationSplitViewColumnWidth(min: 240, ideal: sidebarWidth, max: max(windowWidth / 2, 280))
+                    // One view, not a Group: a Group gives each list its own
+                    // toolbar, and the mark then flies in each time the
+                    // column changes lists.
+                    ZStack {
+                        // The Reader View's list of articles, in the same
+                        // column, so it opens, closes and divides on the hinge
+                        // as the Library Sidebar does.
+                        if isReading {
+                            ReadableItemsSidebar(
+                                items: store.snapshot(for: .libraryRoot).items.filter(hasReaderView),
+                                selectedID: readingID
+                            ) { readingID = $0.id }
+                        } else {
+                            LibrarySidebar(store: store, selection: sidebarSelection)
+                        }
+                    }
+                    .sidebarColumn()
+                    // A range that stays the same, so only the ideal width
+                    // changes on the fold. A single width is also the
+                    // minimum and the maximum, and a jump in those hides
+                    // the sidebar for a moment.
+                    .navigationSplitViewColumnWidth(min: 240, ideal: sidebarWidth, max: max(windowWidth / 2, 280))
                 } detail: {
                     if let sidebarDestination {
                         sidebarDestinationStack(sidebarDestination)
@@ -64,6 +83,7 @@ struct SignedInTabView: View {
                 // Closed, the sidebar is only out of sight: the Library still
                 // leaves its Folders to it.
                 .environment(\.showsLibrarySidebar, true)
+                .environment(\.readerSidebarSelection, $readingID)
             } else {
                 TabView(selection: selectedTabBinding) {
                     Tab("Library", systemImage: "books.vertical", value: AppTab.library) {
@@ -102,9 +122,8 @@ struct SignedInTabView: View {
             keepPlace(isWide: isWide)
             // Opened out, the Duo shows its sidebar, as at launch, whatever
             // it was when the window was last wide.
-            if isWide { resetSidebar() }
+            if isWide { sidebarVisibility = .all }
         }
-        .onChange(of: isReading) { resetSidebar() }
         .environment(profileLoader)
         .environment(profileStore)
         .environment(\.moveToFolder, moveToFolderAction)
@@ -250,13 +269,6 @@ struct SignedInTabView: View {
                 selectedTab = .search
             }
         }
-    }
-
-    /// Opens the sidebar, unless a Reader View is on screen: it has its own
-    /// list of articles beside the article, and on the fold it takes both
-    /// pages, so the sidebar steps aside.
-    private func resetSidebar() {
-        sidebarVisibility = isReading ? .detailOnly : .all
     }
 
     /// Keeps the reader's place when the window gets wide or narrow. In the

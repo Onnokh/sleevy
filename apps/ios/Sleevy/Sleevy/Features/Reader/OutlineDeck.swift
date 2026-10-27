@@ -17,9 +17,6 @@ struct OutlineDeck: View {
     let outline: ArticleOutline
     /// The section in front.
     let frontIndex: Int
-    /// The page each section starts on, by entry id, where the article is set
-    /// as pages: each card then says where its section is.
-    var pages: [String: Int]? = nil
 
     static let width: CGFloat = 272
 
@@ -80,20 +77,11 @@ struct OutlineDeck: View {
         }
 
         return VStack(alignment: .leading, spacing: 5) {
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Text(entry.title)
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(isFront ? .primary : .secondary)
-                    .lineLimit(1)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-
-                if let page = pages?[entry.id] {
-                    Text("\(page + 1)")
-                        .font(.system(size: 14))
-                        .monospacedDigit()
-                        .foregroundStyle(.tertiary)
-                }
-            }
+            Text(entry.title)
+                .font(.system(size: 14, weight: .medium))
+                .foregroundStyle(isFront ? .primary : .secondary)
+                .lineLimit(1)
+                .frame(maxWidth: .infinity, alignment: .leading)
 
             Text(entry.excerpt)
                 .font(.system(size: 13))

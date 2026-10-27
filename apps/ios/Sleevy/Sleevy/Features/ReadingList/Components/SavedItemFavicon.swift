@@ -12,9 +12,8 @@ struct SavedItemFavicon: View {
 
     private let source: Source
     /// The side of the square the favicon draws in. The list rows set the
-    /// default; the Reader View's article list asks for a smaller one, where
-    /// the favicon sits beside the host on a meta line rather than leading a
-    /// row of its own.
+    /// default; the Reader View's article list asks for one the size of a
+    /// sidebar symbol.
     private let size: CGFloat
 
     init(item: SavedItem, size: CGFloat = 30) {
