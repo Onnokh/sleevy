@@ -51,12 +51,15 @@ struct ReaderView: View {
     /// The reader is above the first section, at the wheel's first stop: the
     /// article's title.
     @State private var isAboveOutline = true
+    @State private var isOutlineOverviewShown = false
     /// Which side of the screen the vertical bar is on, or nil where there is
     /// none.
     @State private var barEdge: HorizontalEdge?
     /// The reader's type size, in steps from the default.
     @AppStorage("readerTextSize", store: SleevyUserPreferences.defaults)
     private var textSizeStep = 0
+    @AppStorage("readerFont", store: SleevyUserPreferences.defaults)
+    private var font = ReaderFont.serif
     @Environment(\.openURL) private var openURL
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Environment(\.moveToFolder) private var moveToFolder
@@ -69,11 +72,6 @@ struct ReaderView: View {
         self.store = store
         _selectedID = State(initialValue: openedID)
     }
-
-    /// How wide a column of prose is allowed to get. Past roughly this the eye
-    /// loses its place travelling back to the start of the next line, which is
-    /// why a newspaper sets columns and not pages.
-    private static let measure: CGFloat = 700
 
     /// The breathing room either side of the prose, inside the column.
     private static let columnPadding: CGFloat = 22
@@ -205,7 +203,9 @@ struct ReaderView: View {
         .outlineScrubber(
             outline: wheelStops,
             activeIndex: wheelStop,
+            isOverviewShown: $isOutlineOverviewShown,
             onScrub: scrubbed,
+            onSelect: goToStop,
             onEdgeChange: { barEdge = $0 }
         )
         .navigationTitle(item?.displayTitle ?? "")
@@ -303,12 +303,28 @@ struct ReaderView: View {
     /// The article, with its Article Outline in the leading gutter where the
     /// column leaves one.
     private func articlePane(paneWidth: CGFloat) -> some View {
-        let layout = Layout(paneWidth: paneWidth, hasOutline: !loadedOutline.isEmpty)
         // A wide column is read at arm's length, and set a size up.
-        let largeType = isRegularWidth && layout.columnWidth >= Self.minimumPaneForList
+        let largeType = isRegularWidth && paneWidth >= Self.minimumPaneForList
+        let type = ReaderType(bodySize: ((largeType ? 19 : 18) * textScale).rounded(), font: font)
+        let layout = Layout(paneWidth: paneWidth, measure: type.measure, hasOutline: !loadedOutline.isEmpty)
 
         return ScrollViewReader { proxy in
-            HStack(alignment: .top, spacing: 0) {
+            Group {
+                switch phase {
+                case .loading:
+                    ProgressView()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                case .loaded(let article):
+                    scrollingArticle(article, type: type, columnWidth: layout.columnWidth)
+                case .failed(let failure):
+                    unavailable(failure)
+                        .frame(maxWidth: layout.columnWidth)
+                }
+            }
+            .frame(maxWidth: .infinity)
+            // Over the gutter, not beside the scroll view: the article scrolls
+            // from anywhere in the pane, and the rail stays where it is.
+            .overlay(alignment: .leading) {
                 if layout.showsRail, case .loaded(let article) = phase {
                     OutlineRail(outline: article.outline, activeIndex: activeIndex) { entry in
                         withAnimation(.easeOut(duration: 0.25)) {
@@ -318,29 +334,7 @@ struct ReaderView: View {
                     .frame(width: layout.railWidth)
                     .frame(width: layout.gutter, alignment: .trailing)
                 }
-
-                Group {
-                    switch phase {
-                    case .loading:
-                        ProgressView()
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    case .loaded(let article):
-                        scrollingArticle(article, largeType: largeType)
-                    case .failed(let failure):
-                        unavailable(failure)
-                    }
-                }
-                .frame(maxWidth: layout.columnWidth)
-
-                if layout.showsRail {
-                    // The matching gutter on the other side, so the column is
-                    // centred rather than pushed off the rail.
-                    Spacer(minLength: 0)
-                }
             }
-            // Centred where the pane is wider than the column and there is no
-            // rail, as when the sidebar closes beside it.
-            .frame(maxWidth: .infinity)
             // Scrolled, not jumped, so the reader sees which way the article
             // went. A turn on to the next section takes over from a scroll
             // still on its way.
@@ -409,8 +403,8 @@ struct ReaderView: View {
         let railWidth: CGFloat
         let showsRail: Bool
 
-        init(paneWidth: CGFloat, hasOutline: Bool) {
-            let column = min(ReaderView.measure + 2 * ReaderView.columnPadding, paneWidth)
+        init(paneWidth: CGFloat, measure: CGFloat, hasOutline: Bool) {
+            let column = min(measure + 2 * ReaderView.columnPadding, paneWidth)
             let side = max(0, (paneWidth - column) / 2)
 
             showsRail = hasOutline && side >= OutlineRail.minimumGutter
@@ -420,20 +414,22 @@ struct ReaderView: View {
         }
     }
 
-    private func scrollingArticle(_ article: Article, largeType: Bool) -> some View {
-        let bodySize = ((largeType ? 19 : 18) * textScale).rounded()
-
-        return ScrollView {
+    /// The article in a column of `columnWidth`, centred in a scroll view as
+    /// wide as the pane, so a drag beside the column scrolls it too.
+    private func scrollingArticle(_ article: Article, type: ReaderType, columnWidth: CGFloat) -> some View {
+        ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                articleHeader(article, largeType: largeType, bodySize: bodySize)
-                    .padding(.bottom, 28)
+                articleHeader(article, type: type)
+                    .padding(.top, type.line * 0.4)
+                    .padding(.bottom, type.line * 1.25)
 
                 // Each section is its own Markdown view, and a view drops the
                 // margin above its first heading: the gap is set here instead.
-                VStack(alignment: .leading, spacing: 30) {
+                VStack(alignment: .leading, spacing: type.sectionSpacing) {
                     ForEach(article.sections) { section in
                         Markdown(section.markdown)
-                            .markdownTheme(.sleevyReader(bodySize: bodySize))
+                            .markdownTheme(.sleevyReader(type))
+                            .markdownImageProvider(ReaderImageProvider())
                             .id(section.id)
                             .onGeometryChange(for: CGFloat.self) { proxy in
                                 proxy.frame(in: .named(Self.articleSpace)).minY
@@ -449,6 +445,8 @@ struct ReaderView: View {
             .padding(.horizontal, Self.columnPadding)
             .padding(.top, 6)
             .padding(.bottom, 48)
+            .frame(maxWidth: columnWidth)
+            .frame(maxWidth: .infinity)
             .id(Self.topID)
             .coordinateSpace(.named(Self.articleSpace))
         }
@@ -460,33 +458,39 @@ struct ReaderView: View {
             contentHeight = geometry.contentSize.height
             updateActiveEntry(article.outline)
         }
+        // A scroll by hand ends the wheel's hold on the article. The target
+        // goes too, so a pick of the same section later scrolls again.
         .onScrollPhaseChange { _, phase in
-            if phase == .interacting, pinnedStop != nil { pinnedStop = nil }
+            guard phase == .interacting else { return }
+            if pinnedStop != nil { pinnedStop = nil }
+            if scrubTarget != nil { scrubTarget = nil }
         }
     }
 
-    /// The article's own title, where it is from, and its Preview Summary.
+    /// Where the article is from and when it was saved, its own title, and
+    /// its Preview Summary.
     ///
     /// The title is the article's, not the row's: the extractor read the page
     /// and the Saved Metadata read the tags, and when they disagree the page
     /// is the one that was written by a person.
     @ViewBuilder
-    private func articleHeader(_ article: Article, largeType: Bool, bodySize: CGFloat) -> some View {
+    private func articleHeader(_ article: Article, type: ReaderType) -> some View {
         VStack(alignment: .leading, spacing: 0) {
+            if let item {
+                ReaderByline(item: item, type: type)
+                    .padding(.bottom, type.line * 0.4)
+            }
+
             Text(article.content.title ?? item?.displayTitle ?? "")
-                .font(.system(size: largeType ? 38 : 32, weight: .heavy))
-                .kerning(-0.5)
+                .font(.system(size: type.titleSize, weight: .bold, design: type.font.design))
+                .lineSpacing(type.titleSize * 0.05)
+                .foregroundStyle(.primary)
                 .fixedSize(horizontal: false, vertical: true)
 
-            if let item {
-                ReaderByline(item: item, showsAge: false)
-                    .padding(.top, 14)
-
-                if let summary = item.previewSummary?.trimmingCharacters(in: .whitespacesAndNewlines),
-                   !summary.isEmpty {
-                    ReaderSummaryCard(summary: summary, fontSize: bodySize)
-                        .padding(.top, 24)
-                }
+            if let summary = item?.previewSummary?.trimmingCharacters(in: .whitespacesAndNewlines),
+               !summary.isEmpty {
+                ReaderSummaryCard(summary: summary, type: type)
+                    .padding(.top, type.line)
             }
         }
     }
@@ -550,6 +554,7 @@ struct ReaderView: View {
             }
 
             textSizeControls
+            fontPicker
 
             Button("Open in Browser", systemImage: "safari") { openOriginal() }
             ShareLink(item: url) {
@@ -603,6 +608,18 @@ struct ReaderView: View {
         // Icons only: the default style puts a title under each icon, and the
         // size has no icon, so the row does not line up.
         .controlGroupStyle(.compactMenu)
+        .menuActionDismissBehavior(.disabled)
+    }
+
+    /// Serif or sans, as a row of two under the Text Size row. The menu stays
+    /// open, so the reader sees the article change and can go back.
+    private var fontPicker: some View {
+        Picker("Font", selection: $font) {
+            ForEach(ReaderFont.allCases) { font in
+                Text(font.title).tag(font)
+            }
+        }
+        .pickerStyle(.palette)
         .menuActionDismissBehavior(.disabled)
     }
 
@@ -668,6 +685,15 @@ struct ReaderView: View {
             scrubTarget = wheelStops[next.index].id
             pinnedStop = next.index
         }
+    }
+
+    /// A row picked in the Outline Overview: the article scrolls to it, as for
+    /// a turn of the wheel, and the overview closes.
+    private func goToStop(_ index: Int) {
+        isOutlineOverviewShown = false
+        guard wheelStops.indices.contains(index), index != wheelStop else { return }
+        scrubTarget = wheelStops[index].id
+        pinnedStop = index
     }
 
     /// Which mark the rail lights, from the same arithmetic the Web Companion
@@ -747,43 +773,62 @@ struct ReaderView: View {
 
 // MARK: - Article header
 
-/// Where a save is from: its favicon and its site, with how long ago it was
-/// saved where that helps.
+/// Where a save is from and when it was last saved, over its title: its
+/// favicon, its site, and the date. Sleevy does not know when a page was
+/// published, so the date is the one the Library sorts the save by.
 struct ReaderByline: View {
     let item: SavedItem
-    var showsAge = true
+    let type: ReaderType
 
     var body: some View {
         HStack(spacing: 8) {
-            SavedItemFavicon(item: item, size: 20)
+            SavedItemFavicon(item: item, size: type.metaSize * 1.25)
                 .clipShape(.rect(cornerRadius: 5, style: .continuous))
 
-            Text(showsAge ? "\(item.displayDomain) · \(item.createdDateLabel)" : item.displayDomain)
-                .font(.system(size: 15))
+            Text("\(item.displayDomain) · \(savedLabel)")
+                .font(.system(size: type.metaSize))
                 .foregroundStyle(.secondary)
                 .lineLimit(1)
         }
+        .accessibilityElement(children: .combine)
+    }
+
+    private var savedLabel: String {
+        let date = item.lastSavedAt
+        let calendar = Calendar.current
+
+        if calendar.isDateInToday(date) { return "Saved today" }
+        if calendar.isDateInYesterday(date) { return "Saved yesterday" }
+        let day = calendar.isDate(date, equalTo: .now, toGranularity: .year)
+            ? date.formatted(.dateTime.month(.abbreviated).day())
+            : date.formatted(.dateTime.month(.abbreviated).day().year())
+        return "Saved \(day)"
     }
 }
 
 /// The Preview Summary as a card over the article, which folds away to its
 /// heading for a reader who would rather start on the text.
+///
+/// Sleevy wrote it, not the author, so it is set apart from the prose: in
+/// the app's own face, a step smaller, on a card.
 struct ReaderSummaryCard: View {
     let summary: String
-    var fontSize: CGFloat = 18
+    let type: ReaderType
 
     @State private var isExpanded = true
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        let size = type.bodySize * 0.9
+
+        VStack(alignment: .leading, spacing: 6) {
             Button {
                 withAnimation(.snappy(duration: 0.24)) { isExpanded.toggle() }
             } label: {
-                HStack(spacing: 7) {
+                HStack(spacing: 6) {
                     Text("Summary")
-                        .font(.system(size: 15, weight: .semibold))
+                        .font(.system(size: type.metaSize, weight: .semibold))
                     Image(systemName: "chevron.down")
-                        .font(.system(size: 11, weight: .semibold))
+                        .font(.system(size: type.metaSize * 0.7, weight: .semibold))
                         .rotationEffect(.degrees(isExpanded ? 0 : -90))
                 }
                 .foregroundStyle(.secondary)
@@ -795,79 +840,17 @@ struct ReaderSummaryCard: View {
 
             if isExpanded {
                 Text(summary)
-                    .font(.system(size: fontSize))
-                    .lineSpacing(fontSize * 0.3)
-                    .foregroundStyle(.primary)
+                    .font(.system(size: size))
+                    .lineSpacing(size * 0.25)
+                    .foregroundStyle(ReaderType.prose)
                     .fixedSize(horizontal: false, vertical: true)
                     .transition(.opacity)
             }
         }
-        .padding(.horizontal, 18)
-        .padding(.top, 15)
-        .padding(.bottom, isExpanded ? 18 : 15)
+        .padding(.horizontal, 16)
+        .padding(.top, 13)
+        .padding(.bottom, isExpanded ? 16 : 13)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color(.secondarySystemBackground), in: .rect(cornerRadius: 22, style: .continuous))
-    }
-}
-
-// MARK: - Theme
-
-extension MarkdownUI.Theme {
-    /// Reader typography: one column, generous leading, gray prose under
-    /// white headings, so the eye finds the sections before the sentences.
-    /// Semantic colors throughout, so the Theme setting (System / Light /
-    /// Dark) governs the Reader View too.
-    static func sleevyReader(bodySize: CGFloat) -> MarkdownUI.Theme {
-        MarkdownUI.Theme()
-            .text {
-                FontSize(bodySize)
-                ForegroundColor(.secondary)
-            }
-            .code {
-                FontFamilyVariant(.monospaced)
-                FontSize(.em(0.9))
-            }
-            .strong {
-                FontWeight(.semibold)
-                ForegroundColor(.primary)
-            }
-            .link {
-                ForegroundColor(.primary)
-                UnderlineStyle(.single)
-            }
-            .heading1 { configuration in
-                configuration.label
-                    .markdownMargin(top: 30, bottom: 10)
-                    .markdownTextStyle { FontWeight(.bold); FontSize(.em(1.4)); ForegroundColor(.primary) }
-            }
-            .heading2 { configuration in
-                configuration.label
-                    .markdownMargin(top: 28, bottom: 10)
-                    .markdownTextStyle { FontWeight(.bold); FontSize(.em(1.17)); ForegroundColor(.primary) }
-            }
-            .heading3 { configuration in
-                configuration.label
-                    .markdownMargin(top: 22, bottom: 8)
-                    .markdownTextStyle { FontWeight(.semibold); FontSize(.em(1.06)); ForegroundColor(.primary) }
-            }
-            .paragraph { configuration in
-                configuration.label
-                    .lineSpacing(bodySize * 0.42)
-                    .markdownMargin(top: 0, bottom: 16)
-            }
-            .listItem { configuration in
-                configuration.label
-                    .markdownMargin(top: 8)
-            }
-            .blockquote { configuration in
-                configuration.label
-                    .padding(.leading, 14)
-                    .overlay(alignment: .leading) {
-                        Rectangle()
-                            .fill(Color.secondary.opacity(0.35))
-                            .frame(width: 3)
-                    }
-                    .markdownTextStyle { FontStyle(.italic); ForegroundColor(.secondary) }
-            }
+        .background(Color(.secondarySystemBackground), in: .rect(cornerRadius: 18, style: .continuous))
     }
 }

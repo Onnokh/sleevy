@@ -20,7 +20,8 @@ struct OutlineScrub: Equatable {
 /// thumb, and the article scrolls there. A finger held at either end of the
 /// wheel keeps it turning, so a long outline needs no second stroke. Past the
 /// first or last section it gives a little and bumps, and on release it
-/// settles onto the notch.
+/// settles onto the notch. A tap opens the Outline Overview, and the wheel is
+/// lit while it is open.
 ///
 /// The wheel only reports where it is; the caller scrolls and draws the deck,
 /// since both are outside the bar.
@@ -31,6 +32,8 @@ struct OutlineScrubber: View {
     /// down, and with nil when it lifts. An adjustable action from VoiceOver
     /// is a scrub with a zero frame and no release.
     let onScrub: (OutlineScrub?) -> Void
+    let isOverviewShown: Bool
+    let onTap: () -> Void
 
     static let width: CGFloat = 44
 
@@ -50,6 +53,9 @@ struct OutlineScrubber: View {
     @State private var turn: CGFloat?
     @State private var turnStart = 0
     @State private var travel: CGFloat = 0
+    /// The finger has turned the wheel on a notch, so lifting it is not a
+    /// tap.
+    @State private var hasTurned = false
     /// Which way a finger held at an end keeps the wheel turning, or 0.
     @State private var holdDirection = 0
     @State private var holdTask: Task<Void, Never>?
@@ -64,11 +70,14 @@ struct OutlineScrubber: View {
         let isHeld = turn != nil
 
         ZStack {
+            Capsule()
+                .fill(.primary.opacity(isOverviewShown ? 0.14 : 0))
+
             WheelRidges(
                 position: turn ?? CGFloat(activeIndex),
                 stops: outline.count,
                 spacing: Self.notch / 2,
-                opacity: isHeld ? 0.5 : 0.3
+                opacity: isHeld || isOverviewShown ? 0.5 : 0.3
             )
 
             Capsule()
@@ -77,6 +86,7 @@ struct OutlineScrubber: View {
         }
         .frame(width: Self.width, height: height)
         .animation(.easeOut(duration: 0.15), value: isHeld)
+        .animation(.easeOut(duration: 0.15), value: isOverviewShown)
         .background(WindowFrameReader(probe: probe))
         .contentShape(.rect)
         .gesture(
@@ -84,18 +94,20 @@ struct OutlineScrubber: View {
                 .onChanged { drag in
                     if turn == nil {
                         turnStart = activeIndex
+                        hasTurned = false
                         frame = probe.frame
                     }
                     travel = drag.translation.height
                     turned(by: travel)
                     hold(direction: holdDirection(for: drag))
                 }
-                .onEnded { _ in
+                .onEnded { drag in
                     hold(direction: 0)
                     withAnimation(.spring(duration: 0.3, bounce: 0.2)) { turn = nil }
                     pointed = nil
                     isPastEnd = false
                     onScrub(nil)
+                    if !hasTurned, abs(drag.translation.height) < 6 { onTap() }
                 }
         )
         .sensoryFeedback(.selection, trigger: pointed) { _, new in new != nil }
@@ -103,6 +115,7 @@ struct OutlineScrubber: View {
         .accessibilityElement()
         .accessibilityLabel("Article sections")
         .accessibilityValue(outline.indices.contains(shown) ? outline[shown].title : "")
+        .accessibilityAction { onTap() }
         .accessibilityAdjustableAction { direction in
             let next = switch direction {
             case .increment: activeIndex + 1
@@ -135,6 +148,7 @@ struct OutlineScrubber: View {
 
         let index = Int(min(max(held, 0), last).rounded())
         guard index != pointed else { return }
+        if pointed != nil { hasTurned = true }
         pointed = index
         onScrub(OutlineScrub(index: index, markY: frame.midY, frame: frame))
     }
@@ -252,17 +266,23 @@ private struct WindowFrameReader: UIViewRepresentable {
 extension View {
     /// Puts the scrubber in the vertical bar, where the device has one and
     /// there is an outline to scrub, and reports which side of the screen the
-    /// bar is on: nil while there is no bar, or before iOS 27.1.
+    /// bar is on: nil while there is no bar, or before iOS 27.1. A tap on it
+    /// opens the Outline Overview beside the bar; a row picked there is
+    /// reported to `onSelect`.
     func outlineScrubber(
         outline: ArticleOutline,
         activeIndex: Int,
+        isOverviewShown: Binding<Bool>,
         onScrub: @escaping (OutlineScrub?) -> Void,
+        onSelect: @escaping (Int) -> Void,
         onEdgeChange: @escaping (HorizontalEdge?) -> Void
     ) -> some View {
         modifier(OutlineScrubberPlacement(
             outline: outline,
             activeIndex: activeIndex,
+            isOverviewShown: isOverviewShown,
             onScrub: onScrub,
+            onSelect: onSelect,
             onEdgeChange: onEdgeChange
         ))
     }
@@ -271,7 +291,9 @@ extension View {
 private struct OutlineScrubberPlacement: ViewModifier {
     let outline: ArticleOutline
     let activeIndex: Int
+    @Binding var isOverviewShown: Bool
     let onScrub: (OutlineScrub?) -> Void
+    let onSelect: (Int) -> Void
     let onEdgeChange: (HorizontalEdge?) -> Void
 
     func body(content: Content) -> some View {
@@ -280,7 +302,9 @@ private struct OutlineScrubberPlacement: ViewModifier {
             content.modifier(VerticalBarScrubber(
                 outline: outline,
                 activeIndex: activeIndex,
+                isOverviewShown: $isOverviewShown,
                 onScrub: onScrub,
+                onSelect: onSelect,
                 onEdgeChange: onEdgeChange
             ))
         } else {
@@ -299,7 +323,9 @@ private struct OutlineScrubberPlacement: ViewModifier {
 private struct VerticalBarScrubber: ViewModifier {
     let outline: ArticleOutline
     let activeIndex: Int
+    @Binding var isOverviewShown: Bool
     let onScrub: (OutlineScrub?) -> Void
+    let onSelect: (Int) -> Void
     let onEdgeChange: (HorizontalEdge?) -> Void
 
     @Environment(\.toolbarVerticalEdge) private var edge
@@ -307,9 +333,21 @@ private struct VerticalBarScrubber: ViewModifier {
     func body(content: Content) -> some View {
         content
             .toolbar {
-                if edge != nil, !outline.isEmpty {
+                if let edge, !outline.isEmpty {
                     ToolbarItem(placement: .bottomBar) {
-                        OutlineScrubber(outline: outline, activeIndex: activeIndex, onScrub: onScrub)
+                        OutlineScrubber(
+                            outline: outline,
+                            activeIndex: activeIndex,
+                            onScrub: onScrub,
+                            isOverviewShown: isOverviewShown,
+                            onTap: { isOverviewShown = true }
+                        )
+                        // The arrow points back at the bar, on its side of
+                        // the screen.
+                        .popover(isPresented: $isOverviewShown, arrowEdge: edge == .trailing ? .trailing : .leading) {
+                            OutlineOverview(stops: outline, activeStop: activeIndex, onSelect: onSelect)
+                                .presentationCompactAdaptation(.popover)
+                        }
                     }
                     .axisBehavior(.verticalPreferred)
                     .contentMarginsRemoved()

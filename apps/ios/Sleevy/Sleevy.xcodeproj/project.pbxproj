@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		98E5A58B2FA54E3100C9251A /* GoogleSignIn in Frameworks */ = {isa = PBXBuildFile; productRef = 98E5A58D2FA54E3100C9251A /* GoogleSignIn */; };
 		A10C7D3E2FB10A0100D14E03 /* MarkdownUI in Frameworks */ = {isa = PBXBuildFile; productRef = A10C7D3E2FB10A0100D14E02 /* MarkdownUI */; };
+		B20C7D3E2FB10A0100D14E03 /* Highlightr in Frameworks */ = {isa = PBXBuildFile; productRef = B20C7D3E2FB10A0100D14E02 /* Highlightr */; };
 		98E5A58E2FA54E3200C9251A /* SleevyShareExtension.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = 98E5A5902FA54E3200C9251A /* SleevyShareExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		98E5A6022FA54E3200C9251A /* SleevyWidgets.appex in Embed App Extensions */ = {isa = PBXBuildFile; fileRef = 98E5A6012FA54E3200C9251A /* SleevyWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 /* End PBXBuildFile section */
@@ -112,6 +113,7 @@
 			files = (
 				98E5A58B2FA54E3100C9251A /* GoogleSignIn in Frameworks */,
 				A10C7D3E2FB10A0100D14E03 /* MarkdownUI in Frameworks */,
+				B20C7D3E2FB10A0100D14E03 /* Highlightr in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -210,6 +212,7 @@
 			packageProductDependencies = (
 				98E5A58D2FA54E3100C9251A /* GoogleSignIn */,
 				A10C7D3E2FB10A0100D14E02 /* MarkdownUI */,
+				B20C7D3E2FB10A0100D14E02 /* Highlightr */,
 			);
 			productName = Sleevy;
 			productReference = 98E5A5612FA54E2E00C9251A /* Sleevy.app */;
@@ -348,6 +351,7 @@
 			packageReferences = (
 				98E5A58C2FA54E3100C9251A /* XCRemoteSwiftPackageReference "GoogleSignIn-iOS" */,
 				A10C7D3E2FB10A0100D14E01 /* XCRemoteSwiftPackageReference "swift-markdown-ui" */,
+				B20C7D3E2FB10A0100D14E01 /* XCRemoteSwiftPackageReference "Highlightr" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 98E5A5622FA54E2E00C9251A /* Products */;
@@ -900,6 +904,14 @@
 				minimumVersion = 2.4.1;
 			};
 		};
+		B20C7D3E2FB10A0100D14E01 /* XCRemoteSwiftPackageReference "Highlightr" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/raspu/Highlightr";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.3.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -912,6 +924,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = A10C7D3E2FB10A0100D14E01 /* XCRemoteSwiftPackageReference "swift-markdown-ui" */;
 			productName = MarkdownUI;
+		};
+		B20C7D3E2FB10A0100D14E02 /* Highlightr */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B20C7D3E2FB10A0100D14E01 /* XCRemoteSwiftPackageReference "Highlightr" */;
+			productName = Highlightr;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

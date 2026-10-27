@@ -239,6 +239,10 @@ _Avoid_: In-app browser, web view, archive view, detail screen
 The sections of a Readable Content, read out of its Markdown: for each, the heading in plain words, the opening of the section, and an id the Reader View can send the reader to. It is derived, never stored, and the same on every client because the Markdown is.
 _Avoid_: Table of contents, index, navigation, breadcrumbs
 
+**Outline Overview**:
+The whole **Article Outline** at once, opened from a tap on the scroll wheel: the article's title, then every section, with the one being read marked. A row sends the reader to that place, as a turn of the wheel does.
+_Avoid_: Table of contents, bookmarks, contents page
+
 **Sidebar Stack**:
 The rule for the way back in a wide window of the Native iOS App: the sidebar column is a stack, and the way back is at its top. The **Library Sidebar** is the first level. A **Reader View** puts a second level on it: the list the article was opened from, as it was then, with its name where the mark was and a back button before it that closes the Reader View. The vertical bar holds only what can be done with what is on screen, never a way back, and the sidebar button only opens and closes the column.
 _Avoid_: Breadcrumbs, back button in the vertical bar
@@ -820,7 +824,7 @@ _Avoid_: Deep link, route argument, UI test step
 - The **Reader View** always offers the **Original URL**, because extraction loses tables, embeds, and figure captions.
 - The **Reader View** shows an **Article Outline** beside the article when one can be read from its Markdown, marking the section being read and offering a way into any of them. It is a reading aid rather than a second surface: an article with too few headings to outline simply has none, and the outline never narrows the column of prose it stands beside.
 - On a wide display the **Reader View** shows the **Library**'s readable **Saved Items** beside the article, in a quarter of the window. On a foldable creased like a book, the fold divides the two: the list on one side, the article on the other, so no line of prose crosses the hinge.
-- Where the device puts a vertical bar beside the content (the iPhone Duo's system rail), the **Article Outline** moves out of the gutter into that bar as a scroll wheel. Each notch the reader turns it scrolls the article one section, and the first notch is the article's title, so the wheel also goes back to the top. A deck of section cards beside the wheel names the section and its neighbours.
+- Where the device puts a vertical bar beside the content (the iPhone Duo's system rail), the **Article Outline** moves out of the gutter into that bar as a scroll wheel. Each notch the reader turns it scrolls the article one section, and the first notch is the article's title, so the wheel also goes back to the top. A deck of section cards beside the wheel names the section and its neighbours. A tap on the wheel opens the **Outline Overview**.
 - Clients may open the known **Original URL** immediately while asynchronously notifying the API to update **Read State**.
 - The **Open Action** is exposed as `POST /v1/saved-items/{id}/open`.
 - A **Delete Action** removes a **Saved Item** without archive or trash behavior in v1.
