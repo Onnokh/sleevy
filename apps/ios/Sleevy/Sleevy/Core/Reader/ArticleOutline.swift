@@ -59,6 +59,11 @@ private enum OutlinePattern {
     /// The start or the end of a fenced code block.
     static let fence = try! Regex(#"^(`{3,}|~{3,})"#)
 
+    /// A tag, a comment or a declaration at the start of a line, which opens
+    /// an HTML block. A tag name ends where a tag's does, so an autolink
+    /// such as `<https://…>` is not one.
+    static let htmlBlockStart = try! Regex(#"^ {0,3}<(!--|[!?]|/?[A-Za-z][A-Za-z0-9-]*(?=[\s/>]|$))"#)
+
     /// A line that is punctuation rather than prose: a horizontal rule, or the
     /// dashes under a table's header row.
     static let ruleOrDivider = try! Regex(#"^\s*(?:(?:[-*_]\s*){3,}|\|[\s|:-]*\|)\s*$"#)
@@ -231,6 +236,70 @@ nonisolated struct ArticleSection: Identifiable, Equatable, Sendable {
     let markdown: String
 
     var id: String { entryID ?? "" }
+}
+
+/// The article without its raw HTML blocks, each line of one left blank so
+/// the outline's line numbers still hold.
+///
+/// Readable Content is Markdown, but the converter keeps what it cannot
+/// convert — a Wikipedia infobox, say — as HTML. The Web Companion's
+/// react-markdown drops it, and ADR 0021 keeps third-party markup off every
+/// client; MarkdownUI would draw it as text, tags and all.
+nonisolated func withoutHTMLBlocks(_ markdown: String) -> String {
+    var lines = markdown.components(separatedBy: "\n")
+    var fence: String?
+    /// What closes the HTML block being dropped: a blank line, or for a
+    /// comment, a script and the like, the text that ends it.
+    var blockEnd: String?
+
+    for index in lines.indices {
+        let line = lines[index]
+        let opener = line.firstMatch(of: OutlinePattern.fence).flatMap { $0[1].substring.map(String.init) }
+
+        if let current = fence {
+            if let opener, let marker = current.first, opener.hasPrefix(String(marker)), opener.count >= current.count {
+                fence = nil
+            }
+            continue
+        }
+
+        if let end = blockEnd {
+            if end.isEmpty {
+                // The blank line that ends the block is not part of it.
+                if line.trimmingCharacters(in: .whitespaces).isEmpty {
+                    blockEnd = nil
+                    continue
+                }
+            } else if line.localizedCaseInsensitiveContains(end) {
+                blockEnd = nil
+            }
+            lines[index] = ""
+            continue
+        }
+
+        if let opener {
+            fence = opener
+            continue
+        }
+
+        // A tag at the start of a line opens an HTML block only after a blank
+        // line: inside a paragraph it is inline markup.
+        let followsBlank = index == 0 || lines[index - 1].trimmingCharacters(in: .whitespaces).isEmpty
+        guard followsBlank, let start = line.firstMatch(of: OutlinePattern.htmlBlockStart) else { continue }
+
+        let tag = (start[1].substring.map(String.init) ?? "").lowercased()
+        let end = switch tag {
+        case "!--": "-->"
+        case "script", "pre", "style", "textarea": "</\(tag)>"
+        default: ""
+        }
+        // The line that opens it can close it too.
+        let rest = line[start.range.upperBound...]
+        blockEnd = end.isEmpty || !rest.localizedCaseInsensitiveContains(end) ? end : nil
+        lines[index] = ""
+    }
+
+    return lines.joined(separator: "\n")
 }
 
 /// The article cut at its outline's headings, so each section can be scrolled

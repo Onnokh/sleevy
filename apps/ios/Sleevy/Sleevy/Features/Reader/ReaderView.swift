@@ -676,7 +676,7 @@ struct ReaderView: View {
         return Article(
             content: content,
             outline: outline,
-            sections: articleSections(markdown: content.markdown, outline: outline)
+            sections: articleSections(markdown: withoutHTMLBlocks(content.markdown), outline: outline)
         )
     }
 
