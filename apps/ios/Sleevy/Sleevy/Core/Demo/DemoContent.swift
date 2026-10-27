@@ -345,12 +345,42 @@ nonisolated extension DemoMode {
                     imageUrl: nil,
                     authorName: nil,
                     authorHandle: nil,
+                    authorAvatarUrl: nil,
                     type: item.type,
                     tags: item.tags,
                     previewSummary: item.previewSummary,
                     savedAt: item.lastSavedAt
                 )
             }
+    }
+
+    /// A year of first captures for the Reading Activity grid, from the day
+    /// `publicProfile` joined: about half the days none, most others one or
+    /// two, a few busy ones, the same on every launch.
+    static var readingActivity: ReadingActivity {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .gmt
+        let format = Date.ISO8601FormatStyle(timeZone: .gmt).year().month().day()
+        let today = calendar.startOfDay(for: referenceDate)
+        let first = calendar.date(byAdding: .day, value: -364, to: today) ?? today
+        let joined = calendar.date(byAdding: .month, value: -8, to: today) ?? first
+
+        let days = (0 ... 364).compactMap { offset -> ReadingActivity.Day? in
+            guard let date = calendar.date(byAdding: .day, value: offset, to: first),
+                  date >= joined
+            else { return nil }
+            let roll = UInt32(truncatingIfNeeded: (offset + 7) &* 2_654_435_761) % 100
+            let count = switch roll {
+            case ..<50: 0
+            case ..<75: 1
+            case ..<90: 2
+            case ..<97: 4
+            default: 8
+            }
+            return count == 0 ? nil : ReadingActivity.Day(date: date.formatted(format), count: count)
+        }
+
+        return ReadingActivity(from: first.formatted(format), to: today.formatted(format), days: days)
     }
 
     static var publicProfile: PublicProfile {
