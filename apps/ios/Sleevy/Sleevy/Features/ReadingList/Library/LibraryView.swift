@@ -108,7 +108,7 @@ struct LibraryView: View {
                         Button {
                             folderEditor = .create
                         } label: {
-                            LibraryChip(title: "New Folder", tint: Color(.systemGray)) {
+                            LibraryChip(title: "New Folder") {
                                 Image(systemName: "plus")
                             }
                             .foregroundStyle(.secondary)
@@ -169,35 +169,68 @@ struct ChipStrip<Content: View>: View {
             .padding(.horizontal, 20)
         }
         .scrollIndicators(.hidden)
+        // The chips fade out at the edges, so a strip that runs on past the
+        // screen reads as one that scrolls, not as one cut off.
+        .mask {
+            HStack(spacing: 0) {
+                LinearGradient(colors: [.clear, .black], startPoint: .leading, endPoint: .trailing)
+                    .frame(width: 12)
+                Rectangle()
+                LinearGradient(colors: [.black, .clear], startPoint: .leading, endPoint: .trailing)
+                    .frame(width: 32)
+            }
+        }
         .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 4, trailing: 0))
         .listRowBackground(Color.clear)
         .listRowSeparator(.hidden)
     }
 }
 
-/// A chip in the Folder strip: a tinted capsule with a round badge before
-/// the name.
+/// A chip in the Folder strip: the badge, the name and the count on a
+/// capsule in the Folder's colour. The colour is light and the chip is low,
+/// so the strip stays a way in and the saves under it are the content.
 struct LibraryChip<Badge: View>: View {
     let title: String
-    let tint: Color
+    var count = 0
+    /// The Folder's colours, or nil for a chip that is not a Folder.
+    var palette: FolderCardPalette?
     @ViewBuilder var badge: Badge
 
+    @Environment(\.colorScheme) private var colorScheme
+
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 6) {
             badge
                 .font(.system(size: 14))
-                .frame(width: 28, height: 28)
-                .background(tint.opacity(0.35), in: .circle)
 
             Text(title)
-                .font(.system(size: 15, weight: .semibold))
+                .font(.system(size: 15, weight: .medium))
                 .lineLimit(1)
+
+            if count > 0 {
+                Text("\(count)")
+                    .font(.system(size: 13))
+                    .monospacedDigit()
+                    .foregroundStyle(.secondary)
+            }
         }
-        .padding(.leading, 6)
-        .padding(.trailing, 14)
-        .padding(.vertical, 6)
-        .background(tint.opacity(0.14), in: .capsule)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 7)
+        .background(fill, in: .capsule)
+        .overlay { Capsule().strokeBorder(border, lineWidth: 1) }
         .contentShape(.capsule)
+    }
+
+    /// A Folder's chip is lightly filled with its colour, with an edge in the
+    /// same colour, so each Folder is found by its colour at a glance.
+    private var fill: Color {
+        guard let palette else { return .primary.opacity(0.06) }
+        return Color(palette.mid).opacity(colorScheme == .dark ? 0.24 : 0.16)
+    }
+
+    private var border: Color {
+        guard let palette else { return .primary.opacity(0.08) }
+        return Color(palette.mid).opacity(colorScheme == .dark ? 0.4 : 0.35)
     }
 }
 
@@ -217,13 +250,8 @@ struct FolderChip: View {
         Button {
             pushRoute(.folder(id: folder.id))
         } label: {
-            LibraryChip(title: folder.name, tint: Color(palette.mid)) {
-                if let emoji = folder.emoji, !emoji.isEmpty {
-                    Text(emoji)
-                } else {
-                    Image(systemName: "folder.fill")
-                        .foregroundStyle(Color(palette.highlight))
-                }
+            LibraryChip(title: folder.name, count: itemCount, palette: FolderCardPalette.named(folder.color)) {
+                FolderBadge(folder: folder, size: 14)
             }
         }
         .buttonStyle(.plain)
@@ -251,11 +279,6 @@ struct FolderChip: View {
                 Label("Delete", systemImage: "trash")
             }
         }
-    }
-
-    /// The Folder's colour, as the web app and the Unread Widget show it.
-    private var palette: FolderCardPalette {
-        FolderCardPalette.named(folder.color)
     }
 
     private var accessibilityCountLabel: String {
@@ -289,7 +312,7 @@ struct SavedItemListRows: View {
 
     private func rows(_ slice: [SavedItem]) -> some View {
         ForEach(slice) { item in
-            SavedItemRow(item: item) {
+            SavedItemRow(item: item, showsDomain: true) {
                 // The whole list, not one group: the Reader View steps on
                 // past a heading.
                 await openSavedItem(item, items.map(\.id))
@@ -316,6 +339,25 @@ struct SavedItemListRows: View {
             .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 0, trailing: 20))
             .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)
+        }
+    }
+}
+
+/// A Folder's emoji or, where it has none, a dot in its colour, as the web
+/// app and the Unread Widget show it.
+struct FolderBadge: View {
+    let folder: Folder
+    let size: CGFloat
+
+    var body: some View {
+        if let emoji = folder.emoji, !emoji.isEmpty {
+            Text(emoji)
+                .font(.system(size: size))
+        } else {
+            Circle()
+                .fill(Color(FolderCardPalette.named(folder.color).mid))
+                .frame(width: size * 0.6, height: size * 0.6)
+                .frame(width: size, height: size)
         }
     }
 }

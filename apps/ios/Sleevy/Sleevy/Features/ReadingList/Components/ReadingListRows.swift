@@ -205,15 +205,20 @@ private struct PendingSavedItemMonogram: View {
     }
 }
 
-/// One Saved Item as one line: the favicon and the title. The UI around it
-/// is monochrome, so the favicon is the only colour in the row. Read State
-/// does not show: every title is the same bright colour. The swipe actions
-/// and the menu still change it.
+/// One Saved Item: the favicon and the title. The UI around it is
+/// monochrome, so the favicon is the only colour in the row. Read State does
+/// not show: every title is the same bright colour. The swipe actions and the
+/// menu still change it.
+///
+/// Where a list is for finding a save again, as in the Library, the title
+/// gets a second line and the site goes under it: a long title cut after one
+/// line, as most GitHub titles are, no longer says what the save is.
 ///
 /// Touch and hold shows the Preview Summary above the actions, so the
 /// reader can decide what to do with a save without opening it.
 struct SavedItemRow: View {
     let item: SavedItem
+    var showsDomain = false
     let onOpen: () async -> Void
     let onToggleRead: () async -> Void
     let onDelete: () async -> Void
@@ -224,15 +229,24 @@ struct SavedItemRow: View {
                 await onOpen()
             }
         } label: {
-            HStack(spacing: 12) {
+            HStack(alignment: showsDomain ? .top : .center, spacing: 12) {
                 SavedItemFavicon(item: item, size: 26)
                     .clipShape(.rect(cornerRadius: 6, style: .continuous))
 
-                Text(item.displayTitle)
-                    .font(.callout.weight(.medium))
-                    .foregroundStyle(.primary)
-                    .lineLimit(1)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(item.displayTitle)
+                        .font(.callout.weight(.medium))
+                        .foregroundStyle(.primary)
+                        .lineLimit(showsDomain ? 2 : 1)
+
+                    if showsDomain {
+                        Text(item.displayDomain)
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
             .contentShape(Rectangle())
             .padding(.vertical, ListRhythm.rowPadding)
