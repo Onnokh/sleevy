@@ -27,7 +27,7 @@ struct ReadingListView: View {
             await store.refresh()
         }
         .navigationTitle("Recents")
-        .navigationBarTitleDisplayMode(.large)
+        .largeTitleWhereTheBarHasItsOwnLine()
         .modifier(NavigationSubtitleIfAvailable(subtitle: navigationSubtitleText(unreadCount: snapshot.items.count)))
         .toolbarPreferringVerticalBar {
             ToolbarItem(placement: .primaryAction) {
@@ -107,6 +107,7 @@ struct ReadingListView: View {
             let days = InboxDay.groups(snapshot.items)
             ForEach(days) { group in
                 Section {
+                    ListGroupHeading(title: group.day.title)
                     ForEach(group.items) { item in
                         SavedItemRow(item: item) {
                             await markOpened(item)
@@ -141,8 +142,6 @@ struct ReadingListView: View {
                         .listRowBackground(Color.clear)
                         .listRowSeparator(.hidden)
                     }
-                } header: {
-                    ListGroupHeading(title: group.day.title)
                 }
             }
         }

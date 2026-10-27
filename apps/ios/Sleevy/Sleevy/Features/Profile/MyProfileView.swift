@@ -356,6 +356,7 @@ struct MyProfileView: View {
 
             ForEach(monthSections, id: \.title) { section in
                 Section {
+                    ListGroupHeading(title: section.title)
                     ForEach(section.items) { item in
                         PublicSavedItemRow(item: item)
                             .listRowInsets(EdgeInsets(top: 0, leading: 20, bottom: 0, trailing: 20))
@@ -365,8 +366,6 @@ struct MyProfileView: View {
                                 await loader.loadMoreIfNeeded(current: item)
                             }
                     }
-                } header: {
-                    ListGroupHeading(title: section.title)
                 }
             }
 

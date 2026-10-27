@@ -42,7 +42,7 @@ struct LibraryView: View {
         }
         .background(Color(.systemBackground))
         .navigationTitle("Library")
-        .navigationBarTitleDisplayMode(.large)
+        .largeTitleWhereTheBarHasItsOwnLine()
         .modifier(NavigationSubtitleIfAvailable(subtitle: savesText(complete.destinationCount)))
         .toolbarPreferringVerticalBar {
             ToolbarItem(placement: .primaryAction) {
@@ -278,9 +278,8 @@ struct SavedItemListRows: View {
             let groups = SaveDateGroup.groups(items)
             ForEach(groups) { group in
                 Section {
-                    rows(group.items)
-                } header: {
                     ListGroupHeading(title: group.span.title)
+                    rows(group.items)
                 }
             }
         } else {

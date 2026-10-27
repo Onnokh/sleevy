@@ -58,7 +58,7 @@ struct FolderLibraryView: View {
         .scrollContentBackground(.hidden)
         .background(Color(.systemBackground))
         .navigationTitle(currentFolder.name)
-        .navigationBarTitleDisplayMode(.large)
+        .largeTitleWhereTheBarHasItsOwnLine()
         .modifier(NavigationSubtitleIfAvailable(subtitle: navigationSubtitleText(
             total: projection.destinationCount,
             unread: projection.unreadDestinationCount,
@@ -156,7 +156,7 @@ struct TagLibraryView: View {
         .scrollContentBackground(.hidden)
         .background(Color(.systemBackground))
         .navigationTitle(tagDisplayName(tag))
-        .navigationBarTitleDisplayMode(.large)
+        .largeTitleWhereTheBarHasItsOwnLine()
         .modifier(NavigationSubtitleIfAvailable(subtitle: projection.items.isEmpty ? nil : {
             let saves = projection.items.count == 1 ? "1 save" : "\(projection.items.count) saves"
             return unread > 0 ? "\(saves) · \(unread) unread" : saves
