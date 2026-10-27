@@ -46,7 +46,9 @@ const hasAppleCredentials = (auth: AppleAuthConfig) =>
   auth.appleAppBundleIdentifier.length > 0
 
 const normalizedPrivateKey = (privateKey: string) => {
-  const trimmed = privateKey.trim().replace(/^['"]|['"]$/g, "").replace(/\\n/g, "\n")
+  // A newline arrives as "\n", or as "\\n" where something escaped the value twice
+  // on its way into the container env.
+  const trimmed = privateKey.trim().replace(/^['"]|['"]$/g, "").replace(/\\+n/g, "\n")
   const match = trimmed.match(/-----BEGIN PRIVATE KEY-----\s*([A-Za-z0-9+/=\s]+)\s*-----END PRIVATE KEY-----/)
 
   if (!match) {

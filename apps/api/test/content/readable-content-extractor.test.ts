@@ -415,4 +415,82 @@ describe("ReadableContentExtractor", () => {
       expect(result.value.markdown).toContain("https://example.com/logo.png")
     }),
   )
+
+  // The three below are stored article HTML, as Readability left it.
+  it.effect("drops the labels of a figure drawn in markup, and keeps its sentences", () =>
+    Effect.gen(function* () {
+      const extractor = yield* ReadableContentExtractor
+      const markdown = yield* extractor.convert(
+        [
+          "<p>Every client talks to the same central process.</p>",
+          '<figure aria-label="One background service, with a socket for each client.">',
+          '<section aria-label="The sessions"><p><span>Session</span><span>New session</span></p>',
+          "<p>~/app</p><p>Fix flaky test</p></section></figure>",
+          '<figure aria-label="Cold launch versus snapshot restore, an animation.">',
+          "<p>Cold launch vs snapshot restore</p>",
+          "<p>Snapshot restore reduced the launch path by about 53 times.</p>",
+          "<div><p><span>Cold launch</span> <span>~6906ms</span></p></div></figure>",
+          // A chart the page did not label as a picture: its words are its data.
+          "<figure><p>Boot Linux</p><p>Total 6905.9ms</p></figure>",
+          '<figure aria-label="A photo"><img src="https://example.com/a.png" alt=""></figure>',
+        ].join(""),
+      )
+
+      expect(markdown).toContain("Every client talks to the same central process.")
+      expect(markdown).not.toContain("New session")
+      expect(markdown).not.toContain("~/app")
+      expect(markdown).not.toContain("Fix flaky test")
+      expect(markdown).not.toContain("Cold launch vs snapshot restore")
+      expect(markdown).not.toContain("~6906ms")
+      // The finding the chart draws is prose, and it stays.
+      expect(markdown).toContain("Snapshot restore reduced the launch path by about 53 times.")
+      expect(markdown).toContain("Boot Linux")
+      expect(markdown).toContain("https://example.com/a.png")
+      // The alt text is not shown, for a drawn figure as for an image.
+      expect(markdown).not.toContain("socket for each client")
+    }),
+  )
+
+  it.effect("makes the file name a code viewer draws on its frame the block's title", () =>
+    Effect.gen(function* () {
+      const extractor = yield* ReadableContentExtractor
+      const markdown = yield* extractor.convert(
+        [
+          '<figure data-filename="review.ts"><figcaption><span>review.ts</span></figcaption>',
+          '<pre><code>import { OpenCode } from "@opencode/client"</code></pre></figure>',
+          '<figure><figcaption>models-dev.py</figcaption><pre><code data-language="python">x = 1</code></pre></figure>',
+          // A caption that says something is a caption, and stays one.
+          "<figure><pre><code>npm i</code></pre><figcaption>Install the package first.</figcaption></figure>",
+        ].join(""),
+      )
+
+      expect(markdown).toContain('```ts title="review.ts"\nimport { OpenCode }')
+      expect(markdown).not.toMatch(/^review\.ts$/m)
+      // The highlighter's language wins over the file's extension.
+      expect(markdown).toContain('```python title="models-dev.py"\nx = 1')
+      expect(markdown).toContain("```\nnpm i\n```")
+      expect(markdown).toContain("Install the package first.")
+    }),
+  )
+
+  it.effect("joins a command the page set one word to a code element", () =>
+    Effect.gen(function* () {
+      const extractor = yield* ReadableContentExtractor
+      const markdown = yield* extractor.convert(
+        [
+          "<p><span>then</span> <span>run</span> <span><span><code>opencode</code></span></span>",
+          "<span> </span><span><span><code>upgrade</code></span></span><span> </span>",
+          "<span><span><code>--major</code>.</span></span></p>",
+          "<p>Use <code>read</code> or <code>write</code>, and <code>shell</code>.</p>",
+          "<pre><code>`a` `b`</code></pre>",
+        ].join(""),
+      )
+
+      expect(markdown).toContain("run `opencode upgrade --major`.")
+      // Two terms with a word between them are two terms.
+      expect(markdown).toContain("Use `read` or `write`, and `shell`.")
+      // Code inside a fenced block is the code's own.
+      expect(markdown).toContain("```\n`a` `b`\n```")
+    }),
+  )
 })
