@@ -6,9 +6,9 @@ import { ArticlePage } from "../../pages/article-page"
 export const Route = createFileRoute("/_marketing/articles_/safari-reading-list")({
   head: () => ({
     meta: [
-      { title: "Where Is the Safari Reading List in iOS 27? | Sleevy" },
+      { title: "Where the Safari Reading List went in iOS 27 | Sleevy" },
       { name: "description", content: "On iOS 27, open a new tab and tap Reading List on the start page. On a Mac, open the sidebar and click Reading List. Then save pages to it and clear it." },
-      { property: "og:title", content: "Where is the Safari Reading List in iOS 27?" },
+      { property: "og:title", content: "Where the Safari Reading List went in iOS 27" },
       { property: "og:description", content: "A complete guide to the Safari Reading List on iPhone and Mac, and where it runs out." },
       { property: "og:type", content: "article" },
       { property: "og:url", content: "https://sleevy.app/articles/safari-reading-list" },

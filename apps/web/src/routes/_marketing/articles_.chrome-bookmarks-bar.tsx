@@ -6,9 +6,9 @@ import { ArticlePage } from "../../pages/article-page"
 export const Route = createFileRoute("/_marketing/articles_/chrome-bookmarks-bar")({
   head: () => ({
     meta: [
-      { title: "Chrome Bookmarks Bar Missing? Show It with Ctrl+Shift+B | Sleevy" },
+      { title: "How to get the Chrome bookmarks bar back | Sleevy" },
       { name: "description", content: "Press Ctrl+Shift+B, or Cmd+Shift+B on a Mac, to show or hide the Chrome bookmarks bar. A missing bar is hidden, not deleted. Add links and keep it tidy." },
-      { property: "og:title", content: "Chrome bookmarks bar missing? Show it with Ctrl+Shift+B" },
+      { property: "og:title", content: "How to get the Chrome bookmarks bar back" },
       { property: "og:description", content: "One shortcut shows it, the same shortcut hides it, and a missing bar is almost never lost data." },
       { property: "og:type", content: "article" },
       { property: "og:url", content: "https://sleevy.app/articles/chrome-bookmarks-bar" },
