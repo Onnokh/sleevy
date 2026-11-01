@@ -6,9 +6,9 @@ import { ArticlePage } from "../../pages/article-page"
 export const Route = createFileRoute("/_marketing/articles_/save-links-with-raycast")({
   head: () => ({
     meta: [
-      { title: "How to Save Links with Raycast | Sleevy" },
+      { title: "How to save links with Raycast | Sleevy" },
       { name: "description", content: "Save links with Raycast, search your read-later queue, and open saved articles, websites, videos, and repositories from the launcher." },
-      { property: "og:title", content: "How to Save Links with Raycast" },
+      { property: "og:title", content: "How to save links with Raycast" },
       { property: "og:description", content: "Use Raycast to save URLs and search a synced read-later queue." },
       { property: "og:type", content: "article" },
       { property: "og:url", content: "https://sleevy.app/articles/save-links-with-raycast" },

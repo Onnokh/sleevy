@@ -5,9 +5,9 @@ import { ArticlePage } from "../../pages/article-page"
 export const Route = createFileRoute("/_marketing/articles_/bookmark-manager-for-developers")({
   head: () => ({
     meta: [
-      { title: "A Bookmark Manager for Developers | Sleevy" },
+      { title: "A bookmark manager for developers | Sleevy" },
       { name: "description", content: "Sleevy is a developer read-later app: save links from Raycast, Chrome, iPhone, or your own scripts into one searchable research queue." },
-      { property: "og:title", content: "A Bookmark Manager for Developers" },
+      { property: "og:title", content: "A bookmark manager for developers" },
       { property: "og:description", content: "Save links from the tools you already use — Raycast, Chrome, scripts — into one personal research queue." },
       { property: "og:type", content: "article" },
       { property: "og:url", content: "https://sleevy.app/articles/bookmark-manager-for-developers" },

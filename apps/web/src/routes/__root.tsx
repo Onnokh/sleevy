@@ -8,7 +8,7 @@ export const Route = createRootRoute({
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { name: "description", content: "Sleevy is a scriptable bookmark manager app with an API for saving links from iOS, Raycast, Chrome, the web, scripts, and automations." },
-      { title: "Sleevy - Scriptable Bookmark Manager App" },
+      { title: "Sleevy - Scriptable bookmark manager app" },
       { property: "og:site_name", content: "Sleevy" },
       // Agents use og:type and og:image for entity resolution and attribution,
       // so both are stated site-wide rather than only where a page overrides

@@ -6,14 +6,14 @@ import { ArticlePage } from "../../pages/article-page"
 export const Route = createFileRoute("/_marketing/safari-bookmark-manager")({
   head: () => ({
     meta: [
-      { title: "A Bookmark Manager for Safari | Sleevy" },
+      { title: "A bookmark manager for Safari | Sleevy" },
       { name: "description", content: "Safari bookmarks and Reading List are hard to search and easy to forget. Save links from Safari on iPhone or iPad in one share and find them again anywhere." },
-      { property: "og:title", content: "A Bookmark Manager for Safari" },
+      { property: "og:title", content: "A bookmark manager for Safari" },
       { property: "og:description", content: "Save from Safari with the share sheet and keep one searchable queue across your devices." },
       { property: "og:type", content: "article" },
       { property: "og:url", content: "https://sleevy.app/safari-bookmark-manager" },
       { property: "article:modified_time", content: "2026-09-09" },
-      { name: "twitter:title", content: "A Bookmark Manager for Safari" },
+      { name: "twitter:title", content: "A bookmark manager for Safari" },
       { name: "twitter:description", content: "Save from Safari with the share sheet and keep one searchable queue across your devices." },
     ],
     links: [{ rel: "canonical", href: "https://sleevy.app/safari-bookmark-manager" }],

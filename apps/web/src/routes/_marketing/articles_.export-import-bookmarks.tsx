@@ -6,7 +6,7 @@ import { ArticlePage } from "../../pages/article-page"
 export const Route = createFileRoute("/_marketing/articles_/export-import-bookmarks")({
   head: () => ({
     meta: [
-      { title: "How to Export and Import Bookmarks in Chrome | Sleevy" },
+      { title: "How to export and import bookmarks in Chrome | Sleevy" },
       { name: "description", content: "Export bookmarks from Chrome and import them into Chrome, Safari, Firefox, or Edge, with the exact steps for each browser pair." },
       { property: "og:title", content: "How to export and import bookmarks" },
       { property: "og:description", content: "Move your bookmarks between Chrome, Safari, Firefox, and Edge without losing the folders." },

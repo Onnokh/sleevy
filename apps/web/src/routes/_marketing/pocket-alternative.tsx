@@ -6,14 +6,14 @@ import { ArticlePage } from "../../pages/article-page"
 export const Route = createFileRoute("/_marketing/pocket-alternative")({
   head: () => ({
     meta: [
-      { title: "Pocket Alternative for Saving Links | Sleevy" },
+      { title: "Pocket alternative for saving links | Sleevy" },
       { name: "description", content: "Looking for a Pocket alternative? Sleevy gives you one synced queue for links saved from iPhone, Chrome, Raycast, and your own scripts." },
-      { property: "og:title", content: "A Pocket Alternative for Your Link Queue | Sleevy" },
+      { property: "og:title", content: "A Pocket alternative for your link queue | Sleevy" },
       { property: "og:description", content: "Keep one synced queue for the links you want to return to." },
       { property: "og:type", content: "article" },
       { property: "og:url", content: "https://sleevy.app/pocket-alternative" },
       { property: "article:modified_time", content: "2026-07-17" },
-      { name: "twitter:title", content: "A Pocket Alternative for Your Link Queue | Sleevy" },
+      { name: "twitter:title", content: "A Pocket alternative for your link queue | Sleevy" },
       { name: "twitter:description", content: "Keep one synced queue for the links you want to return to." },
     ],
     links: [{ rel: "canonical", href: "https://sleevy.app/pocket-alternative" }],

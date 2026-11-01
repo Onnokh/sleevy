@@ -6,14 +6,14 @@ import { ArticlePage } from "../../pages/article-page"
 export const Route = createFileRoute("/_marketing/articles_/best-bookmark-manager-chrome")({
   head: () => ({
     meta: [
-      { title: "The Best Bookmark Manager for Chrome | Sleevy" },
+      { title: "The best bookmark manager for Chrome | Sleevy" },
       { name: "description", content: "Chrome's built-in bookmark manager is a filing cabinet. Compare the better free bookmark manager options for Chrome and pick one you will actually keep using." },
-      { property: "og:title", content: "The Best Bookmark Manager for Chrome" },
+      { property: "og:title", content: "The best bookmark manager for Chrome" },
       { property: "og:description", content: "Why Chrome's own bookmark manager stops working at scale, and what to look for instead." },
       { property: "og:type", content: "article" },
       { property: "og:url", content: "https://sleevy.app/articles/best-bookmark-manager-chrome" },
       { property: "article:modified_time", content: "2026-09-09" },
-      { name: "twitter:title", content: "The Best Bookmark Manager for Chrome" },
+      { name: "twitter:title", content: "The best bookmark manager for Chrome" },
       { name: "twitter:description", content: "Why Chrome's own bookmark manager stops working at scale, and what to look for instead." },
     ],
     links: [{ rel: "canonical", href: "https://sleevy.app/articles/best-bookmark-manager-chrome" }],
