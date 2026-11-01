@@ -6,8 +6,8 @@ import { ArticlePage } from "../../pages/article-page"
 export const Route = createFileRoute("/_marketing/articles_/where-are-my-bookmarks")({
   head: () => ({
     meta: [
-      { title: "Where Are My Bookmarks? iPhone, Chrome, and Android | Sleevy" },
-      { name: "description", content: "Find your bookmarks on iPhone, in Chrome on desktop, on Android, and in your Google Account, and learn why they keep turning up missing." },
+      { title: "Where Are My Bookmarks? Find Them on Any Device | Sleevy" },
+      { name: "description", content: "In Chrome, press Ctrl+Shift+O, or Cmd+Option+B on a Mac. Steps for iPhone, Android, and your Google Account, and why bookmarks go missing." },
       { property: "og:title", content: "Where are my bookmarks?" },
       { property: "og:description", content: "Find your saved links on every device, and understand why they went missing in the first place." },
       { property: "og:type", content: "article" },

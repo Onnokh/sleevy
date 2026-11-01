@@ -6,9 +6,9 @@ import { ArticlePage } from "../../pages/article-page"
 export const Route = createFileRoute("/_marketing/articles_/safari-reading-list")({
   head: () => ({
     meta: [
-      { title: "Safari Reading List: Find It, Use It, Clear It | Sleevy" },
-      { name: "description", content: "Where the Reading List is on iPhone and Mac, how to save pages to it, how to clear it, and what to use when it stops being enough." },
-      { property: "og:title", content: "Safari Reading List: find it, use it, clear it" },
+      { title: "Where Is the Safari Reading List in iOS 27? | Sleevy" },
+      { name: "description", content: "On iOS 27, open a new tab and tap Reading List on the start page. On a Mac, open the sidebar and click Reading List. Then save pages to it and clear it." },
+      { property: "og:title", content: "Where is the Safari Reading List in iOS 27?" },
       { property: "og:description", content: "A complete guide to the Safari Reading List on iPhone and Mac, and where it runs out." },
       { property: "og:type", content: "article" },
       { property: "og:url", content: "https://sleevy.app/articles/safari-reading-list" },
@@ -21,10 +21,10 @@ export const Route = createFileRoute("/_marketing/articles_/safari-reading-list"
       eyebrow="Safari Reading List"
       title="Safari Reading List: find it, use it, clear it."
       description="Where the Reading List lives on iPhone and Mac, how to save pages to it, how to empty it when it grows past reading, and what to do when one browser is no longer where your links belong."
-      updatedAt={{ dateTime: "2026-09-11", label: "Published September 2026" }}
+      updatedAt={{ dateTime: "2026-11-01", label: "Updated November 2026 for iOS 27" }}
       callout={{
         title: "The short answer",
-        body: "On iPhone, tap the open book icon at the bottom of Safari, then the glasses tab. On Mac, open the sidebar and choose the glasses tab. To empty it, press and hold Clear All Items on iPhone, or right-click any item on Mac and choose Clear All Items.",
+        body: "On iPhone with iOS 27, open a new tab and tap Reading List on the start page. If your Safari tabs use the Bottom or Top layout, tap the open book icon, then the glasses tab instead. On Mac, open the sidebar and click Reading List. To empty it, press and hold Clear All Items on iPhone, or right-click any item on Mac and choose Clear All Items.",
       }}
       sections={[
         {
@@ -38,22 +38,24 @@ export const Route = createFileRoute("/_marketing/articles_/safari-reading-list"
         {
           title: "Where to find the Reading List on iPhone",
           paragraphs: [
-            "Open Safari and tap the open book icon in the toolbar at the bottom of the screen. On older versions of iOS the same icon sits at the top. Safari opens a panel with three tabs across the top: bookmarks, the Reading List, and history.",
-            "Tap the middle tab, marked with a pair of glasses. That is the Reading List. If the panel opens on bookmarks each time, Safari is remembering the last tab you used rather than hiding the list.",
-            "The toolbar can be hidden while you scroll. Tap once near the bottom of the screen to bring it back, then tap the book icon.",
+            "Since iOS 26, the place depends on the Safari tab layout, which you choose in Settings, then Apps, then Safari, under Tabs. The Compact layout does not show the open book icon in the toolbar, which is why the Reading List seems to have gone.",
+            "On iOS 27 with the Compact layout, go to the start page. Tap the Tabs button, then the plus button to open a new tab, and tap Reading List on the start page.",
+            "On iOS 26 with the Compact layout, tap the More button, marked with three dots, then tap Bookmarks, then tap the tab marked with a pair of glasses.",
+            "With the Bottom or Top layout, and on iOS 18 and earlier, tap the open book icon in the toolbar, then the tab marked with a pair of glasses. If the panel opens on bookmarks each time, Safari is remembering the last tab you used rather than hiding the list.",
+            "The toolbar can be hidden while you scroll. Tap once near the bottom of the screen to bring it back.",
           ],
         },
         {
           title: "Where to find the Reading List on Mac",
           paragraphs: [
-            "In Safari on a Mac, open the sidebar with the sidebar button in the toolbar, or choose View and then Show Sidebar. Select the glasses tab in the sidebar to see the Reading List.",
-            "The keyboard shortcut is Control Command 2. Control Command 1 opens bookmarks in the same sidebar, which is a common reason people believe the Reading List has vanished when they have simply landed on the wrong tab.",
+            "In Safari on a Mac, click the sidebar button in the toolbar, then click Reading List in the sidebar.",
+            "The keyboard shortcut is Control Command 2, or choose View and then Show Reading List Sidebar. Control Command 1 opens bookmarks in the same sidebar, which is a common reason people believe the Reading List has vanished when they have simply landed on the wrong tab.",
           ],
         },
         {
           title: "How to use the Reading List on iPhone",
           paragraphs: [
-            "To save the page you are viewing, tap the share button, then choose Add to Reading List. You can also press and hold the bookmarks icon and choose Add to Reading List from the menu that appears.",
+            "To save the page you are viewing on iOS 27 with the Compact layout, tap the Page Menu button, then Share, then Add to Reading List. With the Bottom or Top layout, tap the share button in the toolbar, then Add to Reading List.",
             "To save a link without opening it first, press and hold the link on the page and choose Add to Reading List. This is the fastest way to work through a page of search results or a newsletter.",
             "Tap any entry to read it. Swipe an entry to the left for Delete, or to the right to mark it as read or unread. Safari can hide entries you have already read: in the Reading List panel, choose Show Unread to see only what is left.",
           ],
@@ -62,7 +64,7 @@ export const Route = createFileRoute("/_marketing/articles_/safari-reading-list"
           title: "How to clear or delete the Reading List",
           paragraphs: [
             "To remove one entry on iPhone, swipe it to the left and tap Delete. To empty the list completely, open the Reading List, then press and hold the Clear All Items control until the confirmation appears. On some versions of iOS this control appears only after you scroll to the bottom of the list.",
-            "On a Mac, right-click any entry in the Reading List sidebar and choose Clear All Items, then confirm. Removing one entry is a right-click and Remove Item.",
+            "On a Mac, right-click any entry in the Reading List sidebar and choose Clear All Items, then confirm. To remove one entry, Control-click it and choose Delete.",
             "Clearing the list also removes the offline copies Safari downloaded, which is the usual reason a full Reading List takes up storage. If you clear it to reclaim space, be aware that anything you had not read yet goes with it and cannot be recovered.",
           ],
         },
@@ -85,9 +87,9 @@ export const Route = createFileRoute("/_marketing/articles_/safari-reading-list"
       ]}
       questions={[
         { question: "What is the Reading List in Safari?", answer: "It is Safari's built-in list for pages you want to read later. Unlike a bookmark it downloads the page for offline reading and is meant to be cleared once you have read the entry." },
-        { question: "Where is my Reading List on my iPhone?", answer: "Open Safari, tap the open book icon in the bottom toolbar, then tap the middle tab marked with a pair of glasses. Tap near the bottom of the screen first if the toolbar is hidden." },
+        { question: "Where is my Reading List on my iPhone?", answer: "On iOS 27, open a new tab in Safari and tap Reading List on the start page. If your tabs use the Bottom or Top layout, tap the open book icon, then the tab marked with a pair of glasses. On iOS 26 with the Compact layout, tap the More button, then Bookmarks, then the glasses tab." },
         { question: "How do I clear the Reading List on iPhone?", answer: "Open the Reading List, then press and hold Clear All Items and confirm. To delete a single entry instead, swipe it to the left and tap Delete." },
-        { question: "How do I delete the Reading List in Safari on a Mac?", answer: "Open the sidebar and select the glasses tab, then right-click any entry and choose Clear All Items. Right-click and Remove Item deletes a single entry." },
+        { question: "How do I delete the Reading List in Safari on a Mac?", answer: "Open the sidebar and click Reading List, then right-click any entry and choose Clear All Items. To delete a single entry, Control-click it and choose Delete." },
         { question: "Does the Safari Reading List sync between devices?", answer: "It syncs through iCloud to Safari on any iPhone, iPad, or Mac signed in to the same Apple Account. It does not reach Chrome, Android, or Windows." },
         { question: "What is the difference between the Reading List and bookmarks?", answer: "A bookmark is a destination you expect to return to for months. A Reading List entry is material you intend to read once and then remove." },
         { question: "Can I read Safari Reading List articles offline?", answer: "Yes. Safari downloads the page when you add it, so saved entries open without a connection. Those downloads are also why a long Reading List uses storage." },
