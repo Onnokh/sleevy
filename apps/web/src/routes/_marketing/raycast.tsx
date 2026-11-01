@@ -6,9 +6,9 @@ import { IntegrationPage } from "../../pages/integration-page"
 export const Route = createFileRoute("/_marketing/raycast")({
   head: () => ({
     meta: [
-      { title: "Raycast Read-Later Extension: Save and Search Links | Sleevy" },
+      { title: "Raycast read-later extension: save and search links | Sleevy" },
       { name: "description", content: "Save links with the Sleevy Raycast read-later extension and search your synced queue without leaving the keyboard." },
-      { property: "og:title", content: "Raycast Read-Later Extension | Sleevy" },
+      { property: "og:title", content: "Raycast read-later extension | Sleevy" },
       { property: "og:description", content: "Save links and search your read-later queue without leaving Raycast." },
       { property: "og:type", content: "website" },
       { property: "og:url", content: "https://sleevy.app/raycast" },

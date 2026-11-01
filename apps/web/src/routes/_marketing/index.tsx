@@ -4,13 +4,13 @@ import { HomePage } from "../../pages/home-page"
 export const Route = createFileRoute("/_marketing/")({
   head: () => ({
     meta: [
-      { title: "Sleevy | Read-It-Later App & Bookmark Manager API" },
+      { title: "Sleevy | Read-it-later app & bookmark manager API" },
       { name: "description", content: "A read-it-later app and personal bookmark manager with a REST API and MCP server. Save links from iPhone, Chrome, Raycast, scripts, or an AI agent into one queue." },
-      { property: "og:title", content: "Sleevy | Read-It-Later App & Bookmark Manager API" },
+      { property: "og:title", content: "Sleevy | Read-it-later app & bookmark manager API" },
       { property: "og:description", content: "A read-it-later app and bookmark manager with a REST API and MCP server. Save links from iPhone, Chrome, Raycast, scripts, or an AI agent into one queue." },
       { property: "og:type", content: "website" },
       { property: "og:url", content: "https://sleevy.app/" },
-      { name: "twitter:title", content: "Sleevy | Read-It-Later App & Bookmark Manager API" },
+      { name: "twitter:title", content: "Sleevy | Read-it-later app & bookmark manager API" },
       { name: "twitter:description", content: "A read-it-later app and bookmark manager with a REST API and MCP server. Save links from iPhone, Chrome, Raycast, scripts, or an AI agent into one queue." },
     ],
     links: [

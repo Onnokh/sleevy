@@ -6,9 +6,9 @@ import { ArticlePage } from "../../pages/article-page"
 export const Route = createFileRoute("/_marketing/articles_/how-to-organize-too-many-open-tabs")({
   head: () => ({
     meta: [
-      { title: "How to Organize Too Many Open Tabs | Sleevy" },
+      { title: "How to organize too many open tabs | Sleevy" },
       { name: "description", content: "Organize too many open tabs with a simple read, save, or close workflow. Learn when to use bookmarks and when to use a read-later app." },
-      { property: "og:title", content: "How to Organize Too Many Open Tabs" },
+      { property: "og:title", content: "How to organize too many open tabs" },
       { property: "og:description", content: "Turn a crowded browser window into a short list of clear next steps." },
       { property: "og:type", content: "article" },
       { property: "og:url", content: "https://sleevy.app/articles/how-to-organize-too-many-open-tabs" },

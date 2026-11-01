@@ -6,9 +6,9 @@ import { IntegrationPage } from "../../pages/integration-page"
 export const Route = createFileRoute("/_marketing/chrome-extension")({
   head: () => ({
     meta: [
-      { title: "Chrome Bookmark Manager & Read-Later Extension | Sleevy" },
+      { title: "Chrome bookmark manager & read-later extension | Sleevy" },
       { name: "description", content: "A Chrome bookmark manager extension that saves tabs for later in one click. No folder to choose, and one synced queue you can reach from any device." },
-      { property: "og:title", content: "Chrome Bookmark Manager & Read-Later Extension | Sleevy" },
+      { property: "og:title", content: "Chrome bookmark manager & read-later extension | Sleevy" },
       { property: "og:description", content: "Save tabs for later in Chrome and keep one synced queue you can search." },
       { property: "og:type", content: "website" },
       { property: "og:url", content: "https://sleevy.app/chrome-extension" },

@@ -6,9 +6,9 @@ import { IntegrationPage } from "../../pages/integration-page"
 export const Route = createFileRoute("/_marketing/ios-app")({
   head: () => ({
     meta: [
-      { title: "Save Links from iPhone | iOS Read-Later App | Sleevy" },
+      { title: "Save links from iPhone | iOS read-later app | Sleevy" },
       { name: "description", content: "Save links from iPhone with Sleevy, an iOS read-later app for the Share Sheet. Keep your reading queue synced across your devices." },
-      { property: "og:title", content: "Save Links from iPhone | Sleevy" },
+      { property: "og:title", content: "Save links from iPhone | Sleevy" },
       { property: "og:description", content: "Save links from the iOS Share Sheet to a synced read-later queue." },
       { property: "og:type", content: "website" },
       { property: "og:url", content: "https://sleevy.app/ios-app" },

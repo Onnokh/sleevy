@@ -4,7 +4,7 @@ import { ContactPage } from "../../pages/contact-page"
 export const Route = createFileRoute("/_marketing/contact")({
   head: () => ({
     meta: [
-      { title: "Contact Sleevy | Support, Privacy, and Security" },
+      { title: "Contact Sleevy | Support, privacy, and security" },
       { name: "description", content: "How to reach Sleevy: app support, privacy and data requests, security reports, and questions about the API and MCP server." },
       { property: "og:title", content: "Contact Sleevy" },
       { property: "og:description", content: "Support, privacy requests, security reports, and developer questions." },

@@ -6,9 +6,9 @@ import { ArticlePage } from "../../pages/article-page"
 export const Route = createFileRoute("/_marketing/articles_/read-later-app-chrome-iphone")({
   head: () => ({
     meta: [
-      { title: "Read-Later App for Chrome and iPhone | Sleevy" },
+      { title: "Read-later app for Chrome and iPhone | Sleevy" },
       { name: "description", content: "Save links from Chrome and iPhone to one synced reading queue with the Sleevy browser extension and iOS Share Sheet." },
-      { property: "og:title", content: "A Read-Later App for Chrome and iPhone" },
+      { property: "og:title", content: "A read-later app for Chrome and iPhone" },
       { property: "og:description", content: "Save links from Chrome and iPhone to the same synced reading queue." },
       { property: "og:type", content: "article" },
       { property: "og:url", content: "https://sleevy.app/articles/read-later-app-chrome-iphone" },

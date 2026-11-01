@@ -6,7 +6,7 @@ import { ArticlePage } from "../../pages/article-page"
 export const Route = createFileRoute("/_marketing/articles_/how-to-organize-bookmarks-chrome")({
   head: () => ({
     meta: [
-      { title: "How to Organize Bookmarks in Chrome | Sleevy" },
+      { title: "How to organize bookmarks in Chrome | Sleevy" },
       { name: "description", content: "Sort a crowded Chrome bookmarks list into folders you will actually use, and learn which saved links do not belong in bookmarks at all." },
       { property: "og:title", content: "How to organize bookmarks in Chrome" },
       { property: "og:description", content: "A method for a bookmark list that has grown past the point of being useful." },

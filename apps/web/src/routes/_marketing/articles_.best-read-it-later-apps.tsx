@@ -6,14 +6,14 @@ import { ArticlePage } from "../../pages/article-page"
 export const Route = createFileRoute("/_marketing/articles_/best-read-it-later-apps")({
   head: () => ({
     meta: [
-      { title: "The Best Read-It-Later Apps in 2026 | Sleevy" },
+      { title: "The best read-it-later apps in 2026 | Sleevy" },
       { name: "description", content: "Compare the best read-it-later apps for saving articles and videos you want to return to, and see which one fits how you actually capture links." },
-      { property: "og:title", content: "The Best Read-It-Later Apps in 2026" },
+      { property: "og:title", content: "The best read-it-later apps in 2026" },
       { property: "og:description", content: "What to look for in a read-it-later app, and how the current options differ." },
       { property: "og:type", content: "article" },
       { property: "og:url", content: "https://sleevy.app/articles/best-read-it-later-apps" },
       { property: "article:modified_time", content: "2026-09-09" },
-      { name: "twitter:title", content: "The Best Read-It-Later Apps in 2026" },
+      { name: "twitter:title", content: "The best read-it-later apps in 2026" },
       { name: "twitter:description", content: "What to look for in a read-it-later app, and how the current options differ." },
     ],
     links: [{ rel: "canonical", href: "https://sleevy.app/articles/best-read-it-later-apps" }],
