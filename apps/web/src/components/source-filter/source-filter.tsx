@@ -4,6 +4,7 @@ import { ChevronRight, Globe2, Hash, Inbox, Library, MoreVertical, Settings, Squ
 
 import { useKeyboardNav } from "../../contexts/keyboard-nav-context"
 import { useProfile } from "../../sleevy/profile"
+import { PUBLIC_PROFILE_HASH } from "../public-profile/public-profile"
 import { useSidebarSheet } from "../app-layout/sidebar-sheet"
 import { useMoveItemsToSource, useSavedItems, type Topic } from "../../sleevy/saved-items"
 import { SAVED_ITEM_DRAG_TYPE, useMoveSavedItemToFolder } from "../../sleevy/folders"
@@ -84,6 +85,7 @@ type SidebarItem = {
   readonly count?: number
   readonly icon?: ReactNode
   readonly to?: string
+  readonly hash?: string
   readonly exact?: boolean
   readonly active?: boolean
   readonly onClick?: () => void
@@ -137,6 +139,7 @@ function SidebarSection({ heading, items, activeValue, onSelect, collapsible = f
             {item.to ? (
               <Link
                 to={item.to}
+                hash={item.hash}
                 className={styles.item}
                 activeOptions={item.exact ? { exact: true } : undefined}
                 activeProps={item.active === false ? undefined : { className: `${styles.item} ${styles.active}` }}
@@ -224,7 +227,10 @@ export function SidebarActions() {
         key: "claim-handle",
         label: "Claim handle",
         icon: <Globe2 size={14} />,
+        // Settings is a column of cards, and this row means one of them. The
+        // hash is what tells the Public Profile card the reader is coming.
         to: "/settings",
+        hash: PUBLIC_PROFILE_HASH,
         active: false,
       }
 

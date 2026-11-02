@@ -304,7 +304,9 @@
   background: var(--surface);
 }
 
-.settings-section > :not(.section-header) {
+/* A canvas child is a field behind the card, not a column of it, so it keeps
+   the placement its own stylesheet gives it. */
+.settings-section > :not(.section-header, canvas) {
   grid-column: 2;
   min-width: 0;
 }
@@ -319,7 +321,7 @@
     gap: 0.75rem;
   }
 
-  .settings-section > :not(.section-header) {
+  .settings-section > :not(.section-header, canvas) {
     grid-column: 1;
   }
 }

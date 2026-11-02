@@ -121,13 +121,130 @@
 
 .confirm-actions {
   display: flex;
+  /* Two buttons whose labels cannot break: a card narrow enough to stack its
+     columns leaves them less room than they need, and a flex-end row with no
+     wrap spills its overflow out of the panel's leading edge. Wrapping puts
+     the primary on its own line instead. */
+  flex-wrap: wrap;
   justify-content: flex-end;
   gap: 0.5rem;
   margin-top: 1rem;
+}
+
+/* On a phone-width card even one of these labels is wider than the panel, and
+   a button's label does not break by default. Here it may: a two-line button
+   is better than a button hanging over the edge of the card. */
+.confirm-actions > button {
+  max-width: 100%;
+  white-space: normal;
 }
 
 .controls {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
+}
+
+/* Clear the collapsing title bar, so a hash landing puts the card's own title
+   below it rather than behind it. */
+.panel {
+  scroll-margin-top: 4.5rem;
+}
+
+/* The aurora lies behind the card's own content, and the card clips it to its
+   rounded corners. */
+.panel:has(.shader) {
+  position: relative;
+  overflow: hidden;
+}
+
+.panel > :not(.shader) {
+  position: relative;
+  z-index: 1;
+}
+
+.shader {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  opacity: 0.4;
+  /* Brightest at the leading edge, gone by the far edge: the title and the
+     field keep a plain surface to sit on. */
+  mask-image: linear-gradient(to right, black, transparent 82%);
+  transition: opacity 900ms ease-out;
+}
+
+/* Arriving by hash turns the wash up, then lets it settle back. A card that
+   brightens says "this one" without a border flashing over the layout. */
+.spotlight .shader {
+  opacity: 0.85;
+  transition: none;
+}
+
+/* Claiming is the one moment this card has to celebrate. The aurora burns up
+   and drains away, and the address it just gave you rises into the space the
+   form held. Nothing is announced twice: the light leaving IS the state
+   change, because a claimed card carries no wash of its own. */
+.celebrating .shader {
+  animation: claim-flare 1800ms ease-out forwards;
+  transition: none;
+  /* The resting wash keeps to the leading edge so the form has a plain
+     surface. For the flare there is no form left to protect, so the light
+     takes the whole card. */
+  mask-image: none;
+}
+
+@keyframes claim-flare {
+  0% {
+    opacity: 0.4;
+  }
+
+  12% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+  }
+}
+
+.summary-arriving {
+  animation: claim-settle 600ms ease-out both;
+}
+
+/* The confirmation can open on its own, at the end of the claim flare, so it
+   arrives rather than appears. The same rise the address uses. */
+.confirm-arriving {
+  animation: claim-settle 300ms ease-out both;
+}
+
+
+@keyframes claim-settle {
+  from {
+    opacity: 0;
+    transform: translateY(0.5rem);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shader,
+  .spotlight .shader {
+    transition: none;
+  }
+
+  /* No flare and no rise. The card simply becomes the address. */
+  .celebrating .shader {
+    animation: none;
+    opacity: 0;
+  }
+
+  .summary-arriving,
+  .confirm-arriving {
+    animation: none;
+  }
 }
