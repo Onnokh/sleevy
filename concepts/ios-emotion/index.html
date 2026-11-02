@@ -1,0 +1,1534 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Sleevy for iPhone — Direction A, with emotion (round 2)</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="../ios-native/symbols.css">
+<link rel="stylesheet" href="../ios-native/symbols-extra.css">
+<link rel="stylesheet" href="../ios-native/newyork.css">
+<style>
+  /* iOS dark system colours */
+  :root {
+    --bg: #000;
+    --cell: #1c1c1e;
+    --cell2: #2c2c2e;
+    --label: #fff;
+    --l2: rgba(235, 235, 245, 0.6);
+    --l3: rgba(235, 235, 245, 0.3);
+    --sep: rgba(84, 84, 88, 0.6);
+    --fill: rgba(120, 120, 128, 0.32);
+    --blue: #0a84ff;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: radial-gradient(circle at 1px 1px, #ffffff12 1px, transparent 0) 0 0 / 22px 22px, #070708;
+    color: var(--label);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    padding: 44px 48px 72px;
+  }
+  body.single { padding: 36px 48px 40px; }
+  body.single .page-head { display: none; }
+  .page-head { max-width: 1400px; margin: 0 auto 44px; }
+  .page-head h1 { font-size: 26px; font-weight: 700; letter-spacing: -0.01em; }
+  .page-head p { color: var(--l2); font-size: 15px; margin-top: 6px; }
+  section.variant { max-width: 1360px; margin: 0 auto 80px; }
+  body.single section.variant { margin-bottom: 0; }
+  .v-head { display: flex; gap: 12px; align-items: center; }
+  .v-head .tag { font-size: 13px; font-weight: 800; color: #000; background: #fff; border-radius: 8px; padding: 3px 9px; }
+  .v-head h2 { font-size: 26px; font-weight: 700; letter-spacing: -0.01em; }
+  .v-idea { color: rgba(235, 235, 245, 0.75); font-size: 16px; margin-top: 8px; max-width: 1000px; line-height: 1.4; }
+  .v-native { color: var(--l3); font-size: 13px; margin: 8px 0 26px; font-family: ui-monospace, "SF Mono", Menlo, monospace; }
+  .row3 { display: flex; gap: 44px; }
+  figure { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+  figcaption { color: var(--l2); font-size: 13px; }
+
+  /* Device: iPhone 17, 402 × 874 pt */
+  .phone { width: 424px; height: 896px; border-radius: 58px; padding: 11px; background: linear-gradient(160deg, #2a2a2e, #141416 40%, #1d1d20); box-shadow: 0 0 0 1px #34343a, 0 40px 80px -20px #000; }
+  .screen { position: relative; width: 100%; height: 100%; border-radius: 48px; overflow: hidden; background: var(--bg); }
+  .island { position: absolute; top: 11px; left: 50%; translate: -50% 0; width: 124px; height: 36px; border-radius: 20px; background: #000; z-index: 9; }
+  .status { position: absolute; top: 0; left: 0; right: 0; height: 54px; z-index: 8; display: flex; justify-content: space-between; align-items: center; padding: 4px 32px 0 50px; font-size: 17px; font-weight: 600; }
+  .status .icons { display: flex; gap: 7px; align-items: center; }
+  .status .sf { font-size: 12px; }
+  .status .sf-battery-100percent { font-size: 13px; }
+  .home-ind { position: absolute; bottom: 8px; left: 50%; translate: -50% 0; width: 140px; height: 5px; border-radius: 3px; background: #fff; z-index: 9; }
+  .edge-top { position: absolute; top: 0; left: 0; right: 0; height: 112px; background: linear-gradient(#000 50%, #0000); z-index: 4; }
+  .edge-bottom { position: absolute; bottom: 0; left: 0; right: 0; height: 150px; background: linear-gradient(#0000, #000 72%); z-index: 4; }
+  .scroll { position: absolute; inset: 0; padding-top: 104px; overflow: hidden; }
+
+  /* Liquid Glass controls */
+  .glass { background: rgba(46, 46, 50, 0.62); backdrop-filter: blur(20px) saturate(1.8); box-shadow: inset 0 0.5px 0 rgba(255, 255, 255, 0.3), inset 0 0 0 0.5px rgba(255, 255, 255, 0.12), 0 8px 24px rgba(0, 0, 0, 0.5); }
+  .toolbar { position: absolute; top: 56px; left: 16px; right: 16px; height: 48px; display: flex; align-items: center; justify-content: space-between; z-index: 5; }
+  .toolbar .center { position: absolute; left: 50%; translate: -50% 0; }
+  .gbtn { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; }
+  .gbtn .sf { font-size: 18px; }
+  .gcap { height: 44px; border-radius: 22px; display: flex; align-items: center; padding: 0 3px; }
+  .gcap > span { min-width: 40px; height: 40px; display: grid; place-items: center; }
+  .gcap .sf { font-size: 18px; }
+  /* The ellipsis glyph box is only the dots, so it needs a smaller em. */
+  .gbtn .sf-ellipsis, .gcap .sf-ellipsis { font-size: 6px; }
+  .screen .gcap i.sf-chevron-up, .screen .gcap i.sf-chevron-down { font-size: 10px; }
+  .screen .disc-h i.sf-chevron-down, .screen .igh i.sf-chevron-down { font-size: 8px; }
+  .avatar { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; background: linear-gradient(#8e8e93, #5a5a5f); font-size: 13px; font-weight: 600; }
+  .gcap > span.av { min-width: 38px; }
+  .inline-title { display: flex; flex-direction: column; align-items: center; line-height: 1.2; }
+  .inline-title b { font-size: 17px; font-weight: 600; }
+  .inline-title span { font-size: 12px; color: var(--l2); }
+
+  /* Tab bar with a search-role tab */
+  .tabbar { position: absolute; left: 20px; right: 20px; bottom: 24px; display: flex; gap: 12px; z-index: 5; }
+  .tabs { flex: 1; height: 62px; border-radius: 31px; display: flex; padding: 4px; }
+  .tab { flex: 1; border-radius: 27px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; font-size: 10px; font-weight: 600; }
+  .tab .sf { font-size: 21px; }
+  .tab.on { background: rgba(255, 255, 255, 0.12); }
+  .tint-blue .tab.on { color: var(--blue); }
+  .tabsearch { width: 62px; height: 62px; border-radius: 50%; display: grid; place-items: center; }
+  .tabsearch .sf { font-size: 21px; }
+
+  /* Bottom toolbar */
+  .bottombar { position: absolute; left: 16px; right: 16px; bottom: 26px; display: flex; gap: 10px; align-items: center; z-index: 5; }
+  .bottombar.split { justify-content: space-between; }
+  .bottombar .gbtn { width: 50px; height: 50px; }
+  .bottombar .gbtn .sf { font-size: 19px; }
+  .bottombar .gcap { height: 50px; border-radius: 25px; }
+  .bottombar .gcap > span { min-width: 46px; height: 46px; }
+  .bottombar .gcap .sf { font-size: 19px; }
+  .field { flex: 1; height: 50px; border-radius: 25px; display: flex; align-items: center; gap: 9px; padding: 0 6px 0 16px; color: var(--l2); font-size: 17px; }
+  .field .sf { font-size: 17px; }
+  .field .grow { flex: 1; }
+  .field .mic { margin-right: 10px; }
+
+  /* Favicons */
+  .fav { position: relative; display: grid; place-items: center; flex: none; overflow: hidden; background: var(--cell2); color: #fff; font-weight: 700; }
+  .fav img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+  .fav.loaded { background: transparent; color: transparent; }
+
+  /* Large title */
+  .lt { padding: 0 20px 6px; }
+  .lt h1 { font-size: 34px; font-weight: 700; letter-spacing: 0.01em; }
+  .lt p { font-size: 15px; color: var(--l2); margin-top: 1px; }
+
+  /* Plain list */
+  .ph { font-size: 17px; font-weight: 600; padding: 18px 20px 4px; }
+  .group > :last-child .cbody { border-bottom: 0; }
+
+  /* Inset grouped list */
+  .igh { font-size: 20px; font-weight: 700; padding: 22px 36px 8px; display: flex; justify-content: space-between; align-items: center; }
+  .igh .sf { font-size: 14px; color: var(--blue); }
+  .ig { margin: 0 16px; background: var(--cell); border-radius: 24px; overflow: hidden; }
+  .igrow { display: flex; align-items: center; gap: 14px; padding-left: 16px; }
+  .igrow > .sf { font-size: 21px; width: 28px; }
+  .igbody { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; padding: 14px 16px 14px 0; border-bottom: 0.5px solid var(--sep); }
+  .igrow:last-child .igbody { border-bottom: 0; }
+  .igname { flex: 1; font-size: 17px; display: flex; align-items: center; gap: 6px; min-width: 0; }
+  .igval { color: var(--l2); font-size: 17px; font-variant-numeric: tabular-nums; }
+  .igrow .chev { font-size: 13px; color: var(--l3); }
+  .pub { font-size: 13px; color: var(--l2); }
+  .igrow.action { color: var(--blue); }
+  .two { flex: 1; min-width: 0; }
+  .two b { display: block; font-size: 17px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .two span { display: block; font-size: 15px; color: var(--l2); }
+  .udot { width: 10px; height: 10px; border-radius: 50%; background: var(--blue); flex: none; }
+
+  /* Reader */
+  .art { padding: 8px 22px 0; }
+  .art-title { font-size: 28px; line-height: 1.15; font-weight: 700; letter-spacing: -0.005em; }
+  .art-by { display: flex; gap: 8px; align-items: center; margin-top: 12px; color: var(--l2); font-size: 15px; }
+  .disc { margin-top: 20px; background: var(--cell); border-radius: 22px; padding: 14px 16px 16px; }
+  .disc-h { display: flex; justify-content: space-between; align-items: center; font-size: 15px; font-weight: 600; color: var(--l2); margin-bottom: 6px; }
+  .disc-h .sf { font-size: 13px; color: var(--l2); }
+  .disc p { font-size: 17px; line-height: 1.4; }
+  .prose { margin-top: 24px; font-size: 17px; line-height: 1.5; color: rgba(235, 235, 245, 0.72); }
+  .prose h4 { font-size: 20px; font-weight: 700; color: var(--label); margin-bottom: 8px; }
+  .prose p + p, .prose ul { margin-top: 12px; }
+  .prose ul { padding-left: 22px; }
+
+  /* A — Plain: the reference's quiet list, sidebar and reader */
+  section.variant.wide { max-width: 1840px; }
+  .tgroup { display: flex; gap: 8px; }
+  .qh { font-size: 15px; color: var(--l2); padding: 18px 20px 4px; }
+  .qrow { display: flex; align-items: center; gap: 14px; height: 50px; padding: 0 20px; }
+  .qrow b { flex: 1; min-width: 0; font-size: 17px; font-weight: 600; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .qsec { display: flex; align-items: center; gap: 7px; font-size: 15px; font-weight: 600; color: var(--l2); padding: 22px 20px 4px; }
+  .screen .qsec i.sf-chevron-down { font-size: 7px; }
+  .qside { display: flex; align-items: center; gap: 12px; height: 46px; padding: 0 20px; font-size: 17px; }
+  .qside .qi { width: 26px; display: grid; place-items: center; color: var(--l2); }
+  .qside .qi .sf { font-size: 19px; }
+  .qside .qi .sf-number { font-size: 17px; }
+  .qside .nm { flex: 1; display: flex; align-items: center; gap: 7px; }
+  .qside .nm .sf { font-size: 13px; color: var(--l3); }
+  .qside .n { color: var(--l2); font-variant-numeric: tabular-nums; }
+  .qside.add { color: var(--l2); }
+  .qart { padding: 6px 22px 0; }
+  .qart h2 { font-size: 32px; line-height: 1.1; font-weight: 800; letter-spacing: -0.015em; }
+  .qby { display: flex; gap: 8px; align-items: center; margin-top: 14px; color: var(--l2); font-size: 16px; }
+  .qsum { margin-top: 26px; background: var(--cell); border-radius: 22px; padding: 15px 18px 18px; }
+  .qsum-h { display: flex; align-items: center; gap: 7px; font-size: 15px; font-weight: 600; color: var(--l2); margin-bottom: 8px; }
+  .screen .qsum-h i.sf-chevron-down { font-size: 7px; }
+  .qsum p { font-size: 18px; line-height: 1.45; }
+  .qprose { margin-top: 30px; font-size: 18px; line-height: 1.6; color: rgba(235, 235, 245, 0.6); }
+  .qprose p + p { margin-top: 16px; }
+  .qblur { position: absolute; inset: 0; z-index: 6; background: rgba(0, 0, 0, 0.3); backdrop-filter: blur(9px); }
+  .qpeek { position: absolute; left: 16px; right: 16px; top: 214px; z-index: 7; background: var(--cell); border-radius: 26px; padding: 18px 20px 20px; box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6); }
+  .qpeek .qby { margin-top: 0; font-size: 15px; }
+  .qpeek h3 { font-size: 24px; line-height: 1.15; font-weight: 800; letter-spacing: -0.01em; margin-top: 12px; }
+  .qpeek p { font-size: 17px; line-height: 1.4; color: rgba(235, 235, 245, 0.75); margin-top: 8px; }
+  .qtags { display: flex; gap: 14px; margin-top: 14px; font-size: 15px; color: var(--l2); }
+  .qmenu { position: absolute; left: 16px; width: 262px; top: 464px; z-index: 7; border-radius: 26px; padding: 6px 0; background: rgba(44, 44, 48, 0.9); backdrop-filter: blur(40px) saturate(1.8); box-shadow: inset 0 0.5px 0 rgba(255, 255, 255, 0.25), 0 20px 60px rgba(0, 0, 0, 0.7); }
+  .qmi { display: flex; align-items: center; gap: 12px; padding: 11px 18px; font-size: 17px; }
+  .qmi .qi { width: 24px; display: grid; place-items: center; }
+  .qmi .qi .sf { font-size: 18px; }
+  .qmi .lbl { flex: 1; }
+  .qmi .lbl small { display: block; font-size: 13px; color: var(--l2); }
+  .qmi > .sf { font-size: 12px; color: var(--l2); }
+  .qmi.red { color: #ff453a; }
+  .qsep { height: 8px; background: rgba(0, 0, 0, 0.25); margin: 6px 0; }
+
+  /* Before / after */
+  body.ba { padding: 40px 48px 44px; }
+  body.ba .page-head { display: none; }
+  .ba-head { display: flex; align-items: baseline; gap: 14px; margin-bottom: 30px; }
+  .ba-head h1 { font-size: 24px; font-weight: 700; }
+  .ba-head p { color: var(--l2); font-size: 14px; }
+  .pairs { display: grid; grid-template-columns: repeat(2, auto); gap: 44px 80px; justify-content: start; }
+  .pair > h3 { font-size: 17px; font-weight: 650; margin: 0 0 14px 4px; }
+  .duo { display: flex; align-items: center; gap: 22px; }
+  .duo .arrow { color: var(--l3); font-size: 22px; }
+  .duo figcaption { font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--l3); }
+  .duo figcaption.new { color: var(--blue); }
+  .screen.shot img { width: 100%; height: 100%; display: block; }
+
+  /* B — Editorial */
+  .ny { font-family: NY, serif; }
+  .kicker { font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--l2); }
+  .ed-head { padding: 0 20px 12px; }
+  .ed-head h1 { font: 700 40px NY, serif; letter-spacing: -0.01em; margin-top: 2px; }
+  .ed-head p { color: var(--l2); font-size: 15px; }
+  .ed-lead { margin: 4px 20px 0; padding: 16px 0 18px; border-top: 1px solid var(--label); border-bottom: 0.5px solid var(--sep); }
+  .ed-src { display: flex; align-items: center; gap: 7px; font-size: 13px; color: var(--l2); }
+  .ed-lead h3 { font: 700 30px/1.08 NY, serif; margin: 10px 0 8px; letter-spacing: -0.01em; }
+  .ed-lead p { font-size: 16px; line-height: 1.4; color: rgba(235, 235, 245, 0.75); }
+  .ed-row { margin: 0 20px; padding: 14px 0; border-bottom: 0.5px solid var(--sep); }
+  .ed-row h4 { font: 600 20px/1.2 NY, serif; margin: 7px 0 4px; }
+  .ed-row p { font-size: 15px; line-height: 1.35; color: var(--l2); }
+  .ed-art { padding: 6px 24px 0; }
+  .ed-art .kicker { display: flex; align-items: center; gap: 7px; }
+  .ed-art h2 { font: 700 34px/1.08 NY, serif; margin-top: 12px; letter-spacing: -0.01em; }
+  .ed-meta { color: var(--l2); font-size: 14px; margin-top: 10px; }
+  .pull { margin-top: 20px; padding: 16px 0; border-top: 0.5px solid var(--sep); border-bottom: 0.5px solid var(--sep); font: italic 400 21px/1.35 NY, serif; }
+  .pull .kicker { display: block; font-style: normal; margin-bottom: 8px; }
+  .ed-prose { margin-top: 20px; font: 400 18px/1.55 NY, serif; color: rgba(235, 235, 245, 0.8); }
+  .ed-prose h5 { font: 700 21px NY, serif; color: var(--label); margin-bottom: 8px; }
+  .ed-prose p + p { margin-top: 12px; }
+  .drop::first-letter { float: left; font: 700 56px/0.8 NY, serif; margin: 7px 8px 0 0; color: var(--label); }
+  .toc { margin: 4px 20px 0; border-top: 1px solid var(--label); }
+  .toc-row { display: flex; align-items: center; gap: 14px; padding: 14px 0; border-bottom: 0.5px solid var(--sep); }
+  .toc-emoji { font-size: 22px; width: 28px; text-align: center; }
+  .toc-main { flex: 1; }
+  .toc-name { font: 600 24px NY, serif; }
+  .toc-sub { font-size: 13px; color: var(--l2); margin-top: 2px; }
+  .toc-count { font: 400 26px NY, serif; color: var(--l2); }
+  .toc-add { color: var(--blue); font-size: 17px; padding: 14px 20px 4px; display: flex; gap: 8px; align-items: center; }
+  .toc-add .sf { font-size: 16px; }
+
+  /* C — Sidebar */
+  .sb .igrow > .sf { color: var(--blue); }
+  .cgroup .crow:last-child .cbody { border-bottom: 0; }
+  .crow { display: flex; align-items: center; gap: 12px; padding-left: 12px; height: 52px; }
+  .crow .udot { width: 9px; height: 9px; }
+  .cbody { flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; height: 100%; border-bottom: 0.5px solid var(--sep); padding-right: 20px; }
+  .ctitle { flex: 1; min-width: 0; font-size: 16px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .ctime { color: var(--l2); font-size: 14px; }
+  .ph.small { font-size: 15px; color: var(--l2); padding: 14px 20px 2px; }
+
+  /* D — Up Next */
+  .next { margin: 6px 16px 0; background: var(--cell); border-radius: 28px; padding: 18px; }
+  .nc-src { display: flex; gap: 12px; align-items: center; }
+  .nc-src b { display: block; font-size: 15px; font-weight: 600; }
+  .nc-src span { font-size: 13px; color: var(--l2); }
+  .next h3 { font-size: 25px; line-height: 1.15; font-weight: 700; margin: 14px 0 8px; letter-spacing: -0.01em; }
+  .next p { font-size: 17px; line-height: 1.4; color: rgba(235, 235, 245, 0.75); }
+  .nc-actions { display: flex; gap: 10px; margin-top: 18px; }
+  .btn { height: 48px; border-radius: 24px; display: flex; align-items: center; justify-content: center; gap: 7px; font-size: 16px; font-weight: 600; padding: 0 18px; }
+  .btn .sf { font-size: 16px; }
+  .btn.prominent { background: #fff; color: #000; flex: 1; }
+  .btn.bordered { background: var(--fill); }
+  .btn.icon { width: 48px; padding: 0; }
+  .btn.wide { flex: 1; }
+  .dots { display: flex; justify-content: center; gap: 7px; margin-top: 12px; }
+  .dots i { width: 7px; height: 7px; border-radius: 50%; background: var(--l3); }
+  .dots i.on { background: var(--label); }
+  .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 6px 16px 0; }
+  .tile { background: var(--cell); border-radius: 22px; padding: 12px 14px 12px 12px; height: 88px; display: flex; flex-direction: column; justify-content: space-between; }
+  .tile .top { display: flex; justify-content: space-between; align-items: flex-start; }
+  .ic { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; color: #fff; flex: none; }
+  .ic .sf { font-size: 16px; }
+  .tile .n { font-size: 26px; font-weight: 700; }
+  .tile .lbl { font-size: 16px; font-weight: 600; color: var(--l2); }
+  .lic { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font-size: 15px; flex: none; }
+  .dim { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.5); z-index: 6; }
+  .sheet { position: absolute; left: 8px; right: 8px; bottom: 8px; height: 540px; border-radius: 42px; background: #1c1c1e; z-index: 7; padding-top: 8px; box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.6); }
+  .grabber { width: 36px; height: 5px; border-radius: 3px; background: var(--l3); margin: 0 auto 16px; }
+  .sh-head { display: flex; gap: 12px; align-items: center; padding: 0 18px; }
+  .sh-head .two b { font-size: 17px; }
+  .sh-head .two span { font-size: 14px; }
+  .sh-close { width: 32px; height: 32px; border-radius: 50%; background: var(--fill); display: grid; place-items: center; color: var(--l2); flex: none; }
+  .sh-close .sf { font-size: 12px; }
+  .sh-sum { margin: 20px 18px 0; }
+  .sh-label { display: flex; gap: 6px; align-items: center; font-size: 13px; font-weight: 600; color: var(--l2); text-transform: uppercase; letter-spacing: 0.04em; }
+  .sh-sum p { font-size: 17px; line-height: 1.4; margin-top: 6px; }
+  .sh-btns { display: flex; gap: 10px; margin: 20px 18px 0; }
+  .sheet .ig { margin: 18px 12px 0; background: var(--cell2); }
+
+  /* Shared by E–I */
+  .sumcard { margin-top: 20px; background: var(--cell); border-radius: 22px; padding: 14px 16px 16px; }
+  .sum-h { display: flex; gap: 6px; align-items: center; font-size: 13px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--l2); margin-bottom: 6px; }
+  .sum-h .sf { font-size: 12px; }
+  .sumcard p { font-size: 17px; line-height: 1.4; }
+  .avatar.lg { width: 44px; height: 44px; font-size: 16px; flex: none; }
+  .roundbtn { width: 40px; height: 40px; border-radius: 50%; background: var(--fill); display: grid; place-items: center; flex: none; }
+  .roundbtn .sf { font-size: 15px; }
+  .meta { flex: 1; min-width: 0; }
+  .meta small { display: block; font-size: 13px; color: var(--l2); }
+  .meta b { display: block; font-size: 17px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  /* E — Sheet */
+  .fsheet { position: absolute; left: 10px; right: 10px; bottom: 10px; z-index: 7; border-radius: 40px; padding: 8px 16px 18px; overflow: hidden; background: rgba(34, 34, 38, 0.82); backdrop-filter: blur(30px) saturate(1.6); box-shadow: inset 0 0.5px 0 rgba(255, 255, 255, 0.25), inset 0 0 0 0.5px rgba(255, 255, 255, 0.1), 0 -10px 40px rgba(0, 0, 0, 0.7); }
+  .fsheet .grabber { margin-bottom: 12px; }
+  .fsheet.large { left: 0; right: 0; bottom: 0; top: 60px; border-radius: 38px 38px 0 0; background: #1c1c1e; backdrop-filter: none; padding: 8px 0 0; }
+  .fsheet.large .ig { background: var(--cell2); }
+  .behind { position: absolute; left: 14px; right: 14px; top: 48px; height: 60px; border-radius: 34px 34px 0 0; background: #111113; }
+  .sh-search { display: flex; gap: 10px; align-items: center; }
+  .sfield { flex: 1; height: 46px; border-radius: 23px; background: rgba(120, 120, 128, 0.24); display: flex; align-items: center; gap: 8px; padding: 0 14px; color: var(--l2); font-size: 17px; }
+  .sfield .sf { font-size: 16px; }
+  .sfield .grow { flex: 1; }
+  .sh-next { display: flex; gap: 12px; align-items: center; margin-top: 16px; padding: 0 2px; }
+  .sh-h { display: flex; justify-content: space-between; align-items: baseline; font-size: 15px; font-weight: 600; color: var(--l2); margin: 20px 4px 10px; }
+  .sh-h a { color: var(--blue); font-weight: 400; }
+  .places { display: flex; justify-content: space-between; }
+  .place { width: 66px; display: flex; flex-direction: column; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 500; white-space: nowrap; }
+  .place .pc { width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center; font-size: 25px; }
+  .place small { color: var(--l2); font-size: 11px; margin-top: -3px; }
+  .sh-card { background: rgba(120, 120, 128, 0.16); border-radius: 22px; overflow: hidden; }
+  .sh-bar { display: flex; justify-content: space-between; padding: 0 16px; }
+  .fv-head { display: flex; flex-direction: column; align-items: center; padding: 0 20px 20px; text-align: center; }
+  .fv-badge { width: 84px; height: 84px; border-radius: 50%; display: grid; place-items: center; font-size: 40px; }
+  .fv-head h2 { font-size: 28px; font-weight: 700; margin-top: 12px; }
+  .fv-head p { font-size: 15px; color: var(--l2); margin-top: 2px; display: flex; gap: 5px; align-items: center; }
+  .fv-head p .sf { font-size: 13px; }
+
+  /* F — Shelves */
+  .lt-row { display: flex; justify-content: space-between; align-items: center; padding: 0 20px 4px; }
+  .lt-row h1 { font-size: 34px; font-weight: 700; }
+  .shelf-h { display: flex; align-items: center; gap: 6px; font-size: 22px; font-weight: 700; padding: 18px 20px 10px; }
+  .shelf-h .sf { font-size: 14px; color: var(--l2); }
+  .carousel { display: flex; gap: 12px; padding: 0 20px; overflow: hidden; }
+  .bigcard { flex: none; width: 300px; height: 236px; border-radius: 28px; background: var(--cell); padding: 20px; display: flex; flex-direction: column; }
+  .bigcard .head { display: flex; gap: 10px; align-items: center; }
+  .bigcard h3 { font-size: 27px; line-height: 1.1; font-weight: 700; letter-spacing: -0.01em; margin: 18px 0 10px; }
+  .bigcard p { font-size: 16px; line-height: 1.35; color: rgba(235, 235, 245, 0.7); }
+  .smallcard { flex: none; width: 158px; height: 184px; border-radius: 24px; padding: 14px; display: flex; flex-direction: column; }
+  .smallcard b { font-size: 17px; line-height: 1.2; font-weight: 700; margin-top: 12px; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+  .smallcard span { font-size: 13px; color: var(--l2); margin-top: auto; }
+  .accessory { position: absolute; left: 20px; right: 20px; bottom: 98px; height: 54px; border-radius: 27px; display: flex; align-items: center; gap: 10px; padding: 0 7px 0 11px; z-index: 5; }
+  .accessory .meta b { font-size: 15px; }
+  .accessory .meta small { font-size: 12px; }
+  .edge-bottom.tall { height: 250px; }
+  .cover { width: 210px; height: 210px; border-radius: 32px; margin: 0 auto; display: grid; place-items: center; font-size: 104px; box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5); }
+  .fv-title { text-align: center; font-size: 26px; font-weight: 700; margin-top: 18px; }
+  .fv-sub { display: flex; justify-content: center; gap: 5px; align-items: center; color: var(--l2); font-size: 15px; margin-top: 3px; }
+  .fv-sub .sf { font-size: 13px; }
+  .fv-btns { display: flex; gap: 12px; padding: 18px 20px 6px; }
+  .fv-btns .btn { flex: 1; }
+  .track { display: flex; align-items: center; gap: 10px; padding-left: 12px; height: 62px; }
+  .track .dotcol { width: 10px; display: grid; place-items: center; }
+  .track .no { width: 20px; text-align: center; color: var(--l2); font-size: 17px; font-variant-numeric: tabular-nums; }
+  .track .tb { flex: 1; min-width: 0; height: 100%; display: flex; align-items: center; gap: 10px; border-bottom: 0.5px solid var(--sep); padding-right: 22px; }
+  .track .tb > .sf { font-size: 6px; color: var(--l2); }
+  .rsheet { position: absolute; left: 0; right: 0; bottom: 0; top: 60px; border-radius: 38px 38px 0 0; background: #1c1c1e; z-index: 7; padding-top: 8px; overflow: hidden; }
+  .rsheet .grabber { margin-bottom: 10px; }
+  .rsheet .sumcard { background: var(--cell2); }
+  .rs-bar { display: flex; justify-content: space-between; align-items: center; padding: 0 16px 6px; }
+
+  /* G — Pages */
+  .title-menu { display: flex; flex-direction: column; align-items: center; line-height: 1.2; }
+  .title-menu b { display: flex; align-items: center; gap: 6px; font-size: 17px; font-weight: 600; }
+  .tm-chev { width: 18px; height: 18px; border-radius: 50%; background: var(--fill); display: grid; place-items: center; }
+  .screen .tm-chev i.sf { font-size: 5px; }
+  .title-menu > span { font-size: 12px; color: var(--l2); }
+  .page { position: absolute; left: 28px; right: 46px; top: 236px; }
+  .pg-meta { font-size: 15px; color: var(--l2); margin-top: 18px; }
+  .pg-title { font-size: 48px; line-height: 1.02; font-weight: 800; letter-spacing: -0.025em; margin-top: 8px; }
+  .pg-sum { font-size: 22px; line-height: 1.35; color: rgba(235, 235, 245, 0.72); margin-top: 18px; }
+  .vticks { position: absolute; right: 14px; top: 50%; translate: 0 -50%; display: flex; flex-direction: column; gap: 5px; z-index: 5; }
+  .vticks i { width: 4px; height: 9px; border-radius: 2px; background: var(--l3); }
+  .vticks i.on { height: 26px; background: var(--label); }
+  .pg-next { position: absolute; left: 0; right: 0; bottom: 100px; display: flex; justify-content: center; align-items: center; gap: 8px; font-size: 14px; color: var(--l2); z-index: 5; }
+  .screen .pg-next i.sf { font-size: 6px; }
+  .screen .gbtn i.sf-chevron-up { font-size: 10px; }
+  .btn.pill { height: 50px; border-radius: 25px; padding: 0 24px; font-size: 17px; }
+  .menu { position: absolute; top: 106px; left: 50%; translate: -50% 0; width: 270px; border-radius: 26px; z-index: 7; background: rgba(44, 44, 48, 0.9); backdrop-filter: blur(40px) saturate(1.8); box-shadow: inset 0 0.5px 0 rgba(255, 255, 255, 0.25), 0 20px 60px rgba(0, 0, 0, 0.7); padding: 6px 0; overflow: hidden; }
+  .mi { display: flex; align-items: center; gap: 10px; padding: 10px 18px 10px 14px; font-size: 17px; }
+  .mi .ck { width: 18px; display: grid; place-items: center; }
+  .mi .ck .sf { font-size: 14px; }
+  .mi .lbl { flex: 1; }
+  .mi .lbl small { display: block; font-size: 13px; color: var(--l2); }
+  .mi > .sf { font-size: 18px; }
+  .mi .cnt { color: var(--l2); }
+  .msep { height: 8px; background: rgba(0, 0, 0, 0.3); }
+  .mhead { font-size: 13px; color: var(--l2); padding: 8px 18px 2px 42px; }
+  .dimlight { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.35); z-index: 6; }
+
+  /* H — Timeline */
+  .tl { position: relative; padding-bottom: 20px; }
+  .tl::before { content: ""; position: absolute; left: 75px; top: 0; bottom: 0; width: 1.5px; background: rgba(255, 255, 255, 0.14); }
+  .tl-day { position: relative; padding: 14px 20px 8px 100px; display: flex; gap: 8px; align-items: baseline; }
+  .tl-day b { font-size: 20px; font-weight: 700; }
+  .tl-day span { font-size: 15px; color: var(--l2); }
+  .tl-now { position: relative; height: 22px; }
+  .tl-now .t { position: absolute; left: 0; width: 58px; text-align: right; top: 3px; color: #ff453a; font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .tl-now i { position: absolute; left: 76px; right: 0; top: 10px; height: 2px; background: #ff453a; }
+  .tl-now i::before { content: ""; position: absolute; left: -5px; top: -4px; width: 10px; height: 10px; border-radius: 50%; background: #ff453a; }
+  .tl-row { position: relative; padding: 8px 20px 14px 100px; }
+  .tl-row .t { position: absolute; left: 0; width: 58px; text-align: right; top: 12px; font-size: 13px; color: var(--l2); font-variant-numeric: tabular-nums; }
+  .tl-row .node { position: absolute; left: 64px; top: 9px; border-radius: 50%; box-shadow: 0 0 0 4px #000; display: grid; }
+  .tl-row .d { font-size: 13px; color: var(--l2); }
+  .tl-row b { display: block; font-size: 17px; font-weight: 600; line-height: 1.25; margin-top: 2px; }
+  .tl-row p { font-size: 15px; color: var(--l2); line-height: 1.35; margin-top: 3px; }
+  .cal { margin: 8px 16px 0; background: var(--cell); border-radius: 26px; padding: 16px 12px 8px; }
+  .cal-h { display: flex; justify-content: space-between; align-items: center; padding: 0 8px 12px; }
+  .cal-h b { font-size: 17px; font-weight: 600; }
+  .cal-h span { display: flex; gap: 26px; color: var(--blue); }
+  .cal-h .sf { font-size: 16px; }
+  .cal-w, .cal-g { display: grid; grid-template-columns: repeat(7, 1fr); text-align: center; }
+  .cal-w span { font-size: 12px; font-weight: 600; color: var(--l3); padding-bottom: 6px; }
+  .cal-g > div { height: 50px; display: flex; flex-direction: column; align-items: center; gap: 1px; }
+  .cal-g .n { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; font-size: 18px; font-variant-numeric: tabular-nums; }
+  .cal-g .sel .n { background: #fff; color: #000; font-weight: 600; }
+  .cal-g .today .n { color: #ff453a; font-weight: 600; }
+  .cal-g .future .n { color: var(--l3); }
+  .cal-g .dots { display: flex; gap: 2px; height: 5px; }
+  .cal-g .dots i { width: 5px; height: 5px; border-radius: 50%; background: rgba(235, 235, 245, 0.45); }
+  .cal-g .dots i.u { background: var(--blue); }
+  .kick { display: flex; gap: 6px; align-items: center; font-size: 13px; color: var(--l2); margin-bottom: 10px; }
+  .kick .sf { font-size: 12px; }
+  .orail { position: absolute; right: 8px; top: 470px; display: flex; flex-direction: column; align-items: flex-end; gap: 16px; z-index: 5; }
+  .orail i { width: 12px; height: 2px; border-radius: 1px; background: var(--l3); }
+  .orail i.on { background: var(--label); width: 20px; }
+
+  /* I — Spotlight */
+  .spot-row { display: flex; gap: 10px; align-items: center; padding: 0 16px; }
+  .spot { flex: 1; min-width: 0; height: 52px; border-radius: 26px; display: flex; align-items: center; gap: 10px; padding: 0 16px; font-size: 17px; color: var(--l2); }
+  .spot .sf { font-size: 17px; }
+  .spot .grow { flex: 1; }
+  .spot .typed { color: var(--label); flex: 1; min-width: 0; display: flex; align-items: center; white-space: nowrap; overflow: hidden; }
+  .caret { display: inline-block; width: 2px; height: 22px; background: var(--blue); margin-left: 1px; border-radius: 1px; flex: none; }
+  .spot-row .gbtn { width: 52px; height: 52px; flex: none; }
+  .sp-h { display: flex; justify-content: space-between; align-items: baseline; font-size: 15px; font-weight: 600; color: var(--l2); padding: 22px 22px 10px; }
+  .sp-h a { color: var(--blue); font-weight: 400; }
+  .apps { display: flex; justify-content: space-between; padding: 0 18px; }
+  .app { width: 66px; display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 11.5px; white-space: nowrap; }
+  .app .ai { width: 60px; height: 60px; border-radius: 15px; display: grid; place-items: center; font-size: 30px; }
+  .tophit { margin: 0 16px; background: var(--cell); border-radius: 24px; padding: 16px; }
+  .tophit .head, .clip .head { display: flex; gap: 12px; align-items: center; }
+  .tophit h3 { font-size: 22px; line-height: 1.2; font-weight: 700; margin-top: 12px; color: var(--l2); }
+  .tophit h3 em, .two b.m em { font-style: normal; color: var(--label); }
+  .two b.m { color: var(--l2); }
+  .tophit p { font-size: 16px; color: var(--l2); margin-top: 6px; }
+  .kb { position: absolute; left: 0; right: 0; bottom: 0; height: 292px; z-index: 7; background: rgba(30, 30, 32, 0.97); border-radius: 30px 30px 0 0; padding: 10px 4px 0; box-shadow: inset 0 0.5px 0 rgba(255, 255, 255, 0.15); }
+  .kr { display: flex; justify-content: center; gap: 6px; margin-bottom: 11px; }
+  .kr.last { padding: 0 2px; }
+  .k { width: 33.5px; height: 44px; border-radius: 9px; background: #505054; display: grid; place-items: center; font-size: 23px; box-shadow: 0 1px 0 rgba(0, 0, 0, 0.5); }
+  .k.s { background: #313134; }
+  .k.w2 { width: 44px; }
+  .k.sp { flex: 1; font-size: 16px; }
+  .k.n { width: 92px; font-size: 16px; }
+  .k.go { width: 92px; font-size: 16px; background: var(--blue); }
+  .k .sf { font-size: 18px; }
+  .kgap { width: 8px; }
+  .kb-foot { display: flex; justify-content: space-between; padding: 6px 26px; }
+  .kb-foot .sf { font-size: 24px; color: var(--l2); }
+  .clip { margin: 0 16px; background: var(--cell); border-radius: 24px; padding: 16px; }
+  .clip .url { font-size: 14px; color: var(--l2); margin-top: 12px; word-break: break-all; font-family: ui-monospace, "SF Mono", Menlo, monospace; }
+  .clip .acts { display: flex; gap: 10px; margin-top: 16px; }
+  .clip .acts .btn { flex: 1; }
+  .clip-note { font-size: 13px; color: var(--l2); margin-top: 12px; line-height: 1.35; }
+
+  /* ---- iPhone Duo ---------------------------------------------------------- */
+  body.duo-page { padding: 40px 48px 40px; }
+  body.duo-page .page-head { max-width: 1560px; margin-bottom: 40px; }
+  body.duo-page.single .page-head { display: none; }
+  .dsec { max-width: 1560px; margin: 0 auto 84px; }
+  body.single .dsec { margin-bottom: 0; }
+  .dpair { display: flex; gap: 64px; align-items: center; }
+  .dpair figure { gap: 18px; }
+  /* Cover display, 466 × 678 pt */
+  .fold { width: 492px; height: 704px; border-radius: 58px; padding: 13px; background: linear-gradient(160deg, #2a2a2e, #141416 40%, #1d1d20); box-shadow: 0 0 0 1px #34343a, 0 40px 80px -20px #000; }
+  .fold > .dscreen { border-radius: 46px; }
+  /* Inner display, 951 × 669 pt, open like a book. Each half turns on the hinge. */
+  .book { display: flex; perspective: 2600px; padding: 0 6px; }
+  .half { height: 697px; padding: 14px 0; background: linear-gradient(160deg, #2a2a2e, #141416 40%, #1d1d20); box-shadow: 0 0 0 1px #34343a, 0 40px 80px -20px #000; }
+  .half.l { padding-left: 14px; border-radius: 58px 0 0 58px; transform-origin: right center; transform: rotateY(7deg); }
+  .half.r { padding-right: 14px; border-radius: 0 58px 58px 0; transform-origin: left center; transform: rotateY(-7deg); }
+  .half > .dscreen { width: 475.5px; height: 669px; }
+  .half.l > .dscreen { border-radius: 44px 0 0 44px; }
+  .half.r > .dscreen { border-radius: 0 44px 44px 0; }
+  /* The crease: a soft shadow on each side of the hinge. */
+  .half.l > .dscreen::after, .half.r > .dscreen::after { content: ""; position: absolute; top: 0; bottom: 0; width: 34px; z-index: 20; pointer-events: none; }
+  .half.l > .dscreen::after { right: 0; background: linear-gradient(to left, rgba(0, 0, 0, 0.55), transparent); box-shadow: inset -1px 0 rgba(255, 255, 255, 0.07); }
+  .half.r > .dscreen::after { left: 0; background: linear-gradient(to right, rgba(0, 0, 0, 0.55), transparent); box-shadow: inset 1px 0 rgba(255, 255, 255, 0.07); }
+
+  /* System rail: time, status ring, the app's toolbar, home indicator */
+  .rail { position: absolute; top: 0; right: 0; bottom: 0; width: 84px; display: flex; flex-direction: column; align-items: center; z-index: 6; }
+  .rtime { margin-top: 28px; font-size: 17px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .fold .rtime { margin-top: 66px; }
+  .ring { position: relative; width: 44px; height: 44px; margin-top: 8px; display: grid; place-items: center; }
+  .ring svg { position: absolute; inset: 0; }
+  .ring .sf-wifi { font-size: 16px; translate: 0 -1px; }
+  .rbtns { display: flex; flex-direction: column; align-items: center; gap: 12px; margin-top: 22px; }
+  .rbtn { width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center; }
+  .rbtn .sf, .rcap .sf { font-size: 19px; }
+  .rcap { width: 48px; border-radius: 24px; display: flex; flex-direction: column; align-items: center; padding: 2px 0; }
+  .rcap > span { width: 44px; height: 46px; display: grid; place-items: center; }
+  .screen .rcap i.sf-chevron-up, .screen .rcap i.sf-chevron-down { font-size: 11px; }
+  .rbtn .sf-ellipsis, .rcap .sf-ellipsis { font-size: 6.5px; }
+  .rtabs > span { width: 40px; height: 44px; border-radius: 20px; margin: 1px 0; }
+  .rtabs > span.on { background: rgba(255, 255, 255, 0.14); }
+  .rfoot { margin-top: auto; margin-bottom: 30px; display: flex; flex-direction: column; align-items: center; gap: 12px; }
+  .rhome { position: absolute; bottom: 9px; left: 50%; translate: -50% 0; width: 34px; height: 5px; border-radius: 3px; background: #fff; }
+
+  /* Page content */
+  .dpage { position: absolute; inset: 0; padding: 30px 30px 0; overflow: hidden; }
+  .dpage.rl { right: 84px; padding-right: 14px; }
+  .dpage.flush { padding: 28px 0 0; }
+  .dfade { position: absolute; left: 0; right: 0; bottom: 0; height: 120px; background: linear-gradient(#0000, #000 80%); z-index: 4; }
+  .dby { display: flex; align-items: center; gap: 8px; color: var(--l2); font-size: 15px; }
+  .dtitle { font-size: 30px; line-height: 1.12; font-weight: 800; letter-spacing: -0.015em; margin-top: 12px; }
+  .dpage .qsum { margin-top: 20px; }
+  .dpage .qsum p { font-size: 17px; }
+  .dpage .qprose { margin-top: 24px; font-size: 17px; }
+  .qprose h3 { font-size: 21px; line-height: 1.25; font-weight: 700; color: #fff; margin: 28px 0 10px; }
+  .qprose h3:first-child { margin-top: 0; }
+  .qrow.sel { background: rgba(255, 255, 255, 0.11); border-radius: 14px; margin: 0 10px; padding: 0 10px; }
+  .dpage .lt { padding-bottom: 2px; }
+
+  /* Pages: a book layout on a 27 pt line grid */
+  .bk { position: absolute; top: 0; bottom: 0; width: 340px; }
+  .bk-head { position: absolute; top: 30px; left: 0; right: 0; text-align: center; font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--l3); white-space: nowrap; }
+  .bk-text { position: absolute; top: 70px; left: 0; right: 0; height: 513px; overflow: hidden; font-size: 17px; line-height: 27px; color: rgba(235, 235, 245, 0.74); text-align: justify; hyphens: auto; }
+  .bk-text p { text-indent: 1.4em; }
+  .bk-text p.first, .bk-text h3 + p { text-indent: 0; }
+  .bk-text h3 { font-size: 19px; line-height: 27px; font-weight: 700; color: #fff; margin-top: 27px; text-align: left; }
+  .bk-folio { position: absolute; bottom: 30px; left: 0; right: 0; text-align: center; font-size: 13px; color: var(--l2); font-variant-numeric: tabular-nums; }
+  .bk-open .dtitle { font-size: 34px; margin-top: 16px; }
+  .bk-open .bk-text { position: static; height: 216px; margin-top: 22px; }
+
+  /* Outline */
+  .dmeta { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 14px; font-size: 15px; color: var(--l2); }
+  .dmeta span { display: flex; align-items: center; gap: 6px; }
+  .dmeta .sf { font-size: 14px; }
+  .olh { display: flex; justify-content: space-between; margin: 26px 0 6px; font-size: 15px; font-weight: 600; color: var(--l2); }
+  .olh span { font-weight: 400; color: var(--l3); }
+  .ol-row { position: relative; display: flex; align-items: baseline; gap: 12px; padding: 10px 0 10px 16px; font-size: 17px; color: var(--l2); }
+  .ol-row .no { width: 14px; color: var(--l3); font-variant-numeric: tabular-nums; font-size: 15px; }
+  .ol-row .t { flex: 1; }
+  .ol-row .m { font-size: 14px; color: var(--l3); font-variant-numeric: tabular-nums; }
+  .ol-row.done { color: var(--l3); }
+  .ol-row.on { color: #fff; font-weight: 600; }
+  .ol-row.on::before { content: ""; position: absolute; left: 0; top: 11px; bottom: 11px; width: 3px; border-radius: 2px; background: #fff; }
+  .sec-of { font-size: 13px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--l3); margin-bottom: 8px; }
+
+  /* Pages + Outline: the switch in the rail, and two states */
+  .rbtn.on { background: #fff; color: #000; }
+  .drow + .drow { margin-top: 56px; }
+  .drow-h { display: flex; align-items: center; gap: 10px; margin: 0 0 18px 4px; font-size: 16px; font-weight: 650; }
+  .drow-h .chip { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; }
+  .drow-h .chip .sf { font-size: 15px; }
+  .drow-h .chip.on { background: #fff; color: #000; }
+  .drow-h span:last-child { font-weight: 400; color: var(--l2); }
+  /* The app's scroll wheel (OutlineScrubber) and its deck (OutlineDeck) */
+  .wheel { position: relative; width: 48px; height: 148px; border-radius: 24px; display: grid; place-items: center; }
+  .wheel i { grid-area: 1 / 1; width: 14px; height: 2px; border-radius: 1px; background: var(--l2); }
+  .wheel i.on { width: 22px; height: 3px; border-radius: 2px; background: #fff; }
+  .deck { position: absolute; right: 78px; width: 272px; height: 0; z-index: 7; }
+  .deck .card { position: absolute; left: 0; width: 258px; height: 44px; padding: 12px 14px 0; border-radius: 12px; overflow: hidden; background: #1c1c1e; box-shadow: inset 0 0 0 0.5px rgba(84, 84, 88, 0.6); }
+  .deck .card.front { width: 272px; height: 84px; z-index: 3; background: #2c2c2e; box-shadow: inset 0 0 0 0.5px rgba(84, 84, 88, 0.6), 0 1px 1px rgba(0, 0, 0, 0.3), 0 10px 28px rgba(0, 0, 0, 0.55); }
+  .deck .card b { display: flex; gap: 8px; width: 230px; font-size: 14px; font-weight: 500; color: var(--l2); }
+  .deck .card b span:first-child { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .deck .card b .pg { color: var(--l3); font-weight: 400; font-variant-numeric: tabular-nums; }
+  .deck .card.front b { color: #fff; }
+  .deck .card p { width: 230px; margin-top: 5px; font-size: 13px; line-height: 17px; color: var(--l2); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  /* Chapters */
+  .endmark { text-align: center; color: var(--l3); margin: 26px 0 24px; font-size: 13px; letter-spacing: 0.7em; padding-left: 0.7em; }
+  .dbtn { height: 50px; border-radius: 25px; display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 17px; font-weight: 600; }
+  .dbtn .sf { font-size: 19px; }
+  .dbtn.pri { background: #fff; color: #000; }
+  .dcard { background: var(--cell); border-radius: 22px; padding: 5px 0; margin-top: 12px; }
+  .dcard .qmi + .qmi { box-shadow: inset 0 0.5px var(--sep); }
+  .nextlbl { display: flex; justify-content: space-between; font-size: 15px; font-weight: 600; color: var(--l2); }
+  .nextlbl span { font-weight: 400; color: var(--l3); }
+  .fadeout { -webkit-mask-image: linear-gradient(#000 20%, transparent); }
+  .turn { position: absolute; left: 34px; right: 98px; bottom: 30px; display: flex; align-items: center; justify-content: space-between; font-size: 15px; color: var(--l2); z-index: 5; }
+  .turn .sf { font-size: 13px; }
+  .peek { position: absolute; left: 14px; right: 96px; bottom: 16px; z-index: 5; background: var(--cell); border-radius: 26px; padding: 14px 18px 16px; }
+  .peek .nextlbl { font-size: 13px; }
+  .peek .dby { margin-top: 10px; font-size: 14px; }
+  .peek b { display: block; font-size: 20px; line-height: 1.2; font-weight: 800; margin-top: 6px; }
+
+  /* ---- Emotion concepts ---- */
+  body.emo .row3 { flex-wrap: wrap; gap: 30px 34px; }
+  body.emo .phone { zoom: 0.64; }
+  body.emo figcaption { max-width: 280px; text-align: center; }
+  body.emo .v-head .tag { min-width: 28px; text-align: center; }
+  .rule { max-width: 1360px; margin: -20px auto 56px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+  .rule div { background: #141416; border: 1px solid #ffffff14; border-radius: 16px; padding: 14px 16px; font-size: 14.5px; color: var(--l2); line-height: 1.45; }
+  .rule b { display: flex; align-items: center; gap: 8px; color: var(--label); font-size: 15px; margin-bottom: 4px; }
+  .rule i.dot { width: 12px; height: 12px; border-radius: 4px; display: inline-block; }
+  .screen.lit .edge-top { display: none; }
+  .mark path { fill: currentColor; }
+  .qrow { position: relative; }
+
+  /* 1 · Site colours */
+  .stile { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; flex: none; margin: 0 -4px; background: color-mix(in srgb, var(--s, #3a3a3c) 34%, #1c1c1e); }
+  .sband { position: absolute; left: 0; right: 0; top: 0; height: 120px; z-index: 4;
+    background: linear-gradient(color-mix(in srgb, var(--s) 72%, #000), color-mix(in srgb, var(--s) 58%, #000) 82%, color-mix(in srgb, var(--s) 40%, #000)); }
+  .sprogress { position: absolute; top: 120px; left: 0; right: 0; height: 3px; z-index: 5; background: rgba(255, 255, 255, 0.08); }
+  .sprogress i { display: block; width: 18%; height: 100%; background: var(--s); }
+  .qsum.site { background: color-mix(in srgb, var(--s) 15%, #121214); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--s) 30%, transparent); }
+  .qsum.site .qsum-h { color: color-mix(in srgb, var(--s) 70%, #fff); }
+
+  /* 2 · Pictures */
+  .qrow.prow { height: 58px; }
+  .prow .thumb { width: 44px; height: 44px; border-radius: 10px; object-fit: cover; flex: none; background: var(--cell); }
+  .pcard { margin: 8px 16px 10px; border-radius: 24px; overflow: hidden; background: var(--cell); }
+  .pcard img { display: block; width: 100%; height: 190px; object-fit: cover; }
+  .pc-in { padding: 12px 16px 16px; }
+  .pc-in .qby { margin-top: 0; font-size: 14px; }
+  .pc-in h3 { font-size: 21px; line-height: 1.2; font-weight: 800; letter-spacing: -0.01em; margin-top: 6px; }
+  .phero { position: absolute; left: 0; right: 0; top: 0; height: 340px; }
+  .phero img { display: block; width: 100%; height: 100%; object-fit: cover; -webkit-mask-image: linear-gradient(#000 40%, transparent); mask-image: linear-gradient(#000 40%, transparent); }
+  .qpeek.pic { padding: 0; overflow: hidden; top: 150px; }
+  .qpeek.pic img { display: block; width: 100%; height: 180px; object-fit: cover; }
+  .qpeek.pic .pp-in { padding: 14px 20px 20px; }
+
+  /* 3 · Your colour */
+  .screen.acc-orange { --a: #ff9f0a; }
+  .screen.acc-pink { --a: #ff6482; }
+  .screen.acc-green { --a: #30d158; }
+  .qrow .udot { position: absolute; left: 6px; width: 9px; height: 9px; background: var(--a, var(--blue)); }
+  .qrow b.faded { color: var(--l2); font-weight: 500; }
+  .lt p.acc { color: var(--a); font-weight: 600; }
+  .gbtn.filled { background: var(--a); color: #000; }
+  .tab.on.tinted { color: var(--a); }
+  .qprose a { color: var(--a); text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--a) 45%, transparent); text-underline-offset: 3px; }
+  .gh { font-size: 15px; font-weight: 600; color: var(--l2); padding: 22px 36px 8px; }
+  .grp { margin: 0 16px; background: var(--cell); border-radius: 26px; overflow: hidden; }
+  .grp.sw { display: flex; justify-content: space-between; padding: 18px 18px; }
+  .swatch { width: 31px; height: 31px; border-radius: 50%; }
+  .swatch.on, .appicon.on { box-shadow: 0 0 0 3px var(--cell), 0 0 0 5px #fff; }
+  .gnote { font-size: 13px; color: var(--l2); padding: 8px 36px 0; line-height: 1.35; }
+  .cell { display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 0 18px; font-size: 17px; }
+  .cell + .cell { border-top: 0.5px solid var(--sep); }
+  .cell .grow { flex: 1; }
+  .cell .val { color: var(--l2); }
+  .cell > .sf { color: var(--l2); font-size: 13px; }
+  .cell > .sf:first-child { color: var(--a); font-size: 18px; width: 24px; }
+  .cell.icons { gap: 18px; padding: 16px 20px; }
+  .appicon { width: 62px; height: 62px; border-radius: 15px; display: grid; place-items: center; }
+
+  /* 4 · Paper */
+  .screen.ink { background: #15120e; }
+  .ink .edge-top { background: linear-gradient(#15120e 50%, #15120e00); }
+  .ink .edge-bottom { background: linear-gradient(#15120e00, #15120e 72%); }
+  .ink .qrow b, .ink .lt h1, .ink .status { color: #f3ece1; }
+  .ink .qh, .ink .lt p { color: rgb(243 236 225 / 0.55); }
+  .ink .glass { background: rgba(62, 54, 45, 0.62); color: #f3ece1; }
+  .ink .tab.on { background: rgba(243, 236, 225, 0.12); }
+  .ink .home-ind { background: #f3ece1; }
+  .qart.nyread h2 { font: 700 34px/1.08 NY, serif; letter-spacing: -0.01em; color: #f4efe6; }
+  .qart.nyread .qprose { font: 400 19px/1.62 NY, serif; color: rgb(244 239 230 / 0.78); }
+  .screen.paper { background: #f6f1e7; color: #2a251f; }
+  .paper .status { color: #000; }
+  .paper .home-ind { background: #1d1a16; }
+  .paper .edge-top { background: linear-gradient(#f6f1e7 50%, #f6f1e700); }
+  .paper .edge-bottom { background: linear-gradient(#f6f1e700, #f6f1e7 72%); }
+  .paper .glass { background: rgba(255, 255, 255, 0.62); color: #1d1a16; box-shadow: inset 0 0.5px 0 rgba(255, 255, 255, 0.8), 0 0 0 0.5px rgba(0, 0, 0, 0.08), 0 8px 20px rgba(60, 40, 10, 0.12); }
+  .paper .qart.nyread h2 { color: #221d17; }
+  .paper .qart.nyread .qprose { color: rgb(42 37 31 / 0.82); }
+  .paper .qby { color: rgb(42 37 31 / 0.6); }
+  .paper .qsum { background: rgb(42 37 31 / 0.06); }
+  .paper .qsum-h { color: rgb(42 37 31 / 0.55); }
+  .paper .qsum p { color: #2a251f; }
+  .tdim { position: absolute; inset: 0; z-index: 6; background: rgba(40, 25, 10, 0.16); }
+  .tsheet { position: absolute; left: 8px; right: 8px; bottom: 8px; z-index: 7; border-radius: 40px; padding: 20px 20px 34px; color: #1d1a16;
+    background: rgba(252, 249, 243, 0.94); box-shadow: 0 -10px 40px rgba(60, 40, 10, 0.18); }
+  .ts-h { display: flex; justify-content: space-between; align-items: center; font-size: 19px; padding-left: 4px; }
+  .ts-h .gbtn { width: 36px; height: 36px; background: rgba(0, 0, 0, 0.06); }
+  .ts-h .gbtn .sf { font-size: 14px; }
+  .ts-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 16px; }
+  .tchip { height: 92px; border-radius: 18px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.1); }
+  .tchip .ny { font-size: 28px; font-weight: 600; }
+  .tchip small { font-size: 12px; font-weight: 600; }
+  .tchip.on { box-shadow: 0 0 0 2.5px #1d1a16; }
+  .ts-size { display: flex; align-items: center; gap: 14px; margin-top: 22px; padding: 0 6px; }
+  .ts-track { flex: 1; height: 4px; border-radius: 2px; background: rgba(0, 0, 0, 0.12); position: relative; }
+  .ts-track i { position: absolute; left: 40%; top: 50%; translate: -50% -50%; width: 26px; height: 26px; border-radius: 50%; background: #fff; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2); }
+
+  /* 5 · Moments */
+  .capsule { margin: 12px 16px 4px; border-radius: 26px; display: flex; align-items: center; gap: 12px; padding: 12px 14px; }
+  .cap-t { flex: 1; min-width: 0; }
+  .cap-t b { display: block; font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cap-t small { color: var(--l2); font-size: 13px; }
+  .saved { display: flex; align-items: center; gap: 5px; font-size: 14px; font-weight: 600; color: #30d158; }
+  .saved .sf { font-size: 17px; }
+  .qrow.arrived { background: rgba(48, 209, 88, 0.12); border-radius: 14px; margin: 0 10px; padding: 0 10px; box-shadow: inset 0 0 0 1px rgba(48, 209, 88, 0.25); }
+  .swipe { position: relative; height: 50px; overflow: hidden; }
+  .sw-row { position: absolute; top: 0; bottom: 0; left: -150px; right: 150px; display: flex; align-items: center; gap: 14px; padding: 0 20px; background: #000; }
+  .sw-row b { font-size: 17px; font-weight: 600; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sw-acts { position: absolute; right: 12px; top: 3px; bottom: 3px; display: flex; gap: 6px; }
+  .sw-acts span { width: 66px; border-radius: 22px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: #fff; }
+  .sw-acts .sf { font-size: 17px; }
+  .sw-acts small { font-size: 11px; font-weight: 600; }
+  .acu { position: absolute; left: 0; right: 0; top: 300px; text-align: center; padding: 0 40px; }
+  .stack { display: inline-block; color: #fff; }
+  .acu h3 { font-size: 26px; font-weight: 700; margin-top: 22px; }
+  .acu p { font-size: 17px; line-height: 1.4; color: rgba(235, 235, 245, 0.75); margin-top: 8px; }
+
+  /* 6 · Folder colours */
+  .fe { display: grid; place-items: center; flex: none; line-height: 1; }
+  .qside .fe { margin: 0 -2px; }
+  .qmi .qi .fe { font-size: 14px; }
+  .qmi.qback { color: var(--l2); font-weight: 600; }
+  .fvh { padding: 4px 20px 12px; }
+  .lt p.pub { display: flex; align-items: center; gap: 5px; }
+  .lt p.pub .sf { font-size: 13px; }
+  .qrow.done b { color: var(--l2); font-weight: 500; }
+  .wash { position: absolute; left: 0; right: 0; top: 0; height: 420px; pointer-events: none;
+    background:
+      radial-gradient(70% 52% at 24% 6%, color-mix(in srgb, var(--c) 62%, transparent), transparent 74%),
+      radial-gradient(50% 42% at 92% 12%, color-mix(in srgb, var(--c) 38%, transparent), transparent 74%);
+    -webkit-mask-image: linear-gradient(#000 25%, transparent); mask-image: linear-gradient(#000 25%, transparent); }
+</style>
+</head>
+<body class="emo">
+
+<header class="page-head">
+  <h1>Direction A, with emotion — round 2</h1>
+  <p>No glow behind the titles. Black stays the canvas, and colour comes back from what is already there: the sites you save, their pictures, your own choices, the reading surface, and the moments when something happens.</p>
+</header>
+<div class="rule">
+  <div><b><i class="dot" style="background:linear-gradient(135deg,#f2902f,#7a4dff)"></i>The web</b>1 Site colours and 2 Pictures. Every save brings its own colour and image, so the app changes with what you read.</div>
+  <div><b><i class="dot" style="background:linear-gradient(135deg,#ff9f0a,#ff6482,#30d158)"></i>You</b>3 Your colour and 6 Folder colours. Choices you make, so the app feels like yours.</div>
+  <div><b><i class="dot" style="background:#f6f1e7"></i>Reading and moments</b>4 Paper and 5 Moments. A warmer surface to read on, and colour that comes and goes when something happens.</div>
+</div>
+
+<main id="variants"></main>
+
+<script>
+const items = [
+  { host: "craigmod.com", title: "Fast Software, the Best Software", summary: "Software that responds instantly respects the person using it.", age: "35m" },
+  { host: "paulgraham.com", title: "How to Do Great Work", summary: "Choose work you have a natural aptitude for and a deep interest in.", age: "2h" },
+  { host: "swiftbysundell.com", title: "Observation in SwiftUI, explained", summary: "How the Observation framework changes the way views track state.", age: "3h" },
+  { host: "quantamagazine.org", title: "The Year in Math", summary: "Proofs that reshaped how mathematicians think about old problems.", age: "4h" },
+  { host: "rauno.me", title: "Invisible Details of Interaction Design", summary: "The small decisions nobody notices until they are missing.", age: "6h" },
+  { host: "theverge.com", title: "The quiet return of the personal website", summary: "People are leaving the feeds and building small homes on the web again.", age: "8h" },
+  { host: "interconnected.org", title: "Notes on ambient computing", summary: "What happens when the computer stops asking for your attention.", age: "12h" },
+  { host: "newyorker.com", title: "The Art of Doing Nothing", summary: "A case for the unscheduled hour.", age: "Yesterday" },
+  { host: "developer.apple.com", title: "Meet Liquid Glass", summary: "The new material that carries depth across the system.", age: "Yesterday" },
+  { host: "css-tricks.com", title: "Modern CSS Layout Patterns", summary: "Container queries, subgrid, and the end of the layout hack.", age: "Yesterday" },
+  { host: "arstechnica.com", title: "The physics of a good espresso", summary: "Pressure, grind, and the surprisingly deep science of a small cup.", age: "Yesterday" },
+];
+const today = items.slice(0, 7);
+const yesterday = items.slice(7);
+const unfiled = [items[0], items[1], items[3], items[5]];
+const folders = [
+  { name: "Design", emoji: "🎨", color: "#bf5af2", count: 4, unread: 2, published: true },
+  { name: "Engineering", emoji: "⚙️", color: "#0a84ff", count: 4, unread: 3, published: true },
+  { name: "Longreads", emoji: "📖", color: "#ff9f0a", count: 4, unread: 3, published: true },
+  { name: "Recipes", emoji: "🍜", color: "#30d158", count: 3, unread: 1, published: false },
+  { name: "Travel", emoji: "✈️", color: "#40c8e0", count: 3, unread: 2, published: false },
+];
+const lead = items[0];
+
+// ---- Building blocks -------------------------------------------------------
+const sf = (name, style = "") => `<i class="sf sf-${name}" style="${style}"></i>`;
+const fav = (host, size = 30, radius = 7) =>
+  `<span class="fav" data-host="${host}" style="width:${size}px;height:${size}px;border-radius:${radius}px;font-size:${Math.round(size * 0.45)}px">${host[0].toUpperCase()}</span>`;
+const status = `<div class="island"></div><div class="status"><span>9:41</span><span class="icons">${sf("cellularbars")}${sf("wifi")}${sf("battery-100percent")}</span></div>`;
+const phone = (inner, caption, cls = "") =>
+  `<figure><div class="phone"><div class="screen ${cls}">${status}${inner}<div class="home-ind"></div></div></div><figcaption>${caption}</figcaption></figure>`;
+const toolbar = (left = "", right = "", center = "") =>
+  `<div class="edge-top"></div><div class="toolbar"><div>${left}</div>${center ? `<div class="center">${center}</div>` : ""}<div>${right}</div></div>`;
+const gbtn = (name) => `<span class="gbtn glass">${sf(name)}</span>`;
+const gcap = (...names) =>
+  `<span class="gcap glass">${names.map((n) => (n === "MC" ? `<span class="av"><span class="avatar">MC</span></span>` : `<span>${sf(n)}</span>`)).join("")}</span>`;
+const tabbar = (on) => `<div class="edge-bottom"></div><div class="tabbar">
+  <div class="tabs glass">
+    <div class="tab ${on === "home" ? "on" : ""}">${sf(on === "home" ? "house-fill" : "house")}Home</div>
+    <div class="tab ${on === "library" ? "on" : ""}">${sf(on === "library" ? "books-vertical-fill" : "books-vertical")}Library</div>
+  </div>
+  <div class="tabsearch glass">${sf("magnifyingglass")}</div>
+</div>`;
+const bottombar = (inner, cls = "") => `<div class="edge-bottom"></div><div class="bottombar ${cls}">${inner}</div>`;
+const searchField = `<div class="field glass">${sf("magnifyingglass")}<span class="grow">Search</span><span class="mic">${sf("mic-fill")}</span></div>`;
+const proseBody = `
+  <h4>Why it matters</h4>
+  <p>The habit is easy to describe and hard to keep: save the thing you meant to read, then actually read it. Everything else in a reading list is in service of that one loop.</p>
+  <ul><li>Save it where you are, not where the article is.</li><li>Let the list tell you what is still waiting.</li><li>Read it without the page arguing for your attention.</li></ul>
+  <h4 style="margin-top:22px">In practice</h4>
+  <p>Most tools stop at the first step. The save is instant, the list grows, and the reading never happens.</p>`;
+const readerTop = (title, by) => `
+  <h2 class="art-title">${title}</h2>
+  <div class="art-by">${fav(by, 20, 5)}${by}</div>
+  <div class="disc"><div class="disc-h"><span>Summary</span>${sf("chevron-down")}</div><p>${lead.summary}</p></div>`;
+
+// ---- A — Plain -------------------------------------------------------------
+const qrow = (i) => `<div class="qrow">${fav(i.host, 26, 6)}<b>${i.title}</b></div>`;
+const qside = (icon, name, count = "", extra = "") =>
+  `<div class="qside"><span class="qi">${sf(icon)}</span><span class="nm">${name}${extra}</span><span class="n">${count}</span></div>`;
+const qmi = (icon, label, { sub = "", more = false, cls = "" } = {}) =>
+  `<div class="qmi ${cls}"><span class="qi">${sf(icon)}</span><span class="lbl">${label}${sub ? `<small>${sub}</small>` : ""}</span>${more ? sf("chevron-right") : ""}</div>`;
+const tags = [["AI", 6], ["Backend", 3], ["Design", 5], ["Front-end", 4], ["Security", 1], ["Tools", 4], ["TypeScript", 2]];
+const held = items[4];
+const quietInbox = `<div class="scroll">
+    <div class="lt"><h1>Inbox</h1><p>19 unread</p></div>
+    <div class="qh">Today</div>${today.map(qrow).join("")}
+    <div class="qh">Yesterday</div>${yesterday.map(qrow).join("")}
+  </div>${toolbar("", gcap("plus", "MC"))}${tabbar("home")}`;
+
+// Each A screen also keeps its pair for the before/after view (?ba=a).
+const aPairs = [];
+const aShot = (name, before, inner, caption) => (aPairs.push({ name, before, inner }), phone(inner, caption));
+const A = [
+  aShot("Inbox", "inbox", quietInbox, "Inbox — one line per save, as in the reference"),
+  aShot("Touch and hold", "menu", `${quietInbox}<div class="qblur"></div>
+    <div class="qpeek">
+      <div class="qby">${fav(held.host, 20, 5)}${held.host} · ${held.age}</div>
+      <h3>${held.title}</h3><p>${held.summary}</p>
+      <div class="qtags"><span># Design</span><span># Front-end</span></div>
+    </div>
+    <div class="qmenu">
+      ${qmi("checkmark-circle", "Mark Read")}${qmi("folder", "Move to Folder", { sub: "Design", more: true })}
+      ${qmi("square-and-arrow-up", "Share")}${qmi("link", "Copy Link")}
+      <div class="qsep"></div>${qmi("trash", "Delete", { cls: "red" })}
+    </div>`, "Touch and hold — the Preview Summary and the actions"),
+  aShot("Reader View", "reader", `<div class="scroll" style="padding-top:112px"><div class="qart">
+      <h2>${lead.title}</h2>
+      <div class="qby">${fav(lead.host, 20, 5)}${lead.host}</div>
+      <div class="qsum"><div class="qsum-h">Summary${sf("chevron-down")}</div><p>${lead.summary}</p></div>
+      <div class="qprose">
+        <p>Speed is not a number on a benchmark. It is the gap between a thought and the thing on the screen. When that gap closes, a tool stops feeling like a tool.</p>
+        <p>Slow software asks you to wait, and waiting asks you to go somewhere else. Every spinner is a small invitation to leave.</p>
+        <p>The tools I like most have one thing in common: I never think about them. They open at once, they keep up with my hands, and then they get out of the way.</p>
+      </div></div></div>
+    ${toolbar(`<span class="tgroup">${gbtn("chevron-left")}${gcap("chevron-up", "chevron-down")}</span>`, gcap("checkmark-circle", "folder", "ellipsis"))}
+    <div class="edge-bottom"></div>`, "Reader View — the next save is one tap away"),
+  aShot("Library", "library", `<div class="scroll">
+      <div class="lt"><h1>Library</h1><p>29 saves</p></div>
+      <div class="qsec">Folders${sf("chevron-down")}</div>
+      ${folders.map((f) => qside("folder", f.name, f.count, f.published ? sf("globe") : "")).join("")}
+      <div class="qside add"><span class="qi">${sf("plus")}</span><span class="nm">New Folder</span></div>
+      <div class="qsec">Tags${sf("chevron-down")}</div>
+      ${tags.map(([t, n]) => qside("number", t, n)).join("")}
+    </div>${toolbar("", `<span class="gbtn glass"><span class="avatar">MC</span></span>`)}${tabbar("library")}`, "Library — the reference's sidebar: Folders and Tags"),
+];
+
+// ---- B — Editorial ---------------------------------------------------------
+const edRow = (i) =>
+  `<div class="ed-row"><div class="ed-src">${fav(i.host, 16, 4)}${i.host} · ${i.age}</div><h4>${i.title}</h4><p>${i.summary}</p></div>`;
+const B = [
+  phone(`<div class="scroll">
+      <div class="ed-head"><div class="kicker">Tuesday 13 October</div><h1>Inbox</h1><p>19 unread</p></div>
+      <div class="ed-lead"><div class="ed-src">${fav(lead.host, 16, 4)}${lead.host} · ${lead.age}</div><h3>${lead.title}</h3><p>${lead.summary}</p></div>
+      ${items.slice(1, 5).map(edRow).join("")}
+    </div>${toolbar("", gcap("plus", "MC"))}${tabbar("home")}`, "Inbox — serif headlines, the Preview Summary under each one"),
+  phone(`<div class="scroll" style="padding-top:110px"><div class="ed-art">
+      <div class="kicker">${fav(lead.host, 16, 4)}${lead.host}</div>
+      <h2>${lead.title}</h2>
+      <div class="ed-meta">Saved 35 minutes ago · Inbox</div>
+      <div class="pull"><span class="kicker">Summary</span>${lead.summary}</div>
+      <div class="ed-prose"><h5>Why it matters</h5><p class="drop">The habit is easy to describe and hard to keep: save the thing you meant to read, then actually read it. Everything else in a reading list is in service of that one loop.</p><p>Most tools stop at the first step. The save is instant, the list grows, and the reading never happens.</p><h5 style="margin-top:22px">In practice</h5><p>Opening an item means opening a browser tab, and everything a browser tab brings with it.</p></div>
+    </div></div>
+    ${toolbar(gbtn("chevron-left"), gcap("textformat-size", "ellipsis"))}
+    ${bottombar(`${gbtn("list-bullet")}${gcap("folder", "checkmark-circle", "square-and-arrow-up")}`, "split")}`, "Reader View — New York body, summary as a pull quote"),
+  phone(`<div class="scroll">
+      <div class="ed-head"><h1>Library</h1><p>29 saves in 5 folders</p></div>
+      <div class="toc">${folders.map((f) => `<div class="toc-row"><span class="toc-emoji">${f.emoji}</span><div class="toc-main"><div class="toc-name">${f.name}</div><div class="toc-sub">${f.published ? "Published · " : ""}${f.unread} unread</div></div><span class="toc-count">${f.count}</span></div>`).join("")}</div>
+      <div class="toc-add">${sf("plus")}New Folder</div>
+      <div class="kicker" style="padding:22px 20px 0">Not in a folder</div>
+      ${[items[1], items[3]].map(edRow).join("")}
+    </div>${toolbar("", gcap("plus", "MC"))}${tabbar("library")}`, "Library — Folders as a table of contents"),
+];
+
+// ---- C — Sidebar -----------------------------------------------------------
+const compactRow = (i) =>
+  `<div class="crow"><span class="udot"></span>${fav(i.host, 24, 6)}<div class="cbody"><span class="ctitle">${i.title}</span><span class="ctime">${i.age === "Yesterday" ? "Mon" : i.age}</span></div></div>`;
+const C = [
+  phone(`<div class="scroll">
+      <div class="lt"><h1>Sleevy</h1></div>
+      <div class="ig sb" style="margin-top:10px">
+        <div class="igrow">${sf("tray")}<div class="igbody"><span class="igname">Inbox</span><span class="igval">19</span></div></div>
+        <div class="igrow">${sf("books-vertical")}<div class="igbody"><span class="igname">Library</span><span class="igval">29</span></div></div>
+        <div class="igrow">${sf("person-crop-circle")}<div class="igbody"><span class="igname">Public Profile</span><span class="igval">@maya</span></div></div>
+      </div>
+      <div class="igh">Folders ${sf("chevron-down")}</div>
+      <div class="ig sb">${folders.map((f) => `<div class="igrow">${sf("folder", `color:${f.color}`)}<div class="igbody"><span class="igname">${f.name}${f.published ? sf("globe", "font-size:13px;color:var(--l2)") : ""}</span><span class="igval">${f.unread}</span></div></div>`).join("")}</div>
+    </div>${toolbar("", `<span class="gbtn glass"><span class="avatar">MC</span></span>`)}
+    ${bottombar(`${searchField}${gbtn("plus")}`)}`, "Sidebar — the reference's left column as the root"),
+  phone(`<div class="scroll" style="padding-top:108px">
+      <div class="ph small">Today</div><div class="group cgroup">${today.map(compactRow).join("")}</div>
+      <div class="ph small">Yesterday</div><div class="group cgroup">${yesterday.map(compactRow).join("")}</div>
+    </div>${toolbar(gbtn("chevron-left"), gbtn("line-3-horizontal-decrease"), `<div class="inline-title"><b>Inbox</b><span>19 unread</span></div>`)}
+    ${bottombar(`${searchField}${gbtn("plus")}`)}`, "Inbox — one dense line per save, search at the bottom"),
+  phone(`<div class="scroll" style="padding-top:110px"><div class="art">${readerTop(lead.title, lead.host)}<div class="prose">${proseBody}</div></div></div>
+    ${toolbar(gbtn("chevron-left"), gbtn("ellipsis"))}
+    ${bottombar(`${gcap("chevron-up", "chevron-down")}${gcap("folder", "checkmark-circle", "square-and-arrow-up")}`, "split")}`, "Reader View — previous / next save, like the reference"),
+];
+
+// ---- D — Up Next -----------------------------------------------------------
+const upNextRow = (i) =>
+  `<div class="igrow">${fav(i.host, 28, 7)}<div class="igbody"><div class="two"><b>${i.title}</b><span>${i.host} · ${i.age}</span></div></div></div>`;
+const upNextInbox = `<div class="scroll">
+    <div class="lt"><h1>Inbox</h1><p>19 unread</p></div>
+    <div class="next">
+      <div class="nc-src">${fav(lead.host, 36, 9)}<div><b>${lead.host}</b><span>Saved ${lead.age} ago</span></div></div>
+      <h3>${lead.title}</h3>
+      <p>${lead.summary}</p>
+      <div class="nc-actions"><span class="btn prominent">${sf("book-fill")}Read</span><span class="btn bordered">${sf("checkmark")}Mark Read</span><span class="btn bordered icon">${sf("folder")}</span></div>
+    </div>
+    <div class="dots"><i class="on"></i><i></i><i></i><i></i><i></i></div>
+    <div class="igh">Up Next</div>
+    <div class="ig">${items.slice(1, 5).map(upNextRow).join("")}</div>
+  </div>${toolbar("", gcap("plus", "MC"))}${tabbar("home")}`;
+const actionRow = (icon, name, value = "") =>
+  `<div class="igrow">${sf(icon, "font-size:19px;color:var(--label)")}<div class="igbody"><span class="igname">${name}</span>${value ? `<span class="igval">${value}</span>${sf("chevron-right")}` : ""}</div></div>`;
+const D = [
+  phone(upNextInbox, "Inbox — the next save with its summary, then Up Next", "tint-blue"),
+  phone(`${upNextInbox}<div class="dim"></div>
+    <div class="sheet"><div class="grabber"></div>
+      <div class="sh-head">${fav(lead.host, 44, 11)}<div class="two"><b>${lead.title}</b><span>${lead.host}</span></div><span class="sh-close">${sf("xmark")}</span></div>
+      <div class="sh-sum"><div class="sh-label">${sf("sparkles")}Summary</div><p>${lead.summary}</p></div>
+      <div class="sh-btns"><span class="btn prominent wide">${sf("book-fill")}Read Now</span><span class="btn bordered wide">${sf("checkmark")}Mark Read</span></div>
+      <div class="ig">${actionRow("folder", "Move to Folder", "None")}${actionRow("square-and-arrow-up", "Share")}${actionRow("link", "Copy Link")}</div>
+    </div>`, "Peek — a medium-detent sheet before you open it", "tint-blue"),
+  phone(`<div class="scroll">
+      <div class="lt"><h1>Library</h1></div>
+      <div class="tiles">
+        <div class="tile"><div class="top"><span class="ic" style="background:#0a84ff">${sf("tray-fill")}</span><span class="n">19</span></div><span class="lbl">Unread</span></div>
+        <div class="tile"><div class="top"><span class="ic" style="background:#636366">${sf("books-vertical-fill")}</span><span class="n">29</span></div><span class="lbl">All Saves</span></div>
+        <div class="tile"><div class="top"><span class="ic" style="background:#30d158">${sf("checkmark")}</span><span class="n">10</span></div><span class="lbl">Read</span></div>
+        <div class="tile"><div class="top"><span class="ic" style="background:#ff9f0a">${sf("globe")}</span><span class="n">12</span></div><span class="lbl">Published</span></div>
+      </div>
+      <div class="igh">My Folders</div>
+      <div class="ig">${folders.map((f) => `<div class="igrow"><span class="lic" style="background:${f.color}">${f.emoji}</span><div class="igbody"><span class="igname">${f.name}</span><span class="igval">${f.count}</span>${sf("chevron-right")}</div></div>`).join("")}</div>
+    </div>${toolbar("", gcap("plus", "MC"))}${tabbar("library")}`, "Library — Reminders-style tiles and Folders", "tint-blue"),
+];
+
+// ---- Shared by E–I --------------------------------------------------------
+const actions = gcap("folder", "checkmark-circle", "square-and-arrow-up");
+const readerArt = (kicker = "") => `<div class="art">${kicker}
+  <h2 class="art-title">${lead.title}</h2>
+  <div class="art-by">${fav(lead.host, 20, 5)}${lead.host}</div>
+  <div class="sumcard"><div class="sum-h">${sf("sparkles")}Summary</div><p>${lead.summary}</p></div>
+  <div class="prose">${proseBody}</div></div>`;
+const metaRow = (i, sub = `${i.host} · ${i.age}`) =>
+  `<div class="igrow">${fav(i.host, 28, 7)}<div class="igbody"><div class="two"><b>${i.title}</b><span>${sub}</span></div></div></div>`;
+const dotRow = (i, sub = `${i.host} · ${i.age}`) =>
+  `<div class="igrow"><span class="udot" style="${i.read ? "background:transparent" : ""}"></span>${fav(i.host, 28, 7)}<div class="igbody"><div class="two"><b>${i.title}</b><span>${sub}</span></div></div></div>`;
+const design = [
+  { host: "rauno.me", title: "Invisible Details of Interaction Design", summary: "The small decisions nobody notices until they are missing.", age: "6h" },
+  { host: "css-tricks.com", title: "Modern CSS Layout Patterns", summary: "Container queries, subgrid, and the end of the layout hack.", age: "Mon" },
+  { host: "smashingmagazine.com", title: "Designing for Focus", summary: "Interfaces that get out of the way of the work.", age: "Fri", read: true },
+  { host: "daringfireball.net", title: "On Interface Craft", summary: "Why the details are the product.", age: "Thu", read: true },
+];
+
+// ---- E — Sheet -------------------------------------------------------------
+const shSearch = `<div class="sh-search"><div class="sfield">${sf("magnifyingglass")}<span class="grow">Search 29 saves</span>${sf("mic-fill")}</div><span class="avatar lg">MC</span></div>`;
+const E = [
+  phone(`<div class="scroll" style="padding-top:110px">${readerArt()}</div>${toolbar(gbtn("list-bullet"), actions)}
+    <div class="fsheet"><div class="grabber"></div>${shSearch}
+      <div class="sh-next">${fav("paulgraham.com", 40, 10)}<div class="meta"><small>Up Next · paulgraham.com</small><b>How to Do Great Work</b></div><span class="roundbtn">${sf("arrow-down")}</span></div>
+    </div>`, "Reading — the Inbox waits in a sheet, like Maps"),
+  phone(`<div class="scroll" style="padding-top:110px">${readerArt()}</div>${toolbar(gbtn("list-bullet"), actions)}
+    <div class="fsheet" style="top:372px"><div class="grabber"></div>${shSearch}
+      <div class="sh-h">Folders</div>
+      <div class="places">${folders.map((f) => `<div class="place"><span class="pc" style="background:${f.color}38">${f.emoji}</span>${f.name}<small>${f.unread} unread</small></div>`).join("")}</div>
+      <div class="sh-h">Inbox · 19 unread<a>See All</a></div>
+      <div class="sh-card">${items.slice(1, 4).map((i) => metaRow(i)).join("")}</div>
+    </div>`, "Pull it up — Folders and the Inbox, the save stays behind"),
+  phone(`<div class="behind"></div>
+    <div class="fsheet large"><div class="grabber"></div>
+      <div class="sh-bar">${gbtn("chevron-left")}${gcap("square-and-arrow-up", "ellipsis")}</div>
+      <div class="fv-head"><span class="fv-badge" style="background:#bf5af238">🎨</span><h2>Design</h2><p>${sf("globe")}Published Folder · 4 saves</p></div>
+      <div class="ig">${design.map((i) => dotRow(i)).join("")}</div>
+    </div>`, "Pull it all the way — a Folder View in the sheet"),
+];
+
+// ---- F — Shelves -----------------------------------------------------------
+const bigCard = (i) =>
+  `<div class="bigcard"><div class="head">${fav(i.host, 36, 9)}<div class="meta"><b style="font-size:15px">${i.host}</b><small>Saved ${i.age} ago</small></div></div><h3>${i.title}</h3><p>${i.summary}</p></div>`;
+const smallCard = (i, color) =>
+  `<div class="smallcard" style="background:color-mix(in srgb, ${color} 24%, #121214)">${fav(i.host, 28, 7)}<b>${i.title}</b><span>${i.host}</span></div>`;
+const accessory = `<div class="accessory glass">${fav(lead.host, 32, 8)}<div class="meta"><b>${lead.title}</b><small>Opened last · craigmod.com</small></div><span class="roundbtn" style="background:transparent">${sf("checkmark-circle", "font-size:20px")}</span></div>`;
+const track = (i, n) =>
+  `<div class="track"><span class="dotcol">${i.read ? "" : `<span class="udot"></span>`}</span><span class="no">${n}</span><div class="tb"><div class="two"><b>${i.title}</b><span>${i.host}</span></div>${sf("ellipsis")}</div></div>`;
+const F = [
+  phone(`<div class="scroll" style="padding-top:64px">
+      <div class="lt-row"><h1>Home</h1><span class="avatar lg">MC</span></div>
+      <div class="shelf-h">Up Next${sf("chevron-right")}</div>
+      <div class="carousel">${items.slice(0, 2).map(bigCard).join("")}</div>
+      <div class="shelf-h">🎨 Design${sf("chevron-right")}</div>
+      <div class="carousel">${design.slice(0, 3).map((i) => smallCard(i, "#bf5af2")).join("")}</div>
+    </div><div class="edge-bottom tall"></div>${accessory}${tabbar("home")}`, "Home — Up Next and one shelf per Folder"),
+  phone(`<div class="scroll" style="padding-top:112px">
+      <div class="cover" style="background:#bf5af2">🎨</div>
+      <div class="fv-title">Design</div>
+      <div class="fv-sub">${sf("globe")}Published Folder · 4 saves</div>
+      <div class="fv-btns"><span class="btn prominent">${sf("book-fill")}Read Next</span><span class="btn bordered">${sf("square-and-arrow-up")}Share</span></div>
+      <div class="group">${design.map((i, n) => track(i, n + 1)).join("")}</div>
+    </div>${toolbar(gbtn("chevron-left"), gcap("plus", "ellipsis"))}<div class="edge-bottom tall"></div>${accessory}${tabbar("home")}`, "Folder View — like a playlist"),
+  phone(`<div class="behind"></div><div class="rsheet"><div class="grabber"></div>
+      <div class="rs-bar">${gbtn("xmark")}${actions}</div>${readerArt()}</div>`, "Reader View — a full-height sheet over Home"),
+];
+
+// ---- G — Pages -------------------------------------------------------------
+const titleMenu = (t, sub) => `<div class="title-menu"><b>${t}<span class="tm-chev">${sf("chevron-down")}</span></b><span>${sub}</span></div>`;
+const ticks = (n = 19, on = 0) => `<div class="vticks">${Array.from({ length: n }, (_, k) => `<i class="${k === on ? "on" : ""}"></i>`).join("")}</div>`;
+const pageInner = `<div class="page">${fav(lead.host, 44, 11)}<div class="pg-meta">${lead.host} · Saved ${lead.age} ago</div><h2 class="pg-title">${lead.title}</h2><p class="pg-sum">${lead.summary}</p></div>
+  ${ticks()}<div class="pg-next">${sf("chevron-up")}Next: How to Do Great Work</div>
+  ${toolbar(`<span class="gbtn glass"><span class="avatar">MC</span></span>`, gbtn("plus"), titleMenu("Inbox", "1 of 19"))}
+  ${bottombar(`${actions}<span class="btn prominent pill">${sf("book-fill")}Read</span>`, "split")}`;
+const mi = (label, { icon = "", checked = false, sub = "", count = "" } = {}) =>
+  `<div class="mi"><span class="ck">${checked ? sf("checkmark") : ""}</span><span class="lbl">${label}${sub ? `<small>${sub}</small>` : ""}</span>${count ? `<span class="cnt">${count}</span>` : ""}${icon ? sf(icon) : ""}</div>`;
+const titleMenuOpen = `<div class="menu">
+  ${mi("Inbox", { icon: "tray", checked: true, sub: "19 unread" })}${mi("Library", { icon: "books-vertical", sub: "29 saves" })}
+  <div class="msep"></div><div class="mhead">Folders</div>
+  ${folders.map((f) => mi(`${f.emoji}&nbsp; ${f.name}`, { count: f.unread })).join("")}
+  <div class="msep"></div>${mi("Search", { icon: "magnifyingglass" })}</div>`;
+const G = [
+  phone(pageInner, "One save per page — swipe up for the next"),
+  phone(`<div class="scroll" style="padding-top:112px"><div class="art">
+      <p class="pg-sum" style="font-size:21px;color:var(--label);margin-top:6px">${lead.summary}</p>
+      <div class="prose">${proseBody}</div></div></div>
+    ${ticks()}
+    ${toolbar(gbtn("chevron-up"), gcap("textformat-size", "ellipsis"), `<div class="inline-title"><b>craigmod.com</b><span>1 of 19</span></div>`)}
+    ${bottombar(`${gcap("folder", "square-and-arrow-up", "list-bullet")}<span class="btn prominent pill">${sf("checkmark")}Done</span>`, "split")}`, "Scroll down — the page becomes the Reader View"),
+  phone(`${pageInner}<div class="dimlight"></div>${titleMenuOpen}`, "Tap the title — Inbox, Library or a Folder"),
+];
+
+// ---- H — Timeline ----------------------------------------------------------
+const tlRow = ([t, i]) =>
+  `<div class="tl-row"><span class="t">${t}</span><span class="node">${fav(i.host, 24, 12)}</span><div class="d">${i.host}</div><b>${i.title}</b><p>${i.summary}</p></div>`;
+const dayCounts = { 13: [6, 0], 12: [5, 0], 11: [4, 0], 10: [1, 1], 9: [1, 1], 8: [1, 1], 7: [1, 1], 6: [0, 1], 5: [0, 1], 4: [0, 1], 3: [0, 1], 2: [0, 1], 1: [0, 1] };
+const calCells = "<div></div>".repeat(3) + Array.from({ length: 31 }, (_, k) => {
+  const d = k + 1;
+  const [u, r] = dayCounts[d] || [0, 0];
+  const nu = Math.min(u, 3);
+  const dots = `<i class="u"></i>`.repeat(nu) + "<i></i>".repeat(Math.min(r, 3 - nu));
+  const cls = d === 12 ? "sel" : d === 13 ? "today" : d > 13 ? "future" : "";
+  return `<div class="${cls}"><span class="n">${d}</span><span class="dots">${dots}</span></div>`;
+}).join("");
+const monday = [
+  { host: "newyorker.com", title: "The Art of Doing Nothing", sub: "newyorker.com · 📖 Longreads" },
+  { host: "css-tricks.com", title: "Modern CSS Layout Patterns", sub: "css-tricks.com · 🎨 Design" },
+  { host: "developer.apple.com", title: "Meet Liquid Glass", sub: "developer.apple.com · ⚙️ Engineering" },
+  { host: "interconnected.org", title: "Notes on ambient computing", sub: "interconnected.org · 21:41" },
+];
+const H = [
+  phone(`<div class="scroll">
+      <div class="lt"><h1>Inbox</h1><p>19 unread</p></div>
+      <div class="tl">
+        <div class="tl-day"><b>Today</b><span>Tuesday 13 October</span></div>
+        <div class="tl-now"><span class="t">9:41</span><i></i></div>
+        ${[["9:06", items[0]], ["7:41", items[1]], ["6:41", items[2]], ["5:41", items[3]], ["3:41", items[4]], ["1:41", items[5]]].map(tlRow).join("")}
+        <div class="tl-day"><b>Monday</b><span>12 October</span></div>
+        ${tlRow(["21:41", items[6]])}
+      </div></div>${toolbar("", gcap("plus", "MC"))}${tabbar("home")}`, "Inbox — a day view with the time you saved each link"),
+  phone(`<div class="scroll">
+      <div class="lt"><h1>Library</h1><p>29 saves</p></div>
+      <div class="cal">
+        <div class="cal-h"><b>October 2026</b><span>${sf("chevron-left")}${sf("chevron-right")}</span></div>
+        <div class="cal-w">${["M", "T", "W", "T", "F", "S", "S"].map((d) => `<span>${d}</span>`).join("")}</div>
+        <div class="cal-g">${calCells}</div>
+      </div>
+      <div class="igh">Monday 12 October</div>
+      <div class="ig">${monday.map((i) => dotRow(i, i.sub)).join("")}</div>
+    </div>${toolbar("", gcap("plus", "line-3-horizontal-decrease", "MC"))}${tabbar("library")}`, "Library — a month of saves, blue dots are unread"),
+  phone(`<div class="scroll" style="padding-top:110px">${readerArt(`<div class="kick">${sf("clock")}Saved today at 9:06 · from the Share Sheet</div>`)}</div>
+    <div class="orail"><i class="on"></i><i></i><i></i><i></i></div>
+    ${toolbar(gbtn("chevron-left"), actions)}`, "Reader View — when and how you saved it"),
+];
+
+// ---- I — Spotlight ---------------------------------------------------------
+const spotField = (inner) => `<div class="spot-row"><div class="spot glass">${sf("magnifyingglass")}${inner}</div><span class="gbtn glass"><span class="avatar">MC</span></span></div>`;
+const blueRow = (icon, label) =>
+  `<div class="igrow">${sf(icon, "font-size:19px;color:var(--blue)")}<div class="igbody"><span class="igname" style="color:var(--blue)">${label}</span></div></div>`;
+const k = (c, cls = "") => `<span class="k ${cls}">${c}</span>`;
+const keyboard = `<div class="kb">
+  <div class="kr">${[..."qwertyuiop"].map((c) => k(c)).join("")}</div>
+  <div class="kr">${[..."asdfghjkl"].map((c) => k(c)).join("")}</div>
+  <div class="kr">${k(sf("shift"), "s w2")}<span class="kgap"></span>${[..."zxcvbnm"].map((c) => k(c)).join("")}<span class="kgap"></span>${k(sf("delete-left"), "s w2")}</div>
+  <div class="kr last">${k("123", "s n")}${k("space", "sp")}${k("search", "go")}</div>
+  <div class="kb-foot">${sf("face-smiling")}${sf("mic-fill")}</div></div>`;
+const I = [
+  phone(`<div class="scroll" style="padding-top:62px">
+      ${spotField(`<span class="grow">Search or paste a link</span>${sf("mic-fill")}`)}
+      <div class="sp-h">Folders</div>
+      <div class="apps">${folders.map((f) => `<div class="app"><span class="ai" style="background:${f.color}">${f.emoji}</span>${f.name}</div>`).join("")}</div>
+      <div class="sp-h">Inbox · 19 unread<a>Show All</a></div>
+      <div class="ig">${items.slice(0, 4).map((i) => metaRow(i)).join("")}</div>
+      <div class="sp-h">Shortcuts</div>
+      <div class="ig">${blueRow("doc-on-clipboard", "Save Link from Clipboard")}${blueRow("books-vertical", "Open Library")}${blueRow("person-crop-circle", "Public Profile")}</div>
+    </div>`, "Home is one field — Folders under it like apps"),
+  phone(`<div class="scroll" style="padding-top:62px">
+      ${spotField(`<span class="typed">slow<span class="caret"></span></span>${sf("xmark-circle-fill", "color:var(--l2)")}`)}
+      <div class="sp-h">Top Hit</div>
+      <div class="tophit"><div class="head">${fav("kottke.org", 40, 10)}<div class="meta"><b style="font-size:15px">kottke.org</b><small>Saved Sunday · Inbox</small></div></div><h3>A Field Guide to Reading <em>Slow</em>ly</h3><p>Notes on finishing what you start.</p></div>
+      <div class="sp-h">Saves</div>
+      <div class="ig"><div class="igrow">${fav("nationalgeographic.com", 28, 7)}<div class="igbody"><div class="two"><b class="m"><em>Slow</em> Trains Through the Alps</b><span>nationalgeographic.com · ✈️ Travel</span></div></div></div></div>
+    </div>${keyboard}`, "Type — the Top Hit shows its Preview Summary"),
+  phone(`<div class="scroll" style="padding-top:62px">
+      ${spotField(`<span class="typed" style="font-size:16px">theatlantic.com/technology/…</span>${sf("xmark-circle-fill", "color:var(--l2)")}`)}
+      <div class="sp-h">Save Link</div>
+      <div class="clip"><div class="head">${fav("theatlantic.com", 40, 10)}<div class="meta"><b>theatlantic.com</b><small>From the clipboard · not saved yet</small></div></div>
+        <div class="url">theatlantic.com/technology/2026/10/</div>
+        <div class="acts"><span class="btn prominent">${sf("tray-and-arrow-down")}Save to Inbox</span><span class="btn bordered">${sf("folder")}Folder${sf("chevron-up-chevron-down", "font-size:12px;margin-left:2px")}</span></div>
+        <p class="clip-note">One tap saves it. Sleevy adds the title, Tags and Preview Summary after.</p></div>
+      <div class="sp-h">Saved Today</div>
+      <div class="ig">${items.slice(0, 3).map((i) => metaRow(i)).join("")}</div>
+    </div>`, "Paste a link — the same field saves it"),
+];
+
+// ---- Page ------------------------------------------------------------------
+const oldVariants = [
+  { id: "a", name: "Plain", screens: A,
+    idea: "The reference, in stock SwiftUI, on the three tabs of today. Each save is one line: the favicon and the title. Touch and hold a save to see its Preview Summary and the actions. The Reader View shows the title, the Summary card and the text, and nothing more. The Library is the left column of the reference: Folders and Tags with counts. The UI is monochrome, so the favicons give the only colour.",
+    native: "List(.plain) + .listRowSeparator(.hidden) · .navigationSubtitle · .contextMenu(menuItems:preview:) · DisclosureGroup · List(.sidebar) + Section(isExpanded:) · TabView + Tab(role: .search)" },
+  { id: "b", name: "Editorial", screens: B,
+    idea: "The Inbox reads like a front page. Headlines are in New York, the Preview Summary is under every title, and the newest save is the lead story. The Reader View is set like a magazine page.",
+    native: ".fontDesign(.serif) · List(.plain) · ToolbarItemGroup(placement: .bottomBar) · ShareLink · TabView + Tab(role: .search)" },
+  { id: "c", name: "Sidebar", screens: C,
+    idea: "The three columns of the reference become three levels of one stack: sidebar, list, reader. There is no tab bar. Search sits in the bottom toolbar, like Mail and Notes. Up and down move to the next save.",
+    native: "NavigationSplitView (a stack on iPhone) · List(.sidebar) · Section(isExpanded:) · DefaultToolbarItem(kind: .search, placement: .bottomBar)" },
+  { id: "d", name: "Up Next", screens: D,
+    idea: "Triage first. The Inbox gives you the next save with its summary and one-tap actions. A tap shows a sheet with the summary before you open the save. The Library uses tiles like Reminders.",
+    native: "ScrollView paging · Button(.borderedProminent / .bordered) · .sheet + .presentationDetents([.medium, .large]) · LazyVGrid · List(.insetGrouped)" },
+  { id: "e", name: "Sheet", screens: E,
+    idea: "The Reader View is always on screen, and the Inbox lives in a sheet that never closes, like Maps. Pull it up for the Folders and the Inbox. Pull it all the way for a Folder View. Let it go and you read again.",
+    native: ".sheet · .presentationDetents([.height(150), .medium, .large]) · .presentationBackgroundInteraction(.enabled) · .interactiveDismissDisabled()" },
+  { id: "f", name: "Shelves", screens: F,
+    idea: "Home is built like Music or Podcasts. Up Next is a row of large summary cards, and each Folder is a shelf. A Folder View looks like a playlist. The save you opened last stays in an accessory above the tab bar.",
+    native: "ScrollView(.horizontal) · .scrollTargetBehavior(.viewAligned) · .tabViewBottomAccessory · .sheet + .presentationDetents([.large])" },
+  { id: "g", name: "Pages", screens: G,
+    idea: "One save fills the screen: the favicon, a very large title and the Preview Summary. Swipe up for the next save. Scroll down and the same page becomes the Reader View. There is no tab bar: tap the title to go to the Library or a Folder.",
+    native: "ScrollView + .scrollTargetBehavior(.paging) · .toolbarTitleMenu · ToolbarItemGroup(placement: .bottomBar) · Button(.borderedProminent)" },
+  { id: "h", name: "Timeline", screens: H,
+    idea: "Saves sit on a day view like Calendar, at the time you saved them, with a red line for now. The Library is a month: the dots show what you saved on each day, and blue dots are unread.",
+    native: "List · Text(date, style: .time) · Grid (month) · .monospacedDigit() · TabView + Tab(role: .search)" },
+  { id: "i", name: "Spotlight", screens: I,
+    idea: "Home is one field, like Spotlight and the Command Palette on the Web Companion. Type to search, or paste a link to save it. The Folders sit under the field like apps.",
+    native: ".searchable + .searchSuggestions · .searchFocused · PasteButton · Picker(.menu) · List(.insetGrouped)" },
+];
+// ---- Emotion without a hero glow --------------------------------------------
+// Black stays the canvas. Colour comes back from a source: the sites you save,
+// their pictures, your own choices, the reading surface, and small moments.
+const fe = (f, size = 30) =>
+  `<span class="fe" style="width:${size}px;height:${size}px;border-radius:${Math.round(size * 0.3)}px;font-size:${Math.round(size * 0.52)}px;background:color-mix(in srgb, ${f.color} 26%, #1c1c1e)">${f.emoji}</span>`;
+const designFolder = folders[0];
+const designItems = [items[4], items[8], items[9], items[5]];
+const mark = (size) => `<svg class="mark" width="${size * 0.787}" height="${size}" viewBox="0 0 462 587"><path d="M0 128C0 57.3 57.3 0 128 0H462V48C462 118.7 404.7 176 334 176H0V128Z"/><path d="M0 205H334C404.7 205 462 262.3 462 333V381H128C57.3 381 0 323.7 0 253V205Z"/><path d="M0 538C0 467.3 57.3 410 128 410H462V459C462 529.7 404.7 587 334 587H0V538Z"/></svg>`;
+
+// The main colour of each site's favicon. Sites with a grey favicon stay grey.
+const siteColour = {
+  "craigmod.com": null, "paulgraham.com": "#d63a3a", "swiftbysundell.com": "#ef5a3c",
+  "quantamagazine.org": "#f2902f", "rauno.me": null, "theverge.com": "#7a4dff",
+  "interconnected.org": null, "newyorker.com": null, "developer.apple.com": "#2f8cff",
+  "css-tricks.com": "#ff5f6d", "arstechnica.com": "#ff5a1f",
+};
+// Stand-in pictures. A real save uses its External Image URL; some saves have none.
+const picture = {
+  "craigmod.com": 0, "swiftbysundell.com": 180, "quantamagazine.org": 1069, "theverge.com": 1018,
+  "newyorker.com": 1015, "developer.apple.com": 119, "css-tricks.com": 2, "arstechnica.com": 425,
+};
+const pic = (host, w = 400, h = 300) => `https://picsum.photos/id/${picture[host]}/${w}/${h}`;
+const unread = new Set(today.map((i) => i.host));
+const settled = (row) => `<div class="qh">Today</div>${today.map(row).join("")}<div class="qh">Yesterday</div>${yesterday.map(row).join("")}`;
+const readerBar = (right = gcap("checkmark-circle", "folder", "ellipsis")) =>
+  toolbar(`<span class="tgroup">${gbtn("chevron-left")}${gcap("chevron-up", "chevron-down")}</span>`, right);
+const readerArticle = (i, prose, { top = 112, cls = "", sum = "" } = {}) => `<div class="scroll" style="padding-top:${top}px"><div class="qart ${cls}">
+      <h2>${i.title}</h2>
+      <div class="qby">${fav(i.host, 20, 5)}${i.host}</div>
+      <div class="qsum ${sum}"><div class="qsum-h">Summary${sf("chevron-down")}</div><p>${i.summary}</p></div>
+      <div class="qprose">${prose}</div></div></div>`;
+const fastProse = `<p>Speed is not a number on a benchmark. It is the gap between a thought and the thing on the screen. When that gap closes, a tool stops feeling like a tool.</p>
+        <p>Slow software asks you to wait, and waiting asks you to go somewhere else. Every spinner is a small invitation to leave.</p>
+        <p>The tools I like most have one thing in common: I never think about them.</p>`;
+
+// ---- 1 · Site colours -------------------------------------------------------
+const tileRow = (i) => {
+  const c = siteColour[i.host];
+  return `<div class="qrow"><span class="stile"${c ? ` style="--s:${c}"` : ""}>${fav(i.host, 20, 5)}</span><b>${i.title}</b></div>`;
+};
+const quanta = items[3];
+const verge = items[5];
+const mathProse = `<p>Some problems wait a century for the right idea. This year, several of them got one.</p>
+        <p>A proof is a story with no gaps. The best ones also change where the next person starts.</p>
+        <p>What made the year stand out was not one result, but how many old questions moved at once.</p>`;
+const vergeProse = `<p>The feeds were loud for a long time. Now more people are building small pages of their own again.</p>
+        <p>A personal site is slow to grow and hard to lose. Nobody can change the rules of it but you.</p>`;
+const siteReader = (i, prose) => `<div class="sband" style="--s:${siteColour[i.host]}"></div>
+    <div class="sprogress" style="--s:${siteColour[i.host]}"><i></i></div>
+    ${readerArticle(i, prose, { top: 124, sum: "site" }).replace('class="qsum site"', `class="qsum site" style="--s:${siteColour[i.host]}"`)}
+    ${readerBar()}<div class="edge-bottom"></div>`;
+
+// ---- 2 · Pictures -----------------------------------------------------------
+const picRow = (i) => `<div class="qrow prow">${fav(i.host, 22, 5)}<b>${i.title}</b>${i.host in picture ? `<img class="thumb" src="${pic(i.host, 120, 120)}" alt="">` : ""}</div>`;
+const leadCard = (i) => `<div class="pcard"><img src="${pic(i.host, 760, 420)}" alt=""><div class="pc-in"><div class="qby">${fav(i.host, 18, 4)}${i.host} · ${i.age}</div><h3>${i.title}</h3></div></div>`;
+const picInbox = `<div class="scroll">
+    <div class="lt"><h1>Inbox</h1><p>19 unread</p></div>
+    <div class="qh">Today</div>${leadCard(lead)}${today.slice(1).map(picRow).join("")}
+    <div class="qh">Yesterday</div>${yesterday.map(picRow).join("")}
+  </div>${toolbar("", gcap("plus", "MC"))}${tabbar("home")}`;
+const picReader = `<div class="phero"><img src="${pic(quanta.host, 804, 640)}" alt=""></div>
+    ${readerArticle(quanta, mathProse, { top: 300 })}
+    ${readerBar().replace('<div class="edge-top"></div>', "")}<div class="edge-bottom"></div>`;
+const apple = items[8];
+const picHold = `${picInbox}<div class="qblur"></div>
+    <div class="qpeek pic"><img src="${pic(apple.host, 700, 360)}" alt="">
+      <div class="pp-in"><div class="qby">${fav(apple.host, 20, 5)}${apple.host} · ${apple.age}</div>
+      <h3>${apple.title}</h3><p>${apple.summary}</p></div>
+    </div>
+    <div class="qmenu" style="top:540px">${qmi("checkmark-circle", "Mark Read")}${qmi("folder", "Move to Folder", { more: true })}${qmi("square-and-arrow-up", "Share")}<div class="qsep"></div>${qmi("trash", "Delete", { cls: "red" })}</div>`;
+
+// ---- 3 · Your colour --------------------------------------------------------
+const unreadRow = (i) => `<div class="qrow">${unread.has(i.host) ? `<span class="udot"></span>` : ""}${fav(i.host, 26, 6)}<b class="${unread.has(i.host) ? "" : "faded"}">${i.title}</b></div>`;
+const accentInbox = `<div class="scroll">
+    <div class="lt"><h1>Inbox</h1><p class="acc">7 unread</p></div>${settled(unreadRow)}
+  </div>${toolbar("", `<span class="tgroup"><span class="gbtn filled">${sf("plus")}</span><span class="gbtn glass"><span class="avatar">MC</span></span></span>`)}${tabbar("home").replace('class="tab on"', 'class="tab on tinted"')}`;
+const swatches = ["#6ea0ff", "#ff9f0a", "#ff6482", "#30d158", "#bf5af2", "#64d2ff", "#ffd60a", "#ebebf5"];
+const settingsAccent = (a) => `<div class="scroll">
+    <div class="lt"><h1>Settings</h1></div>
+    <div class="gh">App Colour</div>
+    <div class="grp sw">${swatches.map((s) => `<span class="swatch${s === a ? " on" : ""}" style="background:${s}"></span>`).join("")}</div>
+    <div class="gnote">Unread Dots, buttons, links and the selected tab use it. The rest stays black and white.</div>
+    <div class="gh">App Icon</div>
+    <div class="grp"><div class="cell icons">${[[a, "#000"], ["#1c1c1e", "#fff"], ["#fff", "#000"]].map(([bg, fg], n) => `<span class="appicon${n === 0 ? " on" : ""}" style="background:${bg};color:${fg}">${mark(30)}</span>`).join("")}</div></div>
+    <div class="gh">Reading</div>
+    <div class="grp"><div class="cell">${sf("textformat-size")}<span class="grow">Text Size</span><span class="val">Medium</span>${sf("chevron-right")}</div>
+      <div class="cell">${sf("book")}<span class="grow">Reader Theme</span><span class="val">Night</span>${sf("chevron-right")}</div></div>
+  </div>${toolbar(gbtn("chevron-left"), "")}`;
+const accentReader = `${readerArticle(lead, `<p>Speed is not a number on a <a>benchmark</a>. It is the gap between a thought and the thing on the screen.</p>
+        <p>Slow software asks you to wait, and waiting asks you to go somewhere else. Every spinner is a <a>small invitation to leave</a>.</p>`)}
+    ${readerBar(`<span class="tgroup"><span class="gbtn filled">${sf("checkmark")}</span>${gcap("folder", "ellipsis")}</span>`)}<div class="edge-bottom"></div>`;
+
+// ---- 4 · Paper --------------------------------------------------------------
+const nyReader = `${readerArticle(lead, fastProse, { cls: "nyread" })}${readerBar()}<div class="edge-bottom"></div>`;
+const themes = [["Night", "#000", "#fff"], ["Ink", "#16130f", "#f2ebe0"], ["Sepia", "#eadfca", "#3b2f22"], ["Paper", "#f6f1e7", "#2a251f"]];
+const themeSheet = `${nyReader}<div class="tdim"></div><div class="tsheet">
+      <div class="ts-h"><b>Reader Theme</b><span class="gbtn">${sf("xmark")}</span></div>
+      <div class="ts-row">${themes.map(([n, bg, fg], k) => `<div class="tchip${k === 3 ? " on" : ""}" style="background:${bg};color:${fg}"><span class="ny">Aa</span><small>${n}</small></div>`).join("")}</div>
+      <div class="ts-size"><span class="ny" style="font-size:15px">A</span><div class="ts-track"><i></i></div><span class="ny" style="font-size:24px">A</span></div>
+    </div>`;
+const inkInbox = `<div class="scroll">
+    <div class="lt"><h1>Inbox</h1><p>19 unread</p></div>${settled(qrow)}
+  </div>${toolbar("", gcap("plus", "MC"))}${tabbar("home")}`;
+
+// ---- 5 · Moments ------------------------------------------------------------
+const pg = items[1];
+const savingInbox = `<div class="scroll">
+    <div class="lt"><h1>Inbox</h1><p>20 unread</p></div>
+    <div class="capsule glass">${fav(pg.host, 26, 6)}<div class="cap-t"><b>${pg.title}</b><small>${pg.host}</small></div><span class="saved">${sf("checkmark-circle-fill")}Saved</span></div>
+    <div class="qh">Today</div><div class="qrow arrived">${fav(pg.host, 26, 6)}<b>${pg.title}</b></div>${today.filter((i) => i !== pg).slice(0, 5).map(qrow).join("")}
+  </div>${toolbar("", gcap("plus", "MC"))}${tabbar("home")}`;
+const swipeInbox = `<div class="scroll">
+    <div class="lt"><h1>Inbox</h1><p>19 unread</p></div>
+    <div class="qh">Today</div>${today.slice(0, 2).map(qrow).join("")}
+    <div class="swipe"><div class="sw-row">${fav(items[2].host, 26, 6)}<b>${items[2].title}</b></div>
+      <div class="sw-acts"><span style="background:#bf5af2">${sf("folder-fill")}<small>Folder</small></span><span style="background:#30d158">${sf("checkmark")}<small>Read</small></span></div></div>
+    ${today.slice(3).map(qrow).join("")}
+    <div class="qh">Yesterday</div>${yesterday.slice(0, 2).map(qrow).join("")}
+  </div>${toolbar("", gcap("plus", "MC"))}${tabbar("home")}`;
+const caughtUp = `<div class="scroll">
+      <div class="lt"><h1>Inbox</h1><p>All read</p></div>
+      <div class="acu"><div class="stack">${mark(72)}</div><h3>All Caught Up</h3><p>Nothing is waiting.<br>Save a link, and it waits here for you.</p></div>
+    </div>${toolbar("", gcap("plus", "MC"))}${tabbar("home")}`;
+
+// ---- 6 · Folder colours (from the first round) ------------------------------
+const libraryColour = `<div class="scroll">
+      <div class="lt"><h1>Library</h1><p>29 saves</p></div>
+      <div class="qsec">Folders${sf("chevron-down")}</div>
+      ${folders.map((f) => `<div class="qside">${fe(f)}<span class="nm">${f.name}${f.published ? sf("globe") : ""}</span><span class="n">${f.count}</span></div>`).join("")}
+      <div class="qside add"><span class="qi">${sf("plus")}</span><span class="nm">New Folder</span></div>
+      <div class="qsec">Tags${sf("chevron-down")}</div>
+      ${tags.slice(0, 5).map(([t, n]) => qside("number", t, n)).join("")}
+    </div>${toolbar("", `<span class="gbtn glass"><span class="avatar">MC</span></span>`)}${tabbar("library")}`;
+const folderView = `<div class="wash" style="--c:${designFolder.color}"></div><div class="scroll">
+      <div class="fvh">${fe(designFolder, 64)}</div>
+      <div class="lt"><h1>${designFolder.name}</h1><p class="pub">${sf("globe")}Published Folder · 4 saves</p></div>
+      <div class="qh">Unread</div>${designItems.slice(0, 2).map(qrow).join("")}
+      <div class="qh">Read</div>${designItems.slice(2).map((i) => qrow(i).replace('class="qrow"', 'class="qrow done"')).join("")}
+    </div>${toolbar(gbtn("chevron-left"), gcap("square-and-arrow-up", "ellipsis"))}<div class="edge-bottom"></div>`;
+const moveMenu = `${quietInbox}<div class="qblur"></div>
+    <div class="qpeek">
+      <div class="qby">${fav(held.host, 20, 5)}${held.host} · ${held.age}</div>
+      <h3>${held.title}</h3><p>${held.summary}</p>
+    </div>
+    <div class="qmenu">
+      <div class="qmi qback"><span class="qi">${sf("chevron-left")}</span><span class="lbl">Move to Folder</span></div><div class="qsep"></div>
+      ${folders.map((f) => `<div class="qmi"><span class="qi">${fe(f, 26)}</span><span class="lbl">${f.name}</span></div>`).join("")}
+      <div class="qsep"></div>${qmi("folder-badge-plus", "New Folder")}
+    </div>`;
+
+const variants = [
+  { id: "1", name: "Site colours",
+    idea: "Each site brings its own colour, taken from its favicon. In the lists, the favicon sits on a tile of that colour. In the Reader View, the colour fills the bar behind the toolbar, as Safari does with a page's theme colour, and tints the Summary card and the reading progress. Every article feels a little different. Sites with a grey favicon stay grey.",
+    native: "Main favicon colour (CIAreaAverage, cached per host) · .toolbarBackground(colour) · tinted RoundedRectangle",
+    screens: [
+      phone(`<div class="scroll"><div class="lt"><h1>Inbox</h1><p>19 unread</p></div>${settled(tileRow)}</div>${toolbar("", gcap("plus", "MC"))}${tabbar("home")}`, "Inbox — each favicon on its site's colour"),
+      phone(siteReader(quanta, mathProse), "Reader View — Quanta is orange", "lit"),
+      phone(siteReader(verge, vergeProse), "Reader View — The Verge is violet", "lit"),
+    ] },
+  { id: "2", name: "Pictures",
+    idea: "Most saves already have a picture (the External Image URL). The newest save shows its picture as a card at the top of the Inbox. The other rows keep one line, with a small picture on the right when there is one. The Reader View opens on the picture, which fades into the black page. Touch and hold shows the picture over the Preview Summary. (The pictures here are stand-ins.)",
+    native: "AsyncImage + .aspectRatio(contentMode: .fill) · .mask(LinearGradient) for the fade · .contextMenu(preview:)",
+    screens: [
+      phone(picInbox, "Inbox — the newest save gets its picture"),
+      phone(picReader, "Reader View — the picture fades into the page", "lit"),
+      phone(picHold, "Touch and hold — the picture over the Preview Summary"),
+    ] },
+  { id: "3", name: "Your colour",
+    idea: "You pick one colour for your Sleevy, as in Things or Ivory. It goes on the Unread Dots, the + button, the selected tab, Mark Read and the links in the Reader View. One choice, and the app is yours. A matching app icon completes it.",
+    native: ".tint(appColour) at the root · @AppStorage · UIApplication.setAlternateIconName",
+    screens: [
+      phone(accentInbox, "Inbox — orange: the Unread Dots and the buttons", "acc-orange"),
+      phone(accentReader, "Reader View — pink: Mark Read and the links", "acc-pink"),
+      phone(settingsAccent("#30d158"), "Settings — pick the colour, and an icon to match", "acc-green"),
+    ] },
+  { id: "4", name: "Paper",
+    idea: "The warmth comes from the surface, not from colour. The Reader View gets themes, as in Books: Night, Ink (a warm black), Sepia and Paper, all in New York. The lists can use Ink too, so the whole app is warm black, not cold black.",
+    native: "ReaderTheme (background + foreground) · .fontDesign(.serif) · .presentationDetents([.height(300)])",
+    screens: [
+      phone(inkInbox, "Inbox — Ink: warm black and cream", "ink"),
+      phone(nyReader, "Reader View — Paper", "paper"),
+      phone(themeSheet, "Reader Theme — four surfaces, one tap", "paper"),
+    ] },
+  { id: "5", name: "Moments",
+    idea: "Colour and motion come when something happens, then go. A saved link shows its favicon and title with a check, and the new row slides into Today. Swipe a row and the actions have colour: green for Read, purple for Move to Folder. All Caught Up shows the Sleevy mark: three bars, like read books on a shelf.",
+    native: ".swipeActions + .tint · .sensoryFeedback(.success) · .transition(.push) · a symbol effect on the mark",
+    screens: [
+      phone(savingInbox, "Save — the link arrives, with a check"),
+      phone(swipeInbox, "Swipe — the actions have colour"),
+      phone(caughtUp, "All Caught Up — the Sleevy mark"),
+    ] },
+  { id: "6", name: "Folder colours",
+    idea: "From the first round. Each Folder already has an emoji and a colour in the data. They come back as small tiles in the Library and in Move to Folder, and a Folder View opens under a wash of its colour.",
+    native: "Folder.emoji + Folder.color (in the model now) · RoundedRectangle tile · Menu with Label icons",
+    screens: [
+      phone(libraryColour, "Library — each Folder has its emoji and colour"),
+      phone(folderView, "Folder View — a wash of the Folder's colour", "lit"),
+      phone(moveMenu, "Move to Folder — find the Folder by its colour"),
+    ] },
+];
+
+document.getElementById("variants").innerHTML = variants.map((v) => `
+  <section class="variant${v.screens.length > 3 ? " wide" : ""}" data-v="${v.id}">
+    <div class="v-head"><span class="tag">${v.id.toUpperCase()}</span><h2>${v.name}</h2></div>
+    <p class="v-idea">${v.idea}</p>
+    <p class="v-native">${v.native}</p>
+    <div class="row3">${v.screens.join("")}</div>
+  </section>`).join("");
+
+const only = new URLSearchParams(location.search).get("v");
+if (only) {
+  document.body.classList.add("single");
+  for (const s of document.querySelectorAll("section.variant")) s.hidden = s.dataset.v !== only;
+}
+
+// Before/after: the current app in Demo Mode next to the new A.
+if (new URLSearchParams(location.search).get("ba") === "a") {
+  document.body.classList.add("ba");
+  document.getElementById("variants").innerHTML = `
+    <div class="ba-head"><h1>Sleevy for iPhone — before / after</h1><p>Before: the current app in Demo Mode on iPhone 17. After: direction A, Plain, with the same saves.</p></div>
+    <div class="pairs">${aPairs.map((p) => `<section class="pair"><h3>${p.name}</h3><div class="duo">
+      <figure><div class="phone"><div class="screen shot"><img src="before/${p.before}.png" alt=""></div></div><figcaption>Before</figcaption></figure>
+      <span class="arrow">→</span>
+      ${phone(p.inner, "After").replace("<figcaption>", '<figcaption class="new">')}</div></section>`).join("")}</div>`;
+}
+
+// ---- iPhone Duo — Reader View in direction A -------------------------------
+// The rail is the Duo's system bar: time, status ring, then the app's toolbar.
+const ring = `<div class="ring"><svg viewBox="0 0 44 44">
+  <circle cx="22" cy="22" r="18.5" fill="none" stroke="#30d158" stroke-width="3.5" stroke-linecap="round" stroke-dasharray="40.4 22.6 40.4 12.9" transform="rotate(-70 22 22)"/>
+  <path d="M23 0.5 L19.6 5.6 H22 L21 9.5 L24.4 4.4 H22 Z" fill="rgba(235,235,245,0.6)"/>
+  ${[[28.3, 39.4], [24.3, 40.4], [19.7, 40.4], [15.7, 39.4]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="1.7" fill="#fff"/>`).join("")}
+</svg>${sf("wifi")}</div>`;
+const rbtn = (n) => `<span class="rbtn glass">${sf(n)}</span>`;
+const rcap = (...ns) => `<span class="rcap glass">${ns.map((n) => `<span>${sf(n)}</span>`).join("")}</span>`;
+const rail = (btns = "", foot = "") => `<div class="rail"><div class="rtime">09:41</div>${ring}<div class="rbtns">${btns}</div><div class="rfoot">${foot}</div><div class="rhome"></div></div>`;
+const rtabs = (on) => `<span class="rcap glass rtabs">${[["home", "house"], ["library", "books-vertical"], ["search", "magnifyingglass"]]
+  .map(([k, n]) => `<span class="${on === k ? "on" : ""}">${sf(on === k && k !== "search" ? `${n}-fill` : n)}</span>`).join("")}</span>`;
+// The Article Outline as the app's scroll wheel: one mark per section on a
+// drum seen from the side; the mark level with the middle is the section.
+const wheel = (n, at) => {
+  const radius = 132 / 2 - 8;
+  return `<span class="wheel glass">${Array.from({ length: n }, (_, i) => {
+    const angle = ((i - at) * 22) / radius;
+    if (Math.abs(angle) >= Math.PI / 2) return "";
+    const on = i === at;
+    return `<i class="${on ? "on" : ""}" style="translate:0 ${(radius * Math.sin(angle)).toFixed(1)}px;opacity:${on ? 1 : (0.5 * Math.cos(angle)).toFixed(2)}"></i>`;
+  }).join("")}</span>`;
+};
+// The deck beside the wheel while a finger turns it: the section in front,
+// opened to its first lines, and the ones either side half-hidden behind it.
+const deck = (at, pages = null) => {
+  const card = (i, top, front) => fast[i] ? `<div class="card${front ? " front" : ""}" style="top:${top}px"><b><span>${fast[i][0]}</span>${pages ? `<span class="pg">${pages[i]}</span>` : ""}</b>${front ? `<p>${fast[i][2][0]}</p>` : ""}</div>` : "";
+  return `<div class="deck" style="bottom:110px">${card(at - 1, -78)}${card(at, -42, true)}${card(at + 1, 34)}</div>`;
+};
+const fold = (inner, caption) => `<figure><div class="fold"><div class="screen dscreen">${inner}</div></div><figcaption>${caption}</figcaption></figure>`;
+const book = (left, right, caption) => `<figure><div class="book"><div class="half l"><div class="screen dscreen">${left}</div></div><div class="half r"><div class="screen dscreen">${right}</div></div></div><figcaption>${caption}</figcaption></figure>`;
+
+const fast = [
+  ["Speed is a feeling", "2 min", ["Speed is not a number on a benchmark. It is the gap between a thought and the thing on the screen. When that gap closes, a tool stops feeling like a tool.", "We notice speed most when it is gone: a menu that opens a beat too late, a search that shows old results first, a page that moves while we read it."]],
+  ["Every spinner is an exit", "1 min", ["Slow software asks you to wait, and waiting asks you to go somewhere else. Every spinner is a small invitation to leave.", "Most of the time we take it. We check a message, open a tab, and the thing we came to do is gone. The cost of a slow tool is not the second it takes. It is the attention it gives away.", "A fast tool keeps you in the room. You ask, it answers, and you are still thinking about the same thing."]],
+  ["Tools that disappear", "1 min", ["The tools I like most have one thing in common: I never think about them. They open at once, they keep up with my hands, and then they get out of the way.", "A good text editor, a good camera, a good pencil. None of them asks for anything. They wait for you, and never the other way round.", "Software can be like that too, but only when speed is the first feature and not the last."]],
+  ["Build for the hand", "1 min", ["Fast software starts with a promise to the hand. Every tap gets an answer in the same frame, even if the answer is only that the work has started.", "Do the slow work where nobody can see it. Keep the last good state on the screen, and change it only when the new one is ready.", "Small things add up: a list that scrolls at the speed of the finger, a search that answers on the first letter, a save that takes no time at all."]],
+  ["What fast costs", "1 min", ["Speed has a price. It asks for less on the screen, fewer features, and the patience to remove what does not earn its place.", "It is a price worth paying. People forgive a tool for what it cannot do. They do not forgive it for making them wait."]],
+];
+const paras = (ps) => ps.map((t) => `<p>${t}</p>`).join("");
+const section = ([h, , ps]) => `<h3>${h}</h3>${paras(ps)}`;
+const byline = (i, size = 22) => `<div class="dby">${fav(i.host, size, 5)}${i.host} · ${i.age}</div>`;
+const article = (i, sections) => `${byline(i)}<h2 class="dtitle">${i.title}</h2>
+  <div class="qsum"><div class="qsum-h">Summary${sf("chevron-down")}</div><p>${i.summary}</p></div>
+  <div class="qprose">${sections}</div>`;
+const readerRail = (foot = "") => rail(`${rbtn("chevron-left")}${rcap("chevron-up", "chevron-down")}${rbtn("ellipsis")}`, foot);
+const next = items[1];
+
+// 1 — Contents: the Inbox on the left page, the save on the right page.
+const duo1 = [
+  fold(`<div class="dpage rl">${article(lead, paras(fast[0][2]) + paras(fast[1][2]))}</div><div class="dfade"></div>${readerRail(wheel(5, 0))}`,
+    "Cover — the Reader View; the toolbar is in the rail"),
+  book(`<div class="dpage flush"><div class="lt"><h1>Inbox</h1><p>19 unread</p></div><div class="qh">Today</div>${today.map((i, n) => qrow(i).replace('class="qrow"', `class="qrow${n === 0 ? " sel" : ""}"`)).join("")}<div class="qh">Yesterday</div>${yesterday.map(qrow).join("")}</div><div class="dfade" style="height:70px"></div>`,
+    `<div class="dpage rl">${article(lead, paras(fast[0][2]) + paras(fast[1][2]))}</div><div class="dfade"></div>${rail(`${rcap("chevron-up", "chevron-down")}${rcap("checkmark-circle", "folder", "ellipsis")}`, wheel(5, 0))}`,
+    "Open — the Inbox on the left page, the save on the right page"),
+];
+
+// 2 — Pages: the save is set as a book, two pages at a time.
+const flow = `<p class="first">${fast[0][2][1]}</p>${section([fast[1][0], , fast[1][2].slice(0, 2)])}${fast.slice(2, 4).map(section).join("")}`;
+const duo2 = [
+  fold(`<div class="dpage rl bk-open" style="padding-top:40px">${byline(lead)}<h2 class="dtitle">${lead.title}</h2>
+      <div class="qsum"><div class="qsum-h">Summary${sf("chevron-down")}</div><p>${lead.summary}</p></div>
+      <div class="bk-text"><p class="first">${fast[0][2][0]}</p><p>Look at the tools you go back to every day. Most of them are not the strongest of their kind. They are the ones that never make you wait.</p></div><div class="bk-folio" style="right:14px">1</div></div>
+    ${rail(`${rbtn("chevron-left")}${rbtn("textformat-size")}${rbtn("ellipsis")}`, wheel(5, 0))}`,
+    "Cover — one page at a time; the first page opens the save"),
+  book(`<div class="bk" style="left:72px"><div class="bk-head">Fast Software, the Best Software</div><div class="bk-text">${flow}</div><div class="bk-folio">4</div></div>`,
+    `<div class="bk" style="left:34px"><div class="bk-head">craigmod.com</div><div class="bk-text"><div style="margin-top:-513px">${flow}</div></div><div class="bk-folio">5</div></div>
+    ${rail(`${rbtn("chevron-left")}${rbtn("textformat-size")}${rbtn("ellipsis")}`, wheel(5, 2))}`,
+    "Open — two pages of the save, with running heads and page numbers"),
+];
+
+// 3 — Outline: the front matter and the Article Outline face the text.
+const olRows = (at) => fast.map(([h, m], n) => `<div class="ol-row${n === at ? " on" : n < at ? " done" : ""}"><span class="no">${n + 1}</span><span class="t">${h}</span><span class="m">${m}</span></div>`).join("");
+const duo3 = [
+  fold(`<div class="dpage rl"><div class="qprose" style="margin-top:0">${section(fast[1])}${section(fast[2])}</div></div>${deck(2)}
+    ${rail(`${rbtn("chevron-left")}${rbtn("ellipsis")}`, wheel(5, 2))}`,
+    "Cover — turn the wheel; the deck shows the section under your finger"),
+  book(`<div class="dpage" style="padding:30px 40px 0 34px">${byline(lead, 24)}<h2 class="dtitle" style="font-size:32px">${lead.title}</h2>
+      <div class="dmeta"><span>${sf("folder")}Longreads</span><span>${sf("number")}Tools</span><span>${sf("number")}Design</span></div>
+      <div class="qsum"><div class="qsum-h">Summary${sf("chevron-down")}</div><p>${lead.summary}</p></div>
+      <div class="olh">Outline<span>6 min</span></div>${olRows(1)}</div>`,
+    `<div class="dpage rl" style="padding-left:34px"><div class="sec-of">2 of 5</div><div class="qprose" style="margin-top:0">${section(fast[1])}${section(fast[2])}</div></div><div class="dfade"></div>
+    ${rail(`${rbtn("chevron-left")}${rcap("chevron-up", "chevron-down")}${rcap("checkmark-circle", "folder", "ellipsis")}`, wheel(5, 1))}`,
+    "Open — the Article Outline on the left page, the text on the right page"),
+];
+
+// 4 — Chapters: the Inbox is the book, and each save is a chapter.
+const endOf = `<div class="qprose" style="margin-top:0">${section(fast[4])}</div><div class="endmark">• • •</div>`;
+const duo4 = [
+  fold(`<div class="dpage rl" style="padding-top:44px">${endOf}<div class="dbtn pri">${sf("checkmark-circle")}Mark Read</div><div class="dcard">${qmi("folder", "Move to Folder", { sub: "Longreads", more: true })}${qmi("square-and-arrow-up", "Share")}</div></div>
+    <div class="peek"><div class="nextlbl">Next in Inbox<span>2 of 19</span></div>${byline(next, 18)}<b>${next.title}</b></div>
+    ${rail(`${rbtn("chevron-left")}${rbtn("ellipsis")}`)}`,
+    "Cover — the end of a save, with the next save below it"),
+  book(`<div class="dpage" style="padding:44px 40px 0 34px">${endOf}<div class="dbtn pri">${sf("checkmark-circle")}Mark Read</div>
+      <div class="dcard">${qmi("folder", "Move to Folder", { sub: "Longreads", more: true })}${qmi("square-and-arrow-up", "Share")}${qmi("trash", "Delete", { cls: "red" })}</div></div>`,
+    `<div class="dpage rl" style="padding:44px 14px 0 34px"><div class="nextlbl">Next in Inbox<span>2 of 19</span></div>
+      <div style="margin-top:22px">${byline(next, 24)}</div><h2 class="dtitle" style="font-size:34px">${next.title}</h2>
+      <div class="qsum"><div class="qsum-h">Summary${sf("chevron-down")}</div><p>${next.summary}</p></div>
+      <div class="qprose fadeout"><p>Great work rarely starts with a plan. It starts with a question you cannot stop asking, and with the patience to follow it further than seems sensible.</p></div></div>
+    <div class="turn"><span>Turn the page to start</span>${sf("chevron-right")}</div>
+    ${rail(`${rbtn("chevron-left")}${rcap("chevron-up", "chevron-down")}${rbtn("ellipsis")}`)}`,
+    "Open — the end of one save faces the start of the next"),
+];
+
+
+// 5 — Pages + Outline: one Reader View; the Outline switch in the rail changes the left page.
+const tocPages = [1, 4, 4, 5, 7];
+const tocRows = (at) => fast.map(([h], n) => `<div class="ol-row${n === at ? " on" : n < at ? " done" : ""}"><span class="no">${n + 1}</span><span class="t">${h}</span><span class="m">${tocPages[n]}</span></div>`).join("");
+const pagesRail = (on, foot) => rail(`${rbtn("chevron-left")}${rbtn("list-bullet-indent").replace("rbtn glass", `rbtn glass${on ? " on" : ""}`)}${rbtn("textformat-size")}${rbtn("ellipsis")}`, foot);
+const page5 = `<div class="bk" style="left:34px"><div class="bk-head">craigmod.com</div><div class="bk-text"><div style="margin-top:-513px">${flow}</div></div><div class="bk-folio">5</div></div>`;
+const coverPage5 = `<p class="first">they get out of the way.</p>${paras(fast[2][2].slice(1))}${section(fast[3])}`;
+const duo5 = [
+  { on: false, label: "Outline off", note: "two pages of text, and the wheel in the rail", screens: [
+    fold(`<div class="bk" style="left:30px;width:328px"><div class="bk-head">Fast Software, the Best Software</div><div class="bk-text">${coverPage5}</div><div class="bk-folio">5</div></div>${pagesRail(false, wheel(5, 2))}`,
+      "Cover — one page at a time; the wheel at rest"),
+    book(`<div class="bk" style="left:72px"><div class="bk-head">Fast Software, the Best Software</div><div class="bk-text">${flow}</div><div class="bk-folio">4</div></div>`,
+      `${page5}${deck(3, tocPages)}${pagesRail(false, wheel(5, 3))}`,
+      "Open — turn the wheel: the deck shows each section and its page, and the pages turn to it"),
+  ] },
+  { on: true, label: "Outline on", note: "the Outline takes the left page, and the wheel moves its mark", screens: [
+    fold(`<div class="dpage rl">${byline(lead)}<h2 class="dtitle">${lead.title}</h2>
+        <div class="qsum"><div class="qsum-h">Summary${sf("chevron-down")}</div><p>${lead.summary}</p></div>
+        <div class="olh">Outline<span>8 pages</span></div>${tocRows(2)}</div>${pagesRail(true, wheel(5, 2))}`,
+      "Cover — the Outline replaces the page; tap a section, or turn the wheel"),
+    book(`<div class="dpage" style="padding:30px 40px 0 34px">${byline(lead, 24)}<h2 class="dtitle" style="font-size:32px">${lead.title}</h2>
+        <div class="dmeta"><span>${sf("folder")}Longreads</span><span>${sf("number")}Tools</span><span>${sf("number")}Design</span></div>
+        <div class="qsum"><div class="qsum-h">Summary${sf("chevron-down")}</div><p>${lead.summary}</p></div>
+        <div class="olh">Outline<span>8 pages</span></div>${tocRows(2)}</div>`,
+      `${page5}${pagesRail(true, wheel(5, 2))}`,
+      "Open — the whole Outline is on the left page, so the wheel needs no deck"),
+  ] },
+];
+
+const duoIdeas = [
+  { id: "1", name: "Contents", screens: duo1,
+    idea: "The middle and right columns of the reference, one on each page. The left page is the Inbox, one line per save, and the open save is marked. The right page is the Reader View. Tap a line to change the save; the list stays where it is. When you close the device, the cover shows only the Reader View.",
+    native: "onHingeChange (.partiallyOpen → two pages) · HStack(spacing: 0) split on the window center · List(selection:) · OutlineScrubber in the rail" },
+  { id: "2", name: "Pages", screens: duo2,
+    idea: "The save is set as a book. The text flows from the left page to the right page, with a running head at the top and a page number at the bottom. Swipe sideways to turn two pages. On the cover, the first page holds the title and the Summary card, like the first page of a chapter.",
+    native: "TextKit 2: one NSTextContainer per page · ScrollView(.horizontal) + .scrollTargetBehavior(.paging) · .accessibilityRotor(.headings)" },
+  { id: "3", name: "Outline", screens: duo3,
+    idea: "The left page is the front matter of the save: the title, the Folder, the Tags, the Summary card and the Article Outline. The section you read is marked, and the sections you finished are gray. Tap a section to show it on the right page, or turn the scroll wheel in the rail: the mark moves down the list. On the cover, the wheel works as it does today, with the deck of sections beside it.",
+    native: "ScrollViewReader.scrollTo(_:anchor: .top) · .onScrollTargetVisibilityChange · OutlineScrubber + OutlineDeck in the rail" },
+  { id: "4", name: "Chapters", screens: duo4,
+    idea: "The Inbox is the book, and each save is a chapter. At the end of a save, the left page holds the end and the actions: Mark Read, Move to Folder, Share and Delete. The right page starts the next save with its title and Summary card. Turn the page to read it.",
+    native: "ScrollView(.horizontal) paging over the Inbox · Button(.borderedProminent) · .safeAreaInset(edge: .bottom) for the next save on the cover" },
+  { id: "5", name: "Pages + Outline", rows: duo5,
+    idea: "One Reader View with an Outline switch in the rail. When the switch is off, the save is set as a book: the text runs across the two pages, and you swipe to turn two pages. When the switch is on, the Outline takes the left page: the title, the Folder, the Tags, the Summary card and the sections with their page numbers, like the contents page of a book. The section you read is marked. Tap a section to go to its page. Only the right page turns while the Outline is open. The scroll wheel stays at the bottom of the rail, with its tick at each section. When the Outline is off, the deck shows the section and its page beside the wheel. When the Outline is on, the wheel moves the mark in the list. On the cover, the same switch shows the Outline in place of the page.",
+    native: "Toggle(isOn:) { Label(\"Outline\", systemImage: \"list.bullet.indent\") }.toggleStyle(.button) · OutlineScrubber + OutlineDeck · TextKit 2: one NSTextContainer per page" },
+];
+
+if (new URLSearchParams(location.search).has("duo")) {
+  document.body.classList.add("duo-page");
+  document.querySelector(".page-head").innerHTML = `<h1>Sleevy for iPhone Duo — Reader View, direction A</h1><p>Each idea on the cover display (closed) and on the inner display (open like a book). The hinge is at the center. The system rail is on the right.</p>`;
+  const one = new URLSearchParams(location.search).get("dv");
+  if (one) document.body.classList.add("single");
+  document.getElementById("variants").innerHTML = duoIdeas.filter((d) => !one || d.id === one).map((d) => `
+    <section class="dsec">
+      <div class="v-head"><span class="tag">${d.id}</span><h2>${d.name}</h2></div>
+      <p class="v-idea">${d.idea}</p>
+      <p class="v-native">${d.native}</p>
+      ${d.rows ? d.rows.map((r) => `<div class="drow"><div class="drow-h"><span class="chip ${r.on ? "on" : "glass"}">${sf("list-bullet-indent")}</span>${r.label}<span>— ${r.note}</span></div><div class="dpair">${r.screens.join("")}</div></div>`).join("") : `<div class="dpair">${d.screens.join("")}</div>`}
+    </section>`).join("");
+}
+
+// Favicons come from the same icon service Demo Mode uses, over a monogram.
+for (const el of document.querySelectorAll(".fav[data-host]")) {
+  const img = new Image();
+  img.onload = () => el.classList.add("loaded");
+  img.onerror = () => img.remove();
+  img.src = `https://icons.duckduckgo.com/ip3/${el.dataset.host}.ico`;
+  el.append(img);
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,342 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Sleevy iOS — before / after</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root {
+    --backdrop: #050506;
+    --screen: #0f0f11;
+    --raised: #18181b;
+    --pressed: #222226;
+    --text: #f2f2f3;
+    --muted: #8d8d93;
+    --faint: #56565c;
+    --blue: #6ea0ff;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background:
+      radial-gradient(circle at 1px 1px, #ffffff14 1px, transparent 0) 0 0 / 22px 22px,
+      var(--backdrop);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+    padding: 44px 40px 64px;
+  }
+  header.page { max-width: 1880px; margin: 0 auto 30px; display: flex; align-items: baseline; gap: 14px; }
+  header.page h1 { font-size: 22px; font-weight: 650; letter-spacing: -0.01em; }
+  header.page p { color: var(--muted); font-size: 14px; }
+  .pairs { display: grid; grid-template-columns: repeat(2, auto); gap: 56px 80px; justify-content: center; }
+  .pair h2 { font-size: 17px; font-weight: 650; margin: 0 0 14px 4px; }
+  .duo { display: flex; align-items: center; gap: 18px; }
+  .duo .arrow { color: var(--faint); font-size: 22px; }
+  figure { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+  figcaption { font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--faint); }
+  figcaption.new { color: var(--blue); }
+
+  /* Device: iPhone 17, 402 × 874 pt */
+  .phone {
+    width: 424px; height: 896px; border-radius: 58px; padding: 11px;
+    background: linear-gradient(160deg, #2a2a2e, #141416 40%, #1d1d20);
+    box-shadow: 0 0 0 1px #34343a, 0 40px 80px -20px #000;
+  }
+  .screen {
+    position: relative; width: 100%; height: 100%; border-radius: 48px; overflow: hidden;
+    background: var(--screen); display: flex; flex-direction: column;
+  }
+  .screen.shot { background: #000; }
+  .screen.shot img { width: 100%; height: 100%; display: block; }
+  .island { position: absolute; top: 11px; left: 50%; translate: -50% 0; width: 124px; height: 36px; border-radius: 20px; background: #000; z-index: 5; }
+  .status { height: 56px; flex: none; display: flex; align-items: center; justify-content: space-between; padding: 6px 32px 0 46px; font-size: 16px; font-weight: 600; }
+  .status .icons { display: flex; gap: 6px; align-items: center; }
+  .scroll { flex: 1; overflow: hidden; position: relative; }
+
+  /* Shared bits */
+  svg.i { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+  .circle { width: 40px; height: 40px; border-radius: 50%; background: var(--raised); display: grid; place-items: center; color: var(--text); box-shadow: inset 0 0 0 1px #ffffff0d; font-size: 13px; font-weight: 650; }
+  .circle.avatar { background: #2c2c31; color: #cfcfd4; }
+  .fav { position: relative; width: 26px; height: 26px; border-radius: 7px; flex: none; display: grid; place-items: center; font-size: 12px; font-weight: 700; color: #fff; background: #2b2b30; overflow: hidden; }
+  .fav img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; background: #fff; }
+  .count { color: var(--faint); font-size: 15px; font-variant-numeric: tabular-nums; }
+  .section-label { color: var(--muted); font-size: 15px; font-weight: 500; padding: 18px 24px 8px; display: flex; align-items: center; gap: 6px; }
+  .section-label .caret { font-size: 10px; color: var(--faint); }
+
+  /* Top bars */
+  .topbar { display: flex; align-items: center; justify-content: space-between; padding: 6px 18px 4px 24px; }
+  .topbar .actions { display: flex; gap: 8px; }
+  .scope { display: flex; align-items: center; gap: 8px; font-size: 26px; font-weight: 700; letter-spacing: -0.02em; }
+  .scope .chev { color: var(--faint); width: 18px; height: 18px; margin-top: 3px; }
+  .scope .pill { font-size: 14px; font-weight: 600; color: var(--muted); background: var(--raised); border-radius: 10px; padding: 2px 8px; letter-spacing: 0; }
+
+  /* Saved Item rows */
+  .rows { padding: 0 10px; }
+  .row { display: flex; align-items: center; gap: 13px; padding: 11px 14px; border-radius: 14px; }
+  .row .text { flex: 1; min-width: 0; }
+  .row .title { font-size: 16px; font-weight: 600; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .row .domain { font-size: 13px; color: var(--muted); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .row .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--blue); flex: none; }
+  .row .dot.read { background: transparent; }
+
+  /* Floating tab bar */
+  .tabbar { position: absolute; left: 20px; right: 20px; bottom: 26px; display: flex; gap: 10px; z-index: 4; }
+  .tabs { flex: 1; display: flex; padding: 5px; border-radius: 32px; background: #1c1c1fe6; box-shadow: inset 0 0 0 1px #ffffff12, 0 10px 30px #000a; }
+  .tab { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 7px 0 6px; border-radius: 26px; color: var(--muted); font-size: 11px; font-weight: 600; }
+  .tab.on { background: #2c2c30; color: var(--text); }
+  .tab svg.i { width: 22px; height: 22px; }
+  .tab-search { width: 62px; height: 62px; border-radius: 50%; background: #1c1c1fe6; display: grid; place-items: center; color: var(--muted); box-shadow: inset 0 0 0 1px #ffffff12, 0 10px 30px #000a; }
+  .tab-search.on { color: var(--text); background: #2c2c30; }
+  .tab-search svg.i { width: 23px; height: 23px; }
+  .fade-bottom { position: absolute; left: 0; right: 0; bottom: 0; height: 150px; background: linear-gradient(transparent, var(--screen) 70%); z-index: 3; pointer-events: none; }
+
+  /* Reader View */
+  .reader-bar { display: flex; align-items: center; justify-content: space-between; padding: 6px 18px 10px; }
+  .seg { display: flex; padding: 3px; border-radius: 13px; background: var(--raised); box-shadow: inset 0 0 0 1px #ffffff0d; }
+  .seg span { padding: 7px 14px; font-size: 14px; font-weight: 600; color: var(--muted); border-radius: 10px; }
+  .seg span.on { background: #2e2e33; color: var(--text); }
+  .article { padding: 14px 26px 0; }
+  .article h3.title { font-size: 30px; line-height: 1.12; font-weight: 750; letter-spacing: -0.025em; }
+  .byline { display: flex; align-items: center; gap: 9px; margin-top: 14px; color: var(--muted); font-size: 15px; }
+  .byline .fav { width: 20px; height: 20px; border-radius: 5px; font-size: 10px; }
+  .summary { margin-top: 22px; padding: 15px 17px 17px; border-radius: 18px; background: var(--raised); box-shadow: inset 0 0 0 1px #ffffff0a; }
+  .summary .label { color: var(--muted); font-size: 14px; font-weight: 500; display: flex; align-items: center; gap: 6px; margin-bottom: 8px; }
+  .summary .label .caret { font-size: 9px; color: var(--faint); }
+  .summary p { font-size: 16px; line-height: 1.5; color: #d9d9dc; }
+  .prose { margin-top: 26px; font-size: 17px; line-height: 1.6; color: #a3a3a9; }
+  .prose h4 { color: var(--text); font-size: 20px; font-weight: 700; letter-spacing: -0.015em; margin-bottom: 8px; }
+  .prose ul { margin: 12px 0 0 20px; }
+  .prose li::marker { color: var(--faint); }
+  .ask { position: absolute; left: 18px; right: 18px; bottom: 30px; z-index: 4; display: flex; align-items: center; gap: 10px; padding: 8px 8px 8px 20px; border-radius: 28px; background: #1c1c1ff0; box-shadow: inset 0 0 0 1px #ffffff14, 0 12px 30px #000c; color: var(--faint); font-size: 16px; }
+  .ask span { flex: 1; }
+  .ask .send { width: 38px; height: 38px; border-radius: 50%; background: #3a3a40; color: var(--text); display: grid; place-items: center; }
+  .outline-rail { position: absolute; right: 8px; top: 400px; display: flex; flex-direction: column; gap: 7px; z-index: 2; }
+  .outline-rail i { display: block; height: 2px; border-radius: 1px; background: #ffffff26; }
+  .outline-rail i.on { background: var(--text); }
+
+  /* Library */
+  .lib-title { font-size: 26px; font-weight: 700; letter-spacing: -0.02em; padding: 6px 18px 8px 24px; display: flex; justify-content: space-between; align-items: center; }
+  .nav { padding: 0 10px; }
+  .nav .item { display: flex; align-items: center; gap: 14px; padding: 12px 14px; border-radius: 14px; font-size: 17px; font-weight: 500; }
+  .nav .item .name { flex: 1; display: flex; align-items: center; gap: 7px; }
+  .nav .item.add { color: var(--faint); }
+  .globe { width: 13px !important; height: 13px !important; color: var(--faint); }
+  .emoji { width: 22px; text-align: center; font-size: 17px; }
+
+  /* Search */
+  .field { margin: 6px 18px 4px; display: flex; align-items: center; gap: 10px; padding: 12px 14px; border-radius: 16px; background: var(--raised); box-shadow: inset 0 0 0 1px #ffffff0d; font-size: 17px; }
+  .field svg.i { color: var(--muted); }
+  .field .caret-bar { width: 2px; height: 20px; background: var(--blue); margin-left: -8px; }
+  .field .clear { margin-left: auto; width: 20px; height: 20px; border-radius: 50%; background: #3a3a40; color: var(--screen); display: grid; place-items: center; }
+  .field .clear svg.i { width: 11px; height: 11px; stroke-width: 3; color: #0f0f11; }
+  .chips { display: flex; gap: 8px; padding: 12px 18px 2px; overflow: hidden; }
+  .chips span { font-size: 14px; font-weight: 500; color: var(--muted); background: var(--raised); border-radius: 18px; padding: 7px 13px; white-space: nowrap; box-shadow: inset 0 0 0 1px #ffffff0a; }
+  .chips span.on { color: var(--screen); background: var(--text); }
+  mark { background: none; color: var(--blue); }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <symbol id="home" viewBox="0 0 24 24"><path d="M4 10.5 12 4l8 6.5V19a1.5 1.5 0 0 1-1.5 1.5h-4v-6h-5v6h-4A1.5 1.5 0 0 1 4 19z"/></symbol>
+    <symbol id="library" viewBox="0 0 24 24"><path d="M5 4h3v16H5zM10 4h3v16h-3zM15.2 5.2l2.9-.8 3.6 15-2.9.8z"/></symbol>
+    <symbol id="search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/></symbol>
+    <symbol id="plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="chev-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+    <symbol id="chev-left" viewBox="0 0 24 24"><path d="m15 5-7 7 7 7"/></symbol>
+    <symbol id="more" viewBox="0 0 24 24"><circle cx="6" cy="12" r="1.2"/><circle cx="12" cy="12" r="1.2"/><circle cx="18" cy="12" r="1.2"/></symbol>
+    <symbol id="arrow-up" viewBox="0 0 24 24"><path d="M12 19V6M6.5 11.5 12 6l5.5 5.5"/></symbol>
+    <symbol id="globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.4 2.4 3.4 5.3 3.4 8.5s-1 6.1-3.4 8.5c-2.4-2.4-3.4-5.3-3.4-8.5s1-6.1 3.4-8.5z"/></symbol>
+    <symbol id="filter" viewBox="0 0 24 24"><path d="M4.5 7h15M7.5 12h9M10.5 17h3"/></symbol>
+    <symbol id="x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+    <symbol id="signal" viewBox="0 0 24 24"><path d="M3 18h2.5v-3H3zM8 18h2.5v-6H8zM13 18h2.5V9H13zM18 18h2.5V6H18z" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="wifi" viewBox="0 0 24 24"><path d="M3.5 9.5a12 12 0 0 1 17 0M6.5 12.8a7.7 7.7 0 0 1 11 0M9.6 16a3.3 3.3 0 0 1 4.8 0"/><circle cx="12" cy="19" r="1" fill="currentColor"/></symbol>
+  </defs>
+</svg>
+
+<template id="status">
+  <div class="island"></div>
+  <div class="status"><span>09:41</span>
+    <span class="icons">
+      <svg class="i" style="width:18px;height:18px"><use href="#signal"/></svg>
+      <svg class="i" style="width:18px;height:18px"><use href="#wifi"/></svg>
+      <svg viewBox="0 0 28 13" width="27" height="13"><rect x=".5" y=".5" width="23" height="12" rx="3.5" fill="none" stroke="#fff6"/><rect x="2" y="2" width="20" height="9" rx="2" fill="#fff"/><path d="M25.5 4.5v4" stroke="#fff6" stroke-width="1.5" stroke-linecap="round"/></svg>
+    </span>
+  </div>
+</template>
+
+<header class="page">
+  <h1>Sleevy for iPhone — before / after</h1>
+  <p>Before: the current app in Demo Mode on iPhone 17. After: the dark concept, with the same saves.</p>
+</header>
+
+<div class="pairs">
+
+  <!-- Inbox -->
+  <section class="pair">
+    <h2>Inbox</h2>
+    <div class="duo">
+      <figure><div class="phone"><div class="screen shot"><img src="before/inbox.png" alt=""></div></div><figcaption>Before</figcaption></figure>
+      <span class="arrow">→</span>
+      <figure><div class="phone"><div class="screen" data-status>
+        <div class="topbar">
+          <div class="scope">Inbox <span class="pill">19</span> <svg class="i chev"><use href="#chev-down"/></svg></div>
+          <div class="actions"><div class="circle"><svg class="i"><use href="#plus"/></svg></div><div class="circle avatar">MC</div></div>
+        </div>
+        <div class="scroll">
+          <div class="section-label">Today</div>
+          <div class="rows">
+            <div class="row" data-host="craigmod.com"><div class="text"><div class="title">Fast Software, the Best Software</div><div class="domain">craigmod.com · 35m</div></div></div>
+            <div class="row" data-host="paulgraham.com"><div class="text"><div class="title">How to Do Great Work</div><div class="domain">paulgraham.com · 2h</div></div></div>
+            <div class="row" data-host="swiftbysundell.com"><div class="text"><div class="title">Observation in SwiftUI, explained</div><div class="domain">swiftbysundell.com · 3h</div></div></div>
+            <div class="row" data-host="quantamagazine.org"><div class="text"><div class="title">The Year in Math</div><div class="domain">quantamagazine.org · 4h</div></div></div>
+            <div class="row" data-host="rauno.me"><div class="text"><div class="title">Invisible Details of Interaction Design</div><div class="domain">rauno.me · 6h</div></div></div>
+            <div class="row" data-host="theverge.com"><div class="text"><div class="title">The quiet return of the personal website</div><div class="domain">theverge.com · 8h</div></div></div>
+            <div class="row" data-host="interconnected.org"><div class="text"><div class="title">Notes on ambient computing</div><div class="domain">interconnected.org · 12h</div></div></div>
+          </div>
+          <div class="section-label">Yesterday</div>
+          <div class="rows">
+            <div class="row" data-host="newyorker.com"><div class="text"><div class="title">The Art of Doing Nothing</div><div class="domain">newyorker.com</div></div></div>
+            <div class="row" data-host="developer.apple.com"><div class="text"><div class="title">Meet Liquid Glass</div><div class="domain">developer.apple.com</div></div></div>
+          </div>
+        </div>
+        <div class="fade-bottom"></div>
+        <div class="tabbar">
+          <div class="tabs"><div class="tab on"><svg class="i"><use href="#home"/></svg>Home</div><div class="tab"><svg class="i"><use href="#library"/></svg>Library</div></div>
+          <div class="tab-search"><svg class="i"><use href="#search"/></svg></div>
+        </div>
+      </div></div><figcaption class="new">After</figcaption></figure>
+    </div>
+  </section>
+
+  <!-- Reader View -->
+  <section class="pair">
+    <h2>Reader View</h2>
+    <div class="duo">
+      <figure><div class="phone"><div class="screen shot"><img src="before/reader.png" alt=""></div></div><figcaption>Before</figcaption></figure>
+      <span class="arrow">→</span>
+      <figure><div class="phone"><div class="screen" data-status>
+        <div class="reader-bar">
+          <div class="circle"><svg class="i"><use href="#chev-left"/></svg></div>
+          <div class="seg"><span class="on">Reader</span><span>Original</span></div>
+          <div class="circle"><svg class="i"><use href="#more"/></svg></div>
+        </div>
+        <div class="scroll">
+          <div class="outline-rail"><i style="width:14px" class="on"></i><i style="width:9px"></i><i style="width:12px"></i><i style="width:8px"></i><i style="width:11px"></i></div>
+          <div class="article">
+            <h3 class="title">Fast Software, the Best Software</h3>
+            <div class="byline"><span class="fav" data-host="craigmod.com"></span>craigmod.com</div>
+            <div class="summary">
+              <div class="label">Summary <span class="caret">▼</span></div>
+              <p>Software that responds instantly respects the person using it.</p>
+            </div>
+            <div class="prose">
+              <h4>Why it matters</h4>
+              <p>The habit is easy to describe and hard to keep: save the thing you meant to read, then actually read it. Everything else in a reading list is in service of that one loop.</p>
+              <ul>
+                <li>Save it where you are, not where the article is.</li>
+                <li>Let the list tell you what is still waiting.</li>
+                <li>Read it without the page arguing for your attention.</li>
+              </ul>
+              <h4 style="margin-top:22px">In practice</h4>
+              <p>Most tools stop at the first step. The save is instant, the list grows, and the reading never happens.</p>
+            </div>
+          </div>
+        </div>
+        <div class="fade-bottom"></div>
+        <div class="ask"><span>Ask anything about this link…</span><div class="send"><svg class="i"><use href="#arrow-up"/></svg></div></div>
+      </div></div><figcaption class="new">After</figcaption></figure>
+    </div>
+  </section>
+
+  <!-- Library -->
+  <section class="pair">
+    <h2>Library</h2>
+    <div class="duo">
+      <figure><div class="phone"><div class="screen shot"><img src="before/library.png" alt=""></div></div><figcaption>Before</figcaption></figure>
+      <span class="arrow">→</span>
+      <figure><div class="phone"><div class="screen" data-status>
+        <div class="lib-title">Library
+          <div class="topbar actions" style="padding:0"><div class="circle"><svg class="i"><use href="#plus"/></svg></div><div class="circle"><svg class="i"><use href="#filter"/></svg></div><div class="circle avatar">MC</div></div>
+        </div>
+        <div class="scroll">
+          <div class="section-label">Folders <span class="caret">▼</span></div>
+          <div class="nav">
+            <div class="item"><span class="emoji">🎨</span><span class="name">Design <svg class="i globe"><use href="#globe"/></svg></span><span class="count">4</span></div>
+            <div class="item"><span class="emoji">⚙️</span><span class="name">Engineering <svg class="i globe"><use href="#globe"/></svg></span><span class="count">4</span></div>
+            <div class="item"><span class="emoji">📖</span><span class="name">Longreads <svg class="i globe"><use href="#globe"/></svg></span><span class="count">4</span></div>
+            <div class="item"><span class="emoji">🍜</span><span class="name">Recipes</span><span class="count">3</span></div>
+            <div class="item"><span class="emoji">✈️</span><span class="name">Travel</span><span class="count">3</span></div>
+            <div class="item add"><svg class="i"><use href="#plus"/></svg><span class="name">New folder</span></div>
+          </div>
+          <div class="section-label">Saves <span class="caret">▼</span></div>
+          <div class="rows">
+            <div class="row" data-host="craigmod.com"><div class="text"><div class="title">Fast Software, the Best Software</div><div class="domain">craigmod.com · 35m</div></div><span class="dot"></span></div>
+            <div class="row" data-host="paulgraham.com"><div class="text"><div class="title">How to Do Great Work</div><div class="domain">paulgraham.com · 2h</div></div><span class="dot"></span></div>
+            <div class="row" data-host="quantamagazine.org"><div class="text"><div class="title">The Year in Math</div><div class="domain">quantamagazine.org · 4h</div></div><span class="dot"></span></div>
+          </div>
+        </div>
+        <div class="fade-bottom"></div>
+        <div class="tabbar">
+          <div class="tabs"><div class="tab"><svg class="i"><use href="#home"/></svg>Home</div><div class="tab on"><svg class="i"><use href="#library"/></svg>Library</div></div>
+          <div class="tab-search"><svg class="i"><use href="#search"/></svg></div>
+        </div>
+      </div></div><figcaption class="new">After</figcaption></figure>
+    </div>
+  </section>
+
+  <!-- Search -->
+  <section class="pair">
+    <h2>Search</h2>
+    <div class="duo">
+      <figure><div class="phone"><div class="screen shot"><img src="before/search.png" alt=""></div></div><figcaption>Before</figcaption></figure>
+      <span class="arrow">→</span>
+      <figure><div class="phone"><div class="screen" data-status>
+        <div class="lib-title">Search</div>
+        <div class="field"><svg class="i"><use href="#search"/></svg>slow<span class="caret-bar"></span><span class="clear"><svg class="i"><use href="#x"/></svg></span></div>
+        <div class="chips"><span class="on">All</span><span>Unread</span><span>Design</span><span>Engineering</span><span>Longreads</span></div>
+        <div class="scroll">
+          <div class="section-label">2 results</div>
+          <div class="rows">
+            <div class="row" data-host="kottke.org"><div class="text"><div class="title">A Field Guide to Reading <mark>Slow</mark>ly</div><div class="domain">kottke.org · Oct 11</div></div><span class="dot"></span></div>
+            <div class="row" data-host="nationalgeographic.com"><div class="text"><div class="title"><mark>Slow</mark> Trains Through the Alps</div><div class="domain">nationalgeographic.com · Travel · Oct 7</div></div><span class="dot"></span></div>
+          </div>
+        </div>
+        <div class="fade-bottom"></div>
+        <div class="tabbar">
+          <div class="tabs"><div class="tab"><svg class="i"><use href="#home"/></svg>Home</div><div class="tab"><svg class="i"><use href="#library"/></svg>Library</div></div>
+          <div class="tab-search on"><svg class="i"><use href="#search"/></svg></div>
+        </div>
+      </div></div><figcaption class="new">After</figcaption></figure>
+    </div>
+  </section>
+
+</div>
+
+<script>
+  const status = document.getElementById("status");
+  for (const screen of document.querySelectorAll("[data-status]")) {
+    screen.prepend(status.content.cloneNode(true));
+  }
+  // Favicons come from the same icon service Demo Mode uses, over a monogram.
+  function favicon(host) {
+    const fav = document.createElement("span");
+    fav.className = "fav";
+    fav.textContent = host[0].toUpperCase();
+    const img = new Image();
+    img.src = `https://icons.duckduckgo.com/ip3/${host}.ico`;
+    img.onerror = () => img.remove();
+    fav.append(img);
+    return fav;
+  }
+  for (const row of document.querySelectorAll(".row[data-host]")) {
+    row.prepend(favicon(row.dataset.host));
+  }
+  for (const slot of document.querySelectorAll(".byline .fav[data-host]")) {
+    slot.replaceWith(Object.assign(favicon(slot.dataset.host), { style: "width:20px;height:20px;border-radius:5px" }));
+  }
+</script>
+</body>
+</html>

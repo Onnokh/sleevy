@@ -1,0 +1,531 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Sleevy iOS · Direction A — before and after</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root {
+    --backdrop: #050506;
+    --panel: #0e0e10;
+    --raised: #17171a;
+    --line: #ffffff12;
+    --text: #f2f2f3;
+    --muted: #9a9aa0;
+    --faint: #5c5c62;
+    --before: #8a8a90;
+    --after: #f2f2f3;
+    --accent: #6ea0ff;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; scroll-padding-top: 72px; }
+  body {
+    background:
+      radial-gradient(circle at 1px 1px, #ffffff10 1px, transparent 0) 0 0 / 22px 22px,
+      var(--backdrop);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    line-height: 1.5;
+  }
+  main { max-width: 1240px; margin: 0 auto; padding: 0 40px 120px; }
+
+  /* Chapter bar */
+  nav.chapters {
+    position: sticky; top: 0; z-index: 20;
+    background: #050506e6; backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    border-bottom: 1px solid var(--line);
+  }
+  nav.chapters ol {
+    max-width: 1240px; margin: 0 auto; padding: 0 40px; list-style: none;
+    display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none;
+  }
+  nav.chapters a {
+    display: block; padding: 18px 10px 16px; white-space: nowrap;
+    color: var(--faint); text-decoration: none; font-size: 13px; font-weight: 600;
+    border-bottom: 2px solid transparent;
+  }
+  nav.chapters a:hover { color: var(--muted); }
+  nav.chapters a.on { color: var(--text); border-bottom-color: var(--text); }
+
+  /* Intro */
+  header.intro { padding: 72px 0 40px; }
+  .eyebrow { font-size: 12px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--faint); }
+  header.intro h1 { font-size: 48px; line-height: 1.08; letter-spacing: -0.025em; font-weight: 700; margin: 14px 0 18px; }
+  header.intro p.lead { font-size: 19px; color: var(--muted); max-width: 760px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 26px; }
+  .chip { font-size: 12.5px; color: var(--muted); background: var(--raised); border: 1px solid var(--line); border-radius: 99px; padding: 5px 12px; }
+  .chip b { color: var(--text); font-weight: 600; }
+
+  .ideas { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 8px 0 24px; }
+  .idea { background: var(--panel); border: 1px solid var(--line); border-radius: 18px; padding: 20px 22px; }
+  .idea .n { font-size: 12px; font-weight: 700; color: var(--faint); }
+  .idea h3 { font-size: 16px; font-weight: 650; margin: 6px 0 6px; }
+  .idea p { font-size: 14px; color: var(--muted); }
+
+  /* Chapters */
+  section.chapter { padding: 64px 0 8px; border-top: 1px solid var(--line); margin-top: 56px; }
+  section.chapter > .head { display: grid; grid-template-columns: 64px 1fr; gap: 0 8px; margin-bottom: 30px; }
+  section.chapter .num { font-size: 15px; font-weight: 700; color: var(--faint); padding-top: 9px; }
+  section.chapter h2 { font-size: 32px; letter-spacing: -0.02em; font-weight: 700; }
+  section.chapter .head p { grid-column: 2; font-size: 16.5px; color: var(--muted); max-width: 780px; margin-top: 6px; }
+  .new-tag { display: inline-block; vertical-align: middle; margin-left: 10px; font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: #000; background: var(--text); border-radius: 6px; padding: 3px 7px; }
+
+  .compare { display: grid; grid-template-columns: auto auto 1fr; gap: 28px; align-items: start; }
+  .compare.solo { grid-template-columns: auto 1fr; }
+  .pair { display: flex; gap: 22px; align-items: flex-start; }
+
+  figure { display: flex; flex-direction: column; gap: 12px; align-items: center; }
+  figcaption { font-size: 11.5px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--before); }
+  figure.after figcaption { color: var(--after); }
+  figcaption small { display: block; text-align: center; font-size: 12px; font-weight: 500; letter-spacing: 0; text-transform: none; color: var(--faint); margin-top: 2px; }
+
+  .phone { width: 282px; border-radius: 46px; padding: 8px; background: linear-gradient(160deg, #2b2b30, #141416 45%, #1e1e22); box-shadow: 0 0 0 1px #35353b, 0 34px 70px -24px #000; }
+  .phone img { display: block; width: 100%; border-radius: 38px; cursor: zoom-in; }
+  .phone.small { width: 214px; border-radius: 36px; padding: 6px; }
+  .phone.small img { border-radius: 30px; }
+  .phone.wide { width: auto; border-radius: 38px; }
+  .phone.wide img { border-radius: 31px; }
+  .frame { border-radius: 28px; padding: 8px; background: linear-gradient(160deg, #2b2b30, #141416 45%, #1e1e22); box-shadow: 0 0 0 1px #35353b, 0 34px 70px -24px #000; }
+  .frame img { display: block; border-radius: 21px; cursor: zoom-in; }
+
+  .arrow { align-self: center; color: var(--faint); font-size: 22px; padding-top: 30px; }
+
+  .notes { display: flex; flex-direction: column; gap: 18px; padding-top: 30px; max-width: 420px; }
+  .notes h4 { font-size: 11.5px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--faint); margin-bottom: 8px; }
+  .notes ul { list-style: none; display: flex; flex-direction: column; gap: 9px; }
+  .notes li { font-size: 14.5px; color: var(--muted); padding-left: 18px; position: relative; }
+  .notes li::before { content: ""; position: absolute; left: 2px; top: 9px; width: 6px; height: 6px; border-radius: 50%; background: var(--faint); }
+  .notes .changed li::before { background: var(--text); }
+  .notes li b { color: var(--text); font-weight: 600; }
+  .callout { font-size: 14px; color: var(--muted); background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; }
+  .callout b { color: var(--text); }
+
+  .strip { display: flex; gap: 26px; flex-wrap: wrap; margin-top: 44px; }
+  .strip figure figcaption { color: var(--muted); letter-spacing: 0.04em; }
+
+  .sub { font-size: 19px; font-weight: 650; margin: 50px 0 22px; letter-spacing: -0.01em; }
+  .sub span { color: var(--faint); font-weight: 500; font-size: 15px; margin-left: 8px; }
+  .duo-row { display: flex; gap: 22px; align-items: flex-start; flex-wrap: wrap; }
+
+  .end { margin-top: 64px; display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .end .idea ul { list-style: none; margin-top: 8px; display: flex; flex-direction: column; gap: 6px; }
+  .end .idea li { font-size: 14px; color: var(--muted); }
+  .end .idea li b { color: var(--text); font-weight: 600; }
+
+  /* Zoom */
+  .zoom { position: fixed; inset: 0; z-index: 50; background: #000000e8; display: none; place-items: center; cursor: zoom-out; padding: 30px; }
+  .zoom.on { display: grid; }
+  .zoom img { max-width: 100%; max-height: 100%; border-radius: 22px; box-shadow: 0 0 0 1px #35353b; }
+
+  /* Two shots of the same size share the row and scale down together. */
+  .duo-row.even > figure { flex: 1 1 0; min-width: 0; max-width: 576px; align-items: stretch; }
+  .duo-row.even figcaption { text-align: center; }
+  .duo-row.even .frame img { width: 100% !important; }
+
+  @media (max-width: 1100px) {
+    /* Keep before and after side by side; the notes go under them. */
+    .compare { display: flex; flex-wrap: wrap; gap: 28px; }
+    .notes { flex-basis: 100%; padding-top: 0; max-width: 780px; }
+    .ideas { grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 640px) {
+    main, nav.chapters ol { padding-left: 18px; padding-right: 18px; }
+    .ideas, .end { grid-template-columns: 1fr; }
+    .phone { width: min(282px, 100%); }
+    .phone.wide img, .frame img { max-width: 100%; height: auto; }
+  }
+</style>
+</head>
+<body>
+
+<nav class="chapters">
+  <ol>
+    <li><a href="#idea">The idea</a></li>
+    <li><a href="#inbox">Inbox</a></li>
+    <li><a href="#hold">Touch and hold</a></li>
+    <li><a href="#library">Library</a></li>
+    <li><a href="#folder">Folder View</a></li>
+    <li><a href="#tag">Tag</a></li>
+    <li><a href="#reader">Reader View</a></li>
+    <li><a href="#search">Search</a></li>
+    <li><a href="#profile">Profile</a></li>
+    <li><a href="#settings">Settings</a></li>
+    <li><a href="#signin">Sign in</a></li>
+    <li><a href="#landscape">Landscape</a></li>
+    <li><a href="#duo">iPhone Duo</a></li>
+    <li><a href="#summary">Summary</a></li>
+  </ol>
+</nav>
+
+<main>
+
+<header class="intro" id="idea">
+  <div class="eyebrow">Sleevy for iOS · Direction A</div>
+  <h1>Before and after</h1>
+  <p class="lead">
+    Direction A moves every screen to one quiet, monochrome style. A Saved Item is one line.
+    The shader art is gone. On the iPhone Duo, the Reader View becomes a book.
+    Each section shows a screen on master on the left and the new build on the right, with notes on what changed.
+  </p>
+  <div class="chips">
+    <span class="chip">Before: <b>master</b> e1f94af5</span>
+    <span class="chip">After: <b>feat/ios-direction-a</b>, 4 commits</span>
+    <span class="chip">All data: <b>Demo Mode</b></span>
+    <span class="chip">Unit tests: <b>142 passed</b></span>
+    <span class="chip">Click a screenshot to make it larger</span>
+  </div>
+</header>
+
+<div class="ideas">
+  <div class="idea"><div class="n">01</div><h3>One style, no colour</h3><p>Black, white and greys. The only colour comes from favicons, the toggle and Delete.</p></div>
+  <div class="idea"><div class="n">02</div><h3>One line per Saved Item</h3><p>A favicon and a title. The domain and age leave the row. Touch and hold shows the Preview Summary.</p></div>
+  <div class="idea"><div class="n">03</div><h3>Large titles with a count</h3><p>Root screens put the count under the large title. Pushed screens show it as the first row.</p></div>
+  <div class="idea"><div class="n">04</div><h3>No shader art</h3><p>The glow heroes, the folder cards, their playground and the folder colour picker are removed.</p></div>
+  <div class="idea"><div class="n">05</div><h3>Library is a sidebar</h3><p>Folders and Tags as plain rows with counts. A Tag opens every save that carries it.</p></div>
+  <div class="idea"><div class="n">06</div><h3>The article comes first</h3><p>The Reader View starts with the title and the Preview Summary. On the Duo it is set as pages.</p></div>
+</div>
+
+<!-- 1 Inbox -->
+<section class="chapter" id="inbox">
+  <div class="head"><div class="num">01</div><h2>Inbox</h2>
+    <p>The Inbox is the first screen and the one you see most. It now reads like a list of titles, not a feed.</p></div>
+  <div class="compare">
+    <figure><figcaption>Before</figcaption><div class="phone"><img src="img/before-inbox.jpg" alt="Inbox on master"></div></figure>
+    <figure class="after"><figcaption>After</figcaption><div class="phone"><img src="img/after-inbox.jpg" alt="Inbox in Direction A"></div></figure>
+    <div class="notes">
+      <div><h4>Before</h4><ul>
+        <li>A coloured glow behind the title.</li>
+        <li>Two lines per row: the title, then the domain. The age is on the right.</li>
+        <li>One long list, with no groups.</li>
+      </ul></div>
+      <div class="changed"><h4>After</h4><ul>
+        <li><b>One line per Saved Item:</b> the favicon and the title. More saves fit on one screen.</li>
+        <li><b>"19 unread"</b> is now the subtitle of the large title.</li>
+        <li>Groups by day: <b>Today, Yesterday, Earlier</b>.</li>
+        <li>No glow. The black goes to the top edge.</li>
+        <li>The Library tab has a new icon: a row of books.</li>
+      </ul></div>
+    </div>
+  </div>
+  <div class="strip">
+    <figure><div class="phone small"><img src="img/after-capture.jpg" alt="Capture Capsule"></div><figcaption>Capture Capsule<small>The + opens it under the title</small></figcaption></figure>
+  </div>
+</section>
+
+<!-- 2 Hold -->
+<section class="chapter" id="hold">
+  <div class="head"><div class="num">02</div><h2>Touch and hold a row</h2>
+    <p>The row lost its domain and age, so touch and hold gives them back, with the Preview Summary. This is where you read about a save before you open it.</p></div>
+  <div class="compare">
+    <figure><figcaption>Before</figcaption><div class="phone"><img src="img/before-hold.jpg" alt="Row menu on master"></div></figure>
+    <figure class="after"><figcaption>After</figcaption><div class="phone"><img src="img/after-hold.jpg" alt="Row menu in Direction A"></div></figure>
+    <div class="notes">
+      <div><h4>Before</h4><ul>
+        <li>The row lifts, with four actions: Mark Read, Copy Link, Share, Delete.</li>
+        <li>No preview, and no way to file the save.</li>
+      </ul></div>
+      <div class="changed"><h4>After</h4><ul>
+        <li><b>Preview Summary card:</b> site and age, title, summary and Tags.</li>
+        <li><b>Move to Folder</b> is a submenu, so you can file a save from any list.</li>
+        <li>The same menu shows in the Inbox, Library, Folder View, Tag, Search and Profile.</li>
+      </ul></div>
+    </div>
+  </div>
+</section>
+
+<!-- 3 Library -->
+<section class="chapter" id="library">
+  <div class="head"><div class="num">03</div><h2>Library</h2>
+    <p>The biggest visual change. The shader cards are replaced by a sidebar of Folders and Tags.</p></div>
+  <div class="compare">
+    <figure><figcaption>Before</figcaption><div class="phone"><img src="img/before-library.jpg" alt="Library on master"></div></figure>
+    <figure class="after"><figcaption>After</figcaption><div class="phone"><img src="img/after-library.jpg" alt="Library in Direction A"></div></figure>
+    <div class="notes">
+      <div><h4>Before</h4><ul>
+        <li>One large shader card per Folder, each in its own colour.</li>
+        <li>Under the cards, a list of all saves.</li>
+        <li>Tags show only inside Filters.</li>
+      </ul></div>
+      <div class="changed"><h4>After</h4><ul>
+        <li><b>Folders</b> and <b>Tags</b> are two sections that fold, with a count on each row.</li>
+        <li>A <b>globe</b> marks a Published Folder. Touch and hold a Folder to edit it, publish it or delete it.</li>
+        <li><b>New Folder</b> is the last row of the Folders section.</li>
+        <li>"29 saves" is the subtitle. The sort button holds the sort order and <b>Filters</b>.</li>
+      </ul></div>
+    </div>
+  </div>
+  <div class="strip">
+    <figure><div class="phone small"><img src="img/after-filter.jpg" alt="Sort menu"></div><figcaption>Sort menu<small>Newest, Oldest, A–Z, Unread First</small></figcaption></figure>
+    <figure><div class="phone small"><img src="img/after-filter-sheet.jpg" alt="Filters"></div><figcaption>Filters<small>By Tag and by Source</small></figcaption></figure>
+    <figure><div class="phone small"><img src="img/after-new-folder.jpg" alt="New Folder"></div><figcaption>New Folder<small>A name, and nothing else</small></figcaption></figure>
+  </div>
+</section>
+
+<!-- 4 Folder View -->
+<section class="chapter" id="folder">
+  <div class="head"><div class="num">04</div><h2>Folder View</h2>
+    <p>A Folder now looks like every other list. Its colour hero is gone.</p></div>
+  <div class="compare">
+    <figure><figcaption>Before</figcaption><div class="phone"><img src="img/before-folder.jpg" alt="Folder View on master"></div></figure>
+    <figure class="after"><figcaption>After</figcaption><div class="phone"><img src="img/after-folder.jpg" alt="Folder View in Direction A"></div></figure>
+    <div class="notes">
+      <div><h4>Before</h4><ul>
+        <li>A glow hero behind a small inline title.</li>
+        <li>Two-line rows with the domain and the age.</li>
+      </ul></div>
+      <div class="changed"><h4>After</h4><ul>
+        <li><b>Large title</b>, then a first row: "4 saves · 2 unread · On your profile".</li>
+        <li>One-line rows. The <b>Unread Dot</b> is on the right, and read saves are grey.</li>
+        <li>"On your profile" tells you that this is a Published Folder.</li>
+      </ul></div>
+    </div>
+  </div>
+</section>
+
+<!-- 5 Tag -->
+<section class="chapter" id="tag">
+  <div class="head"><div class="num">05</div><h2>Tag <span class="new-tag">New</span></h2>
+    <p>A Tag in the Library opens a list of every save that carries it, across all Folders.</p></div>
+  <div class="compare solo">
+    <figure class="after"><figcaption>After</figcaption><div class="phone"><img src="img/after-tag.jpg" alt="Tag list"></div></figure>
+    <div class="notes">
+      <div class="changed"><h4>What it does</h4><ul>
+        <li>Same layout as a Folder View: large title, a count row, one-line rows.</li>
+        <li>"7 saves · 5 unread" for the Tag <b>Design</b>.</li>
+        <li>The sort button and the touch-and-hold menu work as in the Library.</li>
+      </ul></div>
+    </div>
+  </div>
+</section>
+
+<!-- 6 Reader -->
+<section class="chapter" id="reader">
+  <div class="head"><div class="num">06</div><h2>Reader View</h2>
+    <p>On the iPhone the Reader View still scrolls. The top of the article and the toolbar changed.</p></div>
+  <div class="compare">
+    <figure><figcaption>Before</figcaption><div class="phone"><img src="img/before-reader.jpg" alt="Reader View on master"></div></figure>
+    <figure class="after"><figcaption>After</figcaption><div class="phone"><img src="img/after-reader.jpg" alt="Reader View in Direction A"></div></figure>
+    <div class="notes">
+      <div><h4>Before</h4><ul>
+        <li>The title is twice on screen: small in the bar, large in the page.</li>
+        <li>The summary is a plain first paragraph.</li>
+        <li>One menu (⋯) for all actions.</li>
+      </ul></div>
+      <div class="changed"><h4>After</h4><ul>
+        <li><b>Up and down</b> step through the list that you opened the save from.</li>
+        <li><b>Mark Read</b> and <b>Move to Folder</b> are buttons in the bar.</li>
+        <li>The site shows with its favicon, and the <b>Preview Summary</b> is a card that folds.</li>
+        <li>Prose is set at a smaller reading size. <b>Text Size</b> stays the same from article to article.</li>
+      </ul></div>
+    </div>
+  </div>
+</section>
+
+<!-- 7 Search -->
+<section class="chapter" id="search">
+  <div class="head"><div class="num">07</div><h2>Search</h2>
+    <p>Search keeps its layout. Its results now use the shared row.</p></div>
+  <div class="compare">
+    <figure><figcaption>Before</figcaption><div class="phone"><img src="img/before-search.jpg" alt="Search on master"></div></figure>
+    <figure class="after"><figcaption>After</figcaption><div class="phone"><img src="img/after-search.jpg" alt="Search in Direction A"></div></figure>
+    <div class="notes">
+      <div class="changed"><h4>What changed</h4><ul>
+        <li>Results are <b>one-line rows</b> with the same touch-and-hold menu as the Inbox.</li>
+        <li>Search used its own copy of the row and swipe actions. That copy is deleted.</li>
+        <li>The background is the system black, the same as on every other screen.</li>
+      </ul></div>
+    </div>
+  </div>
+</section>
+
+<!-- 8 Profile -->
+<section class="chapter" id="profile">
+  <div class="head"><div class="num">08</div><h2>Profile</h2>
+    <p>Your public page in the app. It keeps its content and drops the glow.</p></div>
+  <div class="compare">
+    <figure><figcaption>Before</figcaption><div class="phone"><img src="img/before-profile.jpg" alt="Profile on master"></div></figure>
+    <figure class="after"><figcaption>After</figcaption><div class="phone"><img src="img/after-profile.jpg" alt="Profile in Direction A"></div></figure>
+    <div class="notes">
+      <div><h4>Before</h4><ul>
+        <li>A blue glow behind the avatar.</li>
+        <li>Month headers in capitals, and two-line rows with ages.</li>
+      </ul></div>
+      <div class="changed"><h4>After</h4><ul>
+        <li>No glow. The avatar, name and <b>Make Private</b> stay the same.</li>
+        <li>Month headers in normal case: "October 2026".</li>
+        <li>One-line rows, as in every other list.</li>
+      </ul></div>
+    </div>
+  </div>
+</section>
+
+<!-- 9 Settings -->
+<section class="chapter" id="settings">
+  <div class="head"><div class="num">09</div><h2>Settings</h2>
+    <p>Settings already used the system style, so it shows almost no change.</p></div>
+  <div class="compare solo">
+    <figure class="after"><figcaption>After</figcaption><div class="phone"><img src="img/after-settings.jpg" alt="Settings"></div></figure>
+    <div class="notes">
+      <div class="changed"><h4>What changed</h4><ul>
+        <li>The <b>Folder Card Playground</b> (Debug builds only) is gone, with the folder cards.</li>
+        <li>Theme, Reader View, Account and Source Name are the same.</li>
+      </ul></div>
+    </div>
+  </div>
+</section>
+
+<!-- 10 Sign in -->
+<section class="chapter" id="signin">
+  <div class="head"><div class="num">10</div><h2>Sign in</h2>
+    <p>The first screen a new user sees. It now uses the same black as the app behind it.</p></div>
+  <div class="compare">
+    <figure><figcaption>Before</figcaption><div class="phone"><img src="img/before-signin.jpg" alt="Sign in on master"></div></figure>
+    <figure class="after"><figcaption>After</figcaption><div class="phone"><img src="img/after-signin.jpg" alt="Sign in in Direction A"></div></figure>
+    <div class="notes">
+      <div><h4>Before</h4><ul>
+        <li>An animated colour field with blurred shapes.</li>
+        <li>The mark and the buttons sit in the middle.</li>
+      </ul></div>
+      <div class="changed"><h4>After</h4><ul>
+        <li>Black, with the white mark, the name <b>Sleevy</b> and "Save it now. Read it later."</li>
+        <li>The buttons move down, where your thumb is.</li>
+      </ul></div>
+    </div>
+  </div>
+</section>
+
+<!-- 11 Landscape -->
+<section class="chapter" id="landscape">
+  <div class="head"><div class="num">11</div><h2>Landscape iPhone</h2>
+    <p>The same screens turn with the phone. One fix came from these screenshots: the Preview Summary card was cut off in landscape.</p></div>
+  <div class="duo-row">
+    <figure class="after"><div class="phone wide"><img src="img/after-land-inbox.jpg" alt="Inbox in landscape" style="width:520px"></div><figcaption>Inbox</figcaption></figure>
+    <figure class="after"><div class="phone wide"><img src="img/after-land-hold.jpg" alt="Touch and hold in landscape" style="width:520px"></div><figcaption>Touch and hold<small>The card now scales down to fit</small></figcaption></figure>
+    <figure class="after"><div class="phone wide"><img src="img/after-land-reader.jpg" alt="Reader View in landscape" style="width:520px"></div><figcaption>Reader View</figcaption></figure>
+  </div>
+  <div class="callout" style="margin-top:28px; max-width:780px">
+    <b>Upside-down</b> is not a supported orientation on the iPhone, so it shows the portrait layout. All four orientations are on contact sheets 01–04.
+  </div>
+</section>
+
+<!-- 12 Duo -->
+<section class="chapter" id="duo">
+  <div class="head"><div class="num">12</div><h2>iPhone Duo</h2>
+    <p>On the Duo, the app uses a vertical rail in place of the tab bar. Direction A uses that rail to set the Reader View as a book: one page on the cover display, and a two-page spread on the inner display, split on the hinge.</p></div>
+
+  <div class="sub">Cover display <span>Closed, portrait</span></div>
+  <div class="compare">
+    <div class="pair">
+      <figure><figcaption>Before</figcaption><div class="frame"><img src="img/before-duo-cover-inbox.jpg" alt="Duo cover Inbox on master" style="width:200px"></div></figure>
+      <figure><figcaption>&nbsp;</figcaption><div class="frame"><img src="img/before-duo-cover-reader.jpg" alt="Duo cover Reader View on master" style="width:200px"></div></figure>
+    </div>
+    <div class="pair">
+      <figure class="after"><figcaption>After</figcaption><div class="frame"><img src="img/after-duo-closed-portrait-inbox.jpg" alt="Duo cover Inbox in Direction A" style="width:200px"></div></figure>
+      <figure class="after"><figcaption>&nbsp;</figcaption><div class="frame"><img src="img/after-duo-closed-portrait-reader.jpg" alt="Duo cover Reader View in Direction A" style="width:200px"></div></figure>
+    </div>
+    <div class="notes">
+      <div><h4>Before</h4><ul>
+        <li>The Reader View scrolls, next to the rail.</li>
+        <li>The rail holds Back, ⋯ and the haptic scroll wheel.</li>
+      </ul></div>
+      <div class="changed"><h4>After</h4><ul>
+        <li>The article is <b>one page</b>, with the page number at the foot.</li>
+        <li>The rail adds the <b>Article Outline</b> and <b>Text Size</b>.</li>
+        <li>The <b>haptic scroll wheel</b> stays. It now turns to a section's page, and its deck shows the page numbers.</li>
+      </ul></div>
+    </div>
+  </div>
+
+  <div class="sub">Inner display <span>Book or Open, portrait (the wide way)</span></div>
+  <div class="duo-row even">
+    <figure><figcaption>Before · Reader View</figcaption><div class="frame"><img src="img/before-duo-inner-reader.jpg" alt="Duo inner Reader View on master" style="width:560px"></div></figure>
+    <figure class="after"><figcaption>After · Reader View</figcaption><div class="frame"><img src="img/after-duo-book-portrait-reader.jpg" alt="Duo inner Reader View in Direction A" style="width:560px"></div></figure>
+  </div>
+  <div class="compare solo" style="margin-top:26px">
+    <div></div>
+    <div class="notes" style="padding-top:0; max-width:780px">
+      <div><h4>Before</h4><ul>
+        <li>A split view: a list of saves on the left, one wide column of prose on the right.</li>
+        <li>The lines run across most of the display, which is hard to read.</li>
+      </ul></div>
+      <div class="changed"><h4>After</h4><ul>
+        <li>A <b>two-page spread</b>, split on the hinge, set with TextKit 1. Pages 1 and 2 are side by side.</li>
+        <li>Short lines, ragged right, with hyphens. Nothing crosses the hinge.</li>
+      </ul></div>
+    </div>
+  </div>
+
+  <div class="sub">Article Outline <span>the left page becomes the contents page</span></div>
+  <div class="duo-row">
+    <figure class="after"><div class="frame"><img src="img/after-duo-book-portrait-reader-outline.jpg" alt="Duo inner Reader View with the Article Outline" style="width:560px"></div><figcaption>Inner display</figcaption></figure>
+    <figure class="after"><div class="frame"><img src="img/after-duo-closed-portrait-reader-outline.jpg" alt="Duo cover Reader View with the Article Outline" style="width:270px"></div><figcaption>Cover display</figcaption></figure>
+  </div>
+  <div class="callout" style="margin-top:24px; max-width:780px">
+    The Article Outline shows the Preview Summary, then each section with its page number. Tap a section to go to its page.
+  </div>
+
+  <div class="sub">Lists on the Duo</div>
+  <div class="duo-row even">
+    <figure><figcaption>Before · Inbox, inner display</figcaption><div class="frame"><img src="img/before-duo-inner-inbox.jpg" alt="Duo inner Inbox on master" style="width:560px"></div></figure>
+    <figure class="after"><figcaption>After · Inbox, inner display</figcaption><div class="frame"><img src="img/after-duo-book-portrait-inbox.jpg" alt="Duo inner Inbox in Direction A" style="width:560px"></div></figure>
+  </div>
+
+  <div class="sub">Other postures</div>
+  <div class="duo-row">
+    <figure class="after"><div class="frame"><img src="img/after-duo-book-landscapeRight-reader.jpg" alt="Duo tall inner display Reader View" style="width:300px"></div><figcaption>Inner display, turned<small>No rail: tab bar and the iPhone Reader View</small></figcaption></figure>
+    <figure class="after"><div class="frame"><img src="img/after-duo-closed-landscapeLeft-inbox.jpg" alt="Duo cover landscape Inbox" style="width:440px"></div><figcaption>Cover display, landscape<small>The rail moves to the left side</small></figcaption></figure>
+  </div>
+  <div class="callout" style="margin-top:24px; max-width:780px">
+    <b>Book and Open look the same, pixel for pixel.</b> The layout follows the display and the orientation, not the hinge angle. Contact sheets 05–16 show every posture in all four orientations.
+  </div>
+</section>
+
+<!-- Summary -->
+<section class="chapter" id="summary">
+  <div class="head"><div class="num">13</div><h2>Summary</h2>
+    <p>What is on the branch, and what is not.</p></div>
+  <div class="end">
+    <div class="idea"><h3>On feat/ios-direction-a</h3><ul>
+      <li><b>586797b9</b> Direction A redesign, with a book Reader View on the iPhone Duo</li>
+      <li><b>59efd26b</b> Ragged-right book pages; no All Caught Up before the first load</li>
+      <li><b>20233061</b> Demo screens wait for their saves before they open</li>
+      <li><b>5d41c9aa</b> The Preview Summary card fits in landscape</li>
+      <li>35 files, 2,258 lines added, 3,001 lines removed. 142 unit tests pass.</li>
+    </ul></div>
+    <div class="idea"><h3>Not in this build</h3><ul>
+      <li>No "ask about this link" and no Reader/Original switch, as you asked.</li>
+      <li>No shader heroes or shader folders. The haptic scroll wheel stays.</li>
+      <li>The branch is <b>not pushed and not merged</b>.</li>
+      <li>Contact sheets of every screen: <b>concepts/ios-direction-a-build/01–16</b>.</li>
+    </ul></div>
+  </div>
+</section>
+
+</main>
+
+<div class="zoom" id="zoom"><img alt=""></div>
+
+<script>
+  // Click a screenshot to see it larger.
+  const zoom = document.getElementById('zoom');
+  document.querySelectorAll('main img').forEach(img => img.addEventListener('click', () => {
+    zoom.querySelector('img').src = img.src;
+    zoom.classList.add('on');
+  }));
+  zoom.addEventListener('click', () => zoom.classList.remove('on'));
+  addEventListener('keydown', e => { if (e.key === 'Escape') zoom.classList.remove('on'); });
+
+  // Mark the chapter in view.
+  const links = new Map([...document.querySelectorAll('nav.chapters a')].map(a => [a.hash.slice(1), a]));
+  const seen = new IntersectionObserver(entries => {
+    for (const entry of entries) {
+      if (!entry.isIntersecting) continue;
+      links.forEach(a => a.classList.remove('on'));
+      links.get(entry.target.id)?.classList.add('on');
+    }
+  }, { rootMargin: '-40% 0px -55% 0px' });
+  document.querySelectorAll('#idea, section.chapter').forEach(s => seen.observe(s));
+</script>
+</body>
+</html>
