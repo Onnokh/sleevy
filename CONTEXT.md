@@ -148,12 +148,32 @@ The authenticated owner of a private collection of Saved Items.
 _Avoid_: Workspace, team, profile, multi-user tenant
 
 **App Session**:
-The authenticated session used by the human-facing app after Google login.
-_Avoid_: API token, magic link, Sign in with Apple
+The session the human-facing app holds for one Account, however that Account was reached.
+_Avoid_: API token, magic link, Google session
 
 **Prototype Auth**:
 A temporary pre-production authentication approach used before paid Apple Developer Program setup is justified.
 _Avoid_: Production auth, public login
+
+**Demo Account**:
+An Account a visitor receives without signing in, which expires and is then deleted with everything inside it.
+_Avoid_: Trial account, guest account, sandbox, demo inbox
+
+**Demo Expiry**:
+The fixed moment, one hour after a Demo Account is created, at which that Account stops working.
+_Avoid_: Session timeout, idle timeout, grace period
+
+**Demo Seed**:
+The fixed set of Saved Items and Folders every Demo Account holds from its first moment.
+_Avoid_: Sample data, fixture, template account, onboarding content
+
+**Demo Capture Allowance**:
+The small fixed number of captures a Demo Account may make in its lifetime.
+_Avoid_: Rate limit, quota, trial limit
+
+**Demo Conversion**:
+The moment the visitor behind a Demo Account signs in, which carries their own captures into a new Account.
+_Avoid_: Upgrade, account migration, account linking
 
 **API Key**:
 A personal credential used by external systems and non-interactive clients to access an Account through the REST API.
@@ -699,6 +719,15 @@ _Avoid_: Client-side robots rule, per-page meta decision, sitemap flag
 - The public **Saved Item** rule is resolved in SQL and owned by Postgres, which decides the one-hour boundary.
 - A signed-in visitor may capture a listed Saved Item into their own Account through the `public-profile` **Capture Channel**.
 - Marking a Saved Item or a Folder private is a **Web Companion** action in v1.
+- A **Demo Account** is an **Account**, so every rule about Saved Items, Folders, and Sources holds for it unchanged.
+- A **Demo Account** may not claim a **Handle**, publish a **Public Profile**, or hold an **API Key**.
+- A **Demo Account** holds one **Demo Seed** and may capture up to its **Demo Capture Allowance**, after which capture is refused.
+- A capture by a **Demo Account** uses the `web-companion` **Capture Channel** and registers no **Source**.
+- **Demo Expiry** is one hour after creation and never moves, whatever the visitor does.
+- At **Demo Expiry** the Account and everything it owns is deleted, while the **Links** it referenced remain.
+- **Demo Conversion** carries the Saved Items the visitor captured into the new Account, and leaves the **Demo Seed** behind.
+- One address holds at most one live **Demo Account** at a time.
+- A **Demo Account** is absent from the account-created analytics event.
 
 ## Flagged Ambiguities
 
@@ -770,3 +799,10 @@ These record the reasoning behind decisions that are not obvious from the defini
 - A public Saved Item page is not ordered by **Last Saved At**; resolved: Saved Item creation time orders it, so a **Duplicate Save** cannot reorder a published page.
 - A public Saved Item page is not addressed by cursor; resolved: numbered pages give every page a shareable URL, which a crawler can reach and infinite scroll cannot.
 - The first publish has no review step; resolved: opt-in confirmation copy states the item count and the automatic future behavior, and Sleevy accepts that an existing library publishes in full at that moment.
+- A "demo inbox" is not an **Inbox**; resolved: the **Inbox** is a surface onto an Account's unread Saved Items, so what a demo visitor holds is a **Demo Account**, and the Inbox is only the first screen they see.
+- A **Demo Account** is not a concept beside **Account**; resolved: it is an Account with capabilities withheld, because the demo is the real product and a parallel entity would duplicate Saved Items, Folders, and Sources for something thrown away within the hour.
+- **App Session** no longer names the login method; resolved: Apple login and the **Demo Account** both reach the same session, so the term describes what the session is for rather than how it was obtained.
+- **Demo Expiry** is absolute, not idle; resolved: a demo is a trial rather than a workspace, and an idle clock lets one visitor hold an Account all day.
+- A capture by a **Demo Account** is not its own **Capture Channel**; resolved: a Capture Channel names the mechanism, and the mechanism is the Web Companion.
+- **Demo Conversion** does not carry the **Demo Seed**; resolved: a new Account should not open with Saved Items its owner never chose, while dropping their own captures at the moment of signup would be the worst first impression Sleevy could make.
+- Demo creation is limited by live Account count per address, not by request rate; resolved: what matters is how many Demo Accounts exist, and a count in Postgres still holds when Redis is unreachable, while every **Rate Limiter** deliberately allows the request instead.
