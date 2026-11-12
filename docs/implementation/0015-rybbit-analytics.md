@@ -74,7 +74,7 @@ Add a `rybbit` section to `AppConfig` in `apps/api/src/runtime/Config.ts`, follo
 | Env var | Type | Default | Notes |
 | --- | --- | --- | --- |
 | `RYBBIT_ENABLED` | boolean | `false` | Master switch. Off in dev/test/local. |
-| `RYBBIT_API_URL` | string | `""` | e.g. `https://rybbit.missingmounts.com`. Non-secret. |
+| `RYBBIT_API_URL` | string | `""` | e.g. `https://rybbit.onkie.dev`. Non-secret. |
 | `RYBBIT_SITE_ID` | string | `""` | e.g. `c8631725ed4a`. Non-secret. |
 | `RYBBIT_API_KEY` | string | `""` | **Secret.** Coolify env + gitignored local `.env` only. |
 
