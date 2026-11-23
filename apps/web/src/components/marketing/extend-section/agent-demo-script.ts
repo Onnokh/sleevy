@@ -3,9 +3,10 @@
 //
 // Every step is a real tool from apps/api/src/modules/mcp/McpTools.ts, and
 // every change to the pane follows the app's rules. list_saved_items takes no
-// search term, so "find" is the agent reading the list itself. The Inbox holds
-// unread Saved Items only, so a read one leaves it; a Folder move leaves its
-// rows in place (Inbox rows do not show Folders), so the pane opens the Folder.
+// search term, so "find" is the agent reading the list itself. Recents keeps
+// a Saved Item once it is read and only drops its unread mark; a Folder move
+// leaves its rows in place (Recents rows do not show Folders), so the pane
+// opens the Folder.
 // The pages are real, so their favicons are too.
 
 export type Client = "claude" | "chatgpt"
@@ -38,7 +39,7 @@ export const conversations: readonly Conversation[] = [
     user: "Save this for later.",
     attachment: { title: "The Tail End", host: "waitbutwhy.com" },
     calls: [{ tool: "save_link", running: "Saving to Sleevy", done: "Saved to Sleevy" }],
-    reply: "Saved. It is at the top of your Inbox, and on your iPhone too.",
+    reply: "Saved. It is at the top of Recents, and on your iPhone too.",
   },
   {
     client: "chatgpt",
@@ -64,7 +65,7 @@ export const conversations: readonly Conversation[] = [
     prompt: "Mark it read",
     user: "I made the tomato sauce. Mark it read.",
     calls: [{ tool: "set_saved_item_read_state", running: "Marking it read", done: "Marked it read" }],
-    reply: "Marked read. It stays in your Library if you want it again.",
+    reply: "Marked read. It stays in Recents if you want it again.",
   },
 ]
 
@@ -137,8 +138,10 @@ export function paneAt(active: number, step: number): PaneState {
     return selected ? "selected" : undefined
   }
 
+  // Recents keeps a save once it is read: it only loses its unread mark.
   const rows = inboxItems
-    .filter((item) => (saved || item.id !== "tail") && (!read || item.id !== "sauce"))
-    .map((item) => ({ ...item, unread: true, mark: mark(item) }))
-  return { view: "inbox", title: "Inbox", subtitle: `${rows.length + UNSEEN_UNREAD} unread`, rows }
+    .filter((item) => saved || item.id !== "tail")
+    .map((item) => ({ ...item, unread: !(read && item.id === "sauce"), mark: mark(item) }))
+  const unread = rows.filter((row) => row.unread).length
+  return { view: "inbox", title: "Recents", subtitle: `${unread + UNSEEN_UNREAD} unread`, rows }
 }
