@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 import UIKit
 import UniformTypeIdentifiers
 
@@ -20,9 +21,7 @@ final class ShareViewController: UIViewController {
         configuration.timeoutIntervalForResource = 15
         return URLSession(configuration: configuration)
     }()
-    private let activityIndicator = UIActivityIndicatorView(style: .medium)
-    private let statusLabel = UILabel()
-    private let gradientView = MeshGradientView()
+    private let model = ShareSaveModel()
     private var hasStarted = false
     private var captureClient: SleevyCaptureClient {
         SleevyCaptureClient(
@@ -41,55 +40,40 @@ final class ShareViewController: UIViewController {
         accessGroup: ShareViewController.keychainAccessGroup
     )
 
+    /// Dark from the first frame, the glass's own ground, so the sheet never
+    /// opens light before the glass is drawn.
+    override func loadView() {
+        let ground = UIView()
+        ground.backgroundColor = UIColor(red: 8 / 255, green: 9 / 255, blue: 12 / 255, alpha: 1)
+        view = ground
+        overrideUserInterfaceStyle = .dark
+    }
+
     override func viewDidLoad() {
         super.viewDidLoad()
 
-        // The same mesh field the sign-in screen draws.
-        gradientView.translatesAutoresizingMaskIntoConstraints = false
-        view.addSubview(gradientView)
+        let save = UIHostingController(rootView: ShareSaveView(model: model) { [weak self] in
+            self?.extensionContext?.cancelRequest(withError: ShareExtensionError.missingSharedURL)
+        })
+        save.view.backgroundColor = .clear
+        save.view.translatesAutoresizingMaskIntoConstraints = false
+        addChild(save)
+        view.addSubview(save.view)
         NSLayoutConstraint.activate([
-            gradientView.topAnchor.constraint(equalTo: view.topAnchor),
-            gradientView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-            gradientView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            gradientView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            save.view.topAnchor.constraint(equalTo: view.topAnchor),
+            save.view.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            save.view.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            save.view.trailingAnchor.constraint(equalTo: view.trailingAnchor),
         ])
+        save.didMove(toParent: self)
+    }
 
-        // Brandmark
-        let logoView = SleevyBrandmarkView()
-        logoView.translatesAutoresizingMaskIntoConstraints = false
-
-        // Status label
-        statusLabel.translatesAutoresizingMaskIntoConstraints = false
-        statusLabel.text = "Saving to Sleevy..."
-        statusLabel.font = .systemFont(ofSize: 17, weight: .semibold)
-        statusLabel.textColor = .white
-        statusLabel.textAlignment = .center
-        statusLabel.numberOfLines = 0
-
-        // Activity indicator
-        activityIndicator.translatesAutoresizingMaskIntoConstraints = false
-        activityIndicator.color = .white
-        activityIndicator.startAnimating()
-
-        let stack = UIStackView(arrangedSubviews: [logoView, statusLabel, activityIndicator])
-        stack.axis = .vertical
-        stack.alignment = .center
-        stack.spacing = 16
-        stack.translatesAutoresizingMaskIntoConstraints = false
-
-        view.addSubview(stack)
-
-        NSLayoutConstraint.activate([
-            logoView.heightAnchor.constraint(equalToConstant: 72),
-            logoView.widthAnchor.constraint(
-                equalTo: logoView.heightAnchor,
-                multiplier: SleevyBrandmarkPath.aspectRatio
-            ),
-            stack.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            stack.centerYAnchor.constraint(equalTo: view.centerYAnchor),
-            stack.leadingAnchor.constraint(greaterThanOrEqualTo: view.leadingAnchor, constant: 24),
-            stack.trailingAnchor.constraint(lessThanOrEqualTo: view.trailingAnchor, constant: -24),
-        ])
+    /// Shows the save, lets the inhale play, and closes the sheet.
+    private func finish(_ phase: ShareSaveModel.Phase) async {
+        model.phase = phase
+        let hold = ShareSaveModel.inhaleDuration + (phase == .savedOffline ? 1.0 : 0.5)
+        try? await Task.sleep(for: .seconds(hold))
+        extensionContext?.completeRequest(returningItems: nil)
     }
 
     override func viewDidAppear(_ animated: Bool) {
@@ -106,13 +90,12 @@ final class ShareViewController: UIViewController {
     private func submitSharedItem() async {
         do {
             let sharedURL = try await loadSharedURL()
+            model.host = sharedURL.host.map { $0.hasPrefix("www.") ? String($0.dropFirst(4)) : $0 }
 
             // Marketing-capture mode: show the real sheet against the real
             // shared URL, but never call the API or need a session.
             if DemoCaptureFlag.isOn {
                 try? await Task.sleep(nanoseconds: 800_000_000)
-                activityIndicator.stopAnimating()
-                statusLabel.text = "Saved to Sleevy"
                 if !DemoCaptureFlag.holdsSuccess {
                     // A first-run demo: queue the share for the demo Account,
                     // and close as the real sheet does.
@@ -124,10 +107,10 @@ final class ShareViewController: UIViewController {
                             captureChannel: CaptureChannel.shareExtension.rawValue
                         )
                     }
-                    try? await Task.sleep(nanoseconds: 400_000_000)
-                    extensionContext?.completeRequest(returningItems: nil)
+                    await finish(.saved)
                     return
                 }
+                model.phase = .saved
                 // Held far longer than the real sheet, which completes as soon
                 // as the capture returns: a screenshot run needs the success
                 // state on screen while it takes the picture.
@@ -146,10 +129,7 @@ final class ShareViewController: UIViewController {
                     sourceName: Self.sourceName,
                     captureChannel: CaptureChannel.shareExtension.rawValue
                 )
-                activityIndicator.stopAnimating()
-                statusLabel.text = "Saved to Sleevy"
-                try? await Task.sleep(nanoseconds: 500_000_000)
-                extensionContext?.completeRequest(returningItems: nil)
+                await finish(.saved)
                 return
             }
 
@@ -162,29 +142,18 @@ final class ShareViewController: UIViewController {
                     captureChannel: CaptureChannel.shareExtension.rawValue
                 )
                 persistRotatedToken(from: response.http)
-                extensionContext?.completeRequest(returningItems: nil)
+                await finish(.saved)
             } catch {
                 guard shouldQueueCapture(after: error) else {
                     throw error
                 }
 
                 try queueCapture(sharedURL)
-                activityIndicator.stopAnimating()
-                statusLabel.text = "Saved offline. Sleevy will sync it when you're back online."
-                try? await Task.sleep(nanoseconds: 850_000_000)
-                extensionContext?.completeRequest(returningItems: nil)
+                await finish(.savedOffline)
             }
         } catch {
-            statusLabel.text = error.localizedDescription
-            activityIndicator.stopAnimating()
-
-            let dismissAction = UIAlertAction(title: "Close", style: .default) { [weak self] _ in
-                self?.extensionContext?.cancelRequest(withError: error)
-            }
-
-            let alert = UIAlertController(title: "Couldn’t Save Link", message: error.localizedDescription, preferredStyle: .alert)
-            alert.addAction(dismissAction)
-            present(alert, animated: true)
+            // The sheet says what went wrong, and its Close button ends it.
+            model.phase = .failed(error.localizedDescription)
         }
     }
 
@@ -344,23 +313,5 @@ private extension NSItemProvider {
                 continuation.resume(returning: SharedItemValue(item))
             }
         }
-    }
-}
-
-private final class SleevyBrandmarkView: UIView {
-    private let shapeLayer = CAShapeLayer()
-
-    override init(frame: CGRect) {
-        super.init(frame: frame)
-        backgroundColor = .clear
-        shapeLayer.fillColor = UIColor.white.cgColor
-        layer.addSublayer(shapeLayer)
-    }
-
-    required init?(coder: NSCoder) { fatalError() }
-
-    override func layoutSubviews() {
-        super.layoutSubviews()
-        shapeLayer.path = SleevyBrandmarkPath.path(in: bounds)
     }
 }

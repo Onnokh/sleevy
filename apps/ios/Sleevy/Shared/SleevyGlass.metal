@@ -1,4 +1,4 @@
-// The homepage's glass, live, for the sign-in screens: out-of-focus satin
+// The homepage's glass, live, for the sign-in screens and the save sheet: out-of-focus satin
 // ribbons in the dark, lit by soft coloured lights that wander and breathe.
 // A port of apps/web/src/components/marketing/glass-background/glass-shader.ts;
 // keep the two the same. The web shader explains each step.
@@ -36,7 +36,7 @@ namespace glass {
     }
 }
 
-[[ stitchable ]] half4 signInGlass(
+[[ stitchable ]] half4 sleevyGlass(
     float2 position,
     half4 color,
     float2 size,
@@ -102,10 +102,94 @@ namespace glass {
     c *= mix(1.0, 0.6, smoothstep(0.8, 1.0, uv.y));
     c = 1.0 - exp(-c * 0.7);
 
-    // The screen-door of the web's CSS: 4 pt cells, a darker line on two sides.
-    float2 cell = fmod(position, 4.0);
-    if (cell.x < 1.0 || cell.y < 1.0) { c *= 0.85; }
+    // The screen-door grid is drawn over the glass in SwiftUI, once: the
+    // glass itself is rendered small and scaled up.
 
     c += (hash2(position + fract(time * 7.0)) - 0.5) * (2.0 / 255.0);
     return half4(half3(c), 1.0);
+}
+
+// The save sheet's inhale: the light comes in from the edges of the screen
+// and ends on the shared link, a pill. Before the save a faint glow breathes
+// along the screen's edges; on the save a band in the glass's colours runs
+// in from every edge at once, closes on the pill, and lights its rim. Studied
+// from how Dia's power-up and New Tab light work (a coloured band that runs
+// in from an edge; a light that breathes; a halo that shrinks onto the bar);
+// written for Sleevy.
+//
+// size: the screen. pill: x, y, width, height in points from the top left.
+// idle: the edge glow's strength. inhale: 0 → 1 the band runs in, 1 → 1.35
+// it fades.
+namespace inhale {
+    float roundedBox(float2 p, float2 halfSize, float radius) {
+        float2 q = abs(p) - halfSize + radius;
+        return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - radius;
+    }
+
+    float easeInOut(float t) {
+        return t < 0.5 ? 4.0 * t * t * t : 1.0 - pow(-2.0 * t + 2.0, 3.0) * 0.5;
+    }
+}
+
+[[ stitchable ]] half4 sleevyInhale(
+    float2 position,
+    half4 color,
+    float2 size,
+    float4 pill,
+    float radius,
+    float idle,
+    float inhale,
+    float time
+) {
+    float2 pillHalf = pill.zw * 0.5;
+    float2 pillCentre = pill.xy + pillHalf;
+    float dPill = inhale::roundedBox(position - pillCentre, pillHalf, radius);
+    // Inside the pill: the pill draws itself.
+    if (dPill < -1.0) { return half4(0.0); }
+    // How far in from the screen's edge (its corners are round, as the
+    // display's are).
+    float2 screenHalf = size * 0.5;
+    float dEdge = max(-inhale::roundedBox(position - screenHalf, screenHalf, 55.0), 0.0);
+
+    // The colour runs round the screen and turns slowly.
+    float2 fromPill = position - pillCentre;
+    float angle = atan2(fromPill.y, fromPill.x);
+    float around = fract(angle / 6.2831853 + time * 0.06);
+    float3 c = around < 0.333 ? mix(glass::rose, glass::gold, around * 3.0)
+             : around < 0.666 ? mix(glass::gold, glass::steel, (around - 0.333) * 3.0)
+             : mix(glass::steel, glass::rose, (around - 0.666) * 3.0);
+
+    // Before the save: the edges breathe, ±7% on a 5.5 s sine.
+    float breath = 1.0 + 0.07 * sin(time * 6.2831853 / 5.5);
+    float a = idle * breath * 0.32 * exp(-dEdge / 28.0);
+
+    if (inhale > 0.0) {
+        float t = clamp(inhale, 0.0, 1.0);
+        // An inhale: a small breath out first (the glow swells at the
+        // edges), then in, faster and faster, onto the pill. The sides
+        // close a little ahead of the top and bottom, so the front is not
+        // one even line.
+        float swell = 0.035 * sin(3.14159265 * min(t / 0.28, 1.0));
+        float kx = pow(t, 2.6) - swell;
+        float ky = pow(clamp((t - 0.06) / 0.94, 0.0, 1.0), 2.6) - swell;
+        float k = max(kx, ky);
+        // One rounded rectangle of light: the screen's shape at the start,
+        // the pill's at the end, shrinking between them.
+        float2 centre = float2(mix(screenHalf.x, pillCentre.x, kx), mix(screenHalf.y, pillCentre.y, ky));
+        float2 halfSize = float2(mix(screenHalf.x, pillHalf.x, kx), mix(screenHalf.y, pillHalf.y, ky));
+        float corner = mix(55.0, radius, k);
+        float d = inhale::roundedBox(position - centre, halfSize, corner);
+        // The band wavers in width as it travels, and narrows as it lands.
+        float waver = 1.0 + 0.3 * sin(angle * 3.0 + time * 2.3) * sin(angle * 5.0 - time * 1.7) * (1.0 - k);
+        float width = mix(36.0, 6.0, k) * waver;
+        float band = exp(-abs(d) / width) * mix(0.5, 0.85, k);
+        float trail = d > 0.0 ? 0.1 * (1.0 - k) * exp(-d / 90.0) : 0.0;
+        float rim = smoothstep(2.5, 0.0, abs(dPill)) * smoothstep(0.9, 1.0, k);
+        float fade = 1.0 - smoothstep(1.05, 1.5, inhale);
+        float edgesOut = 1.0 - smoothstep(0.0, 0.3, t);
+        a = max(a * edgesOut, (band + trail + rim * 0.9) * fade);
+        c = mix(c, float3(1.0), rim * 0.45);
+    }
+    a = clamp(a, 0.0, 1.0);
+    return half4(half3(c * a), a);
 }

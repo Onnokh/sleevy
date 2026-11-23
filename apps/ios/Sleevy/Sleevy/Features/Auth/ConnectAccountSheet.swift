@@ -56,7 +56,7 @@ struct ConnectAccountSheet: View {
             }
         }
         .environment(\.colorScheme, .dark)
-        .presentationBackground { SignInGlassBackdrop() }
+        .presentationBackground { SleevyGlassBackdrop() }
         .interactiveDismissDisabled(authStore.isSigningIn)
         .presentationSizing(.form)
     }

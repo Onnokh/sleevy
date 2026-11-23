@@ -26,6 +26,8 @@
 	<string>$(SLEEVY_APP_GROUP)</string>
 	<key>SleevyKeychainAccessGroup</key>
 	<string>$(SLEEVY_KEYCHAIN_GROUP)</string>
+	<key>UIUserInterfaceStyle</key>
+	<string>Dark</string>
 	<key>NSExtension</key>
 	<dict>
 		<key>NSExtensionAttributes</key>

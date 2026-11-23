@@ -1,62 +1,9 @@
 import SwiftUI
 
 /// The parts every sign-in screen shares: the sign-in landing and the
-/// Connect an Account sheet. They speak the language of the web app's iPhone
+/// Connect an Account sheet. Their backdrop is `SleevyGlassBackdrop`. They speak the language of the web app's iPhone
 /// hand-off: the homepage's glass, a short headline, a white button and a
 /// dark glass one. Always dark, like that glass.
-
-/// The homepage's glass, live (SignInGlass.metal): satin ribbons in the
-/// dark under slow, wandering lights, dark under the words. Reduce Motion
-/// gets its first frame as a still.
-struct SignInGlassBackdrop: View {
-    private static let ground = Color(red: 8 / 255, green: 9 / 255, blue: 12 / 255)
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var start = Date.now
-
-    var body: some View {
-        ZStack {
-            Self.ground
-            if reduceMotion {
-                Image("SyncGlass")
-                    .resizable()
-                    .scaledToFill()
-                    .frame(maxHeight: .infinity, alignment: .top)
-            } else {
-                // A slow field: 30 frames a second is enough, and saves the
-                // battery.
-                TimelineView(.animation(minimumInterval: 1 / 30)) { context in
-                    let seconds = context.date.timeIntervalSince(start)
-                    GeometryReader { proxy in
-                        Rectangle()
-                            .colorEffect(ShaderLibrary.signInGlass(
-                                .float2(proxy.size),
-                                .float(seconds),
-                                .float2(Self.roam(seconds)),
-                                .float(0.25)
-                            ))
-                    }
-                }
-            }
-            LinearGradient(
-                stops: [
-                    .init(color: Self.ground.opacity(0.1), location: 0),
-                    .init(color: Self.ground.opacity(0.45), location: 0.38),
-                    .init(color: Self.ground.opacity(0.92), location: 0.62),
-                    .init(color: Self.ground, location: 1),
-                ],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-        }
-        .ignoresSafeArea()
-        .accessibilityHidden(true)
-    }
-
-    /// The web's roaming light, with no pointer: a slow loop over the glass.
-    private static func roam(_ seconds: Double) -> CGPoint {
-        CGPoint(x: 0.5 + 0.2 * sin(seconds * 0.21), y: 0.46 + 0.2 * sin(seconds * 0.33 + 1.1))
-    }
-}
 
 /// The small grey line over a sign-in headline.
 struct SignInEyebrow: View {

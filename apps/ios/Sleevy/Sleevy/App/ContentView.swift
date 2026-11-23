@@ -61,7 +61,7 @@ struct ContentView: View {
         .padding(.horizontal, 24)
         .padding(.bottom, 16)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background { SignInGlassBackdrop() }
+        .background { SleevyGlassBackdrop() }
         // Dark while it shows, the status bar too; signed in, the app
         // follows the reader's theme again.
         .preferredColorScheme(.dark)
