@@ -44,6 +44,9 @@ struct LibraryView: View {
         .navigationTitle("Library")
         .largeTitleWhereTheBarHasItsOwnLine()
         .modifier(NavigationSubtitleIfAvailable(subtitle: savesText(complete.destinationCount)))
+        // Before the sort menu: of two primary actions, the one applied first
+        // is last in the bar, and Add Link is last on every screen.
+        .addLinkButton(store: store)
         .toolbarPreferringVerticalBar {
             ToolbarItem(placement: .primaryAction) {
                 LibrarySortMenu(
@@ -78,6 +81,7 @@ struct LibraryView: View {
 
     private func libraryList(projection: LibraryProjection) -> some View {
         List {
+
             // One section, so the first date heading sits close under
             // the chips: the space between groups would push it down.
             Section {

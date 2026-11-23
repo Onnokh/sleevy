@@ -143,9 +143,9 @@ _Avoid_: Paste workflow, import screen, ingest form
 A lightweight on-device preview shown before saving a clipboard URL.
 _Avoid_: Enrichment preview, server preview, metadata fetch
 
-**Capture Capsule**:
-An inline native iOS capture surface that appears at the top of the Inbox without moving the app chrome.
-_Avoid_: Bottom sheet, modal form, full-screen composer
+**Capture Sheet**:
+A small native iOS sheet with one URL field, opened with the Add Link button, the last top-bar item on every list screen. It is the same sheet on every screen, and its system Paste button saves a copied link in one tap.
+_Avoid_: Capture Capsule, inline capture row, full-screen composer
 
 **Pending Capture**:
 A native iOS capture that is saved locally when the API is unavailable and synced later.
@@ -732,19 +732,18 @@ _Avoid_: Deep link, route argument, UI test step
 - **Clipboard Capture** requires explicit confirmation before saving a clipboard URL.
 - **Clipboard Capture** opens empty **Manual URL Capture** when the clipboard does not contain a URL.
 - **Clipboard URL Preview** is lightweight and on-device; backend **Enrichment** still happens only after capture.
-- **Capture Capsule** is opened and closed by the same navigation action, which morphs between add and close states.
-- **Capture Capsule** appears inline at the top of the **Inbox** and should not shift the navigation title, toolbar, or tab chrome.
-- **Capture Capsule** uses one subtle editable URL field for both clipboard preview and manual entry.
-- **Capture Capsule** follows the **Capture Endpoint** definition of a valid URL rather than introducing stricter client-only URL rules.
-- **Capture Capsule** may disable saving for obviously empty or locally unparseable input, while the **Capture Endpoint** remains the final URL validation authority.
-- **Capture Capsule** remains visible and locked while save confirmation is in flight.
-- **Capture Capsule** collapses after successful capture and the Saved Item appears at the top of the **Inbox**.
-- **Capture Capsule** keeps the entered URL visible with a compact inline error when capture fails.
-- **Capture Capsule** creates a **Pending Capture** when the API is temporarily unavailable.
+- **Capture Sheet** opens from the Add Link button, which is the last top-bar item on every list screen; it is the same sheet on every screen.
+- **Capture Sheet** uses one editable URL field for both the clipboard URL and manual entry, with Cancel at the leading edge and Save at the trailing edge of its bar.
+- **Capture Sheet** follows the **Capture Endpoint** definition of a valid URL rather than introducing stricter client-only URL rules.
+- **Capture Sheet** may disable saving for obviously empty or locally unparseable input, while the **Capture Endpoint** remains the final URL validation authority.
+- **Capture Sheet** stays open and cannot be dismissed while save confirmation is in flight.
+- **Capture Sheet** closes after a successful capture and the Saved Item appears at the top of the **Inbox**.
+- **Capture Sheet** keeps the entered URL visible with a compact error when capture fails.
+- **Capture Sheet** creates a **Pending Capture** when the API is temporarily unavailable.
 - The **iOS Share Extension** creates a **Pending Capture** when the API is temporarily unavailable.
 - A **Pending Capture** appears in the **Inbox** until it syncs.
-- **Pending Capture** sync uses the same native iOS behavior for **iOS Share Extension** and **Capture Capsule**.
-- **Capture Capsule** collapses once a URL is accepted as a **Pending Capture**.
+- **Pending Capture** sync uses the same native iOS behavior for **iOS Share Extension** and **Capture Sheet**.
+- **Capture Sheet** closes once a URL is accepted as a **Pending Capture**.
 - A **Duplicate Save** moves the existing **Saved Item** to the top of the **Inbox**.
 - A **Duplicate Save** does not create another **Saved Item**.
 - A **Duplicate Save** sets the existing **Saved Item** to unread.
@@ -822,7 +821,7 @@ _Avoid_: Deep link, route argument, UI test step
 - Each **Saved Item** has a **Read State**.
 - **Unread Dot** is the v1 visual indicator for unread **Read State**.
 - The **Native iOS App**'s lists of Saved Items do not show **Read State**: every title is the same bright colour, with no **Unread Dot**. A row's swipe actions and menu still change **Read State**, and a Library list can filter to only unread or only read Saved Items. Its rows also carry no mark for a Saved Item that opens at its **Original URL**. The **Unread Widget** keeps the **Unread Dot**.
-- The **Native iOS App**'s **Library** lists — the Library root, a **Folder View**, and a Tag — put their Saved Items under date headings while they are sorted by date: Today, Yesterday, This Week, Last Week, This Month, Last Month, and Earlier. Sorted by title or by **Read State**, they show no headings.
+- The **Native iOS App**'s Recents list on the **Home Tab** and its **Library** lists — the Library root, a **Folder View**, and a Tag — put their Saved Items under date headings while they are sorted by date: Today, Yesterday, This Week, Last Week, This Month, Last Month, and Earlier. Sorted by title or by **Read State**, they show no headings.
 - A **Saved Item** becomes read when the user opens it.
 - Opening a **Saved Item** that has **Readable Content** opens the **Reader View**; opening one without it sends the user to its **Original URL** in the browser.
 - The **Reader View** always offers the **Original URL**, because extraction loses tables, embeds, and figure captions.

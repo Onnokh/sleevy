@@ -56,6 +56,7 @@ struct SearchView: View {
         .navigationTitle("Search")
         .navigationBarTitleDisplayMode(.large)
         .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .always))
+        .addLinkButton(store: store)
         .onChange(of: query, initial: true) {
             store.setSearchQuery(query)
         }
