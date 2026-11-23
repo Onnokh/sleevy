@@ -421,6 +421,73 @@ export namespace BatchCaptureResponse {
   export type Encoded = Schema.Codec.Encoded<typeof BatchCaptureResponse>
 }
 
+// The most a Local Library import may carry in one request. A reader's Local
+// Library can be larger than one request; the client sends it in parts, and the
+// import is idempotent by Normalized URL and Folder name, so a part sent twice
+// does no harm.
+export const LOCAL_LIBRARY_IMPORT_ITEM_LIMIT = 500
+export const LOCAL_LIBRARY_IMPORT_FOLDER_LIMIT = 50
+
+// One Folder of a Local Library. It is matched to a Folder of the Account by
+// name, case-insensitively, and created when the Account has none by that name.
+export class LocalLibraryFolderPayload extends Schema.Class<LocalLibraryFolderPayload>(
+  "LocalLibraryFolderPayload",
+)({
+  name: Schema.String,
+  emoji: Schema.NullOr(Schema.String),
+  color: Schema.NullOr(Schema.String),
+}) {}
+export namespace LocalLibraryFolderPayload {
+  export type Encoded = Schema.Codec.Encoded<typeof LocalLibraryFolderPayload>
+}
+
+// One Saved Item of a Local Library, with what the device enriched it with.
+// The server keeps these fields as sent and does not enrich the item again.
+export class LocalLibraryItemPayload extends Schema.Class<LocalLibraryItemPayload>(
+  "LocalLibraryItemPayload",
+)({
+  url: Schema.String,
+  title: Schema.NullOr(Schema.String),
+  description: Schema.NullOr(Schema.String),
+  siteName: Schema.NullOr(Schema.String),
+  faviconUrl: Schema.NullOr(Schema.String),
+  previewSummary: Schema.NullOr(Schema.String),
+  // Free strings, so a client with a Tag this server does not know still
+  // imports. Tags outside the closed vocabulary are dropped on import.
+  tags: Schema.Array(Schema.String),
+  isRead: Schema.Boolean,
+  savedAt: Schema.DateFromString.check(Schema.isDateValid()),
+  // The name of a Folder in this request or of a Folder the Account has.
+  folderName: Schema.NullOr(Schema.String),
+}) {}
+export namespace LocalLibraryItemPayload {
+  export type Encoded = Schema.Codec.Encoded<typeof LocalLibraryItemPayload>
+}
+
+export class LocalLibraryImportPayload extends Schema.Class<LocalLibraryImportPayload>(
+  "LocalLibraryImportPayload",
+)({
+  folders: Schema.Array(LocalLibraryFolderPayload).check(
+    Schema.isMaxLength(LOCAL_LIBRARY_IMPORT_FOLDER_LIMIT),
+  ),
+  items: Schema.Array(LocalLibraryItemPayload).check(
+    Schema.isMaxLength(LOCAL_LIBRARY_IMPORT_ITEM_LIMIT),
+  ),
+}) {}
+export namespace LocalLibraryImportPayload {
+  export type Encoded = Schema.Codec.Encoded<typeof LocalLibraryImportPayload>
+}
+
+// One Saved Item per imported item, in request order.
+export class LocalLibraryImportResponse extends Schema.Class<LocalLibraryImportResponse>(
+  "LocalLibraryImportResponse",
+)({
+  savedItems: Schema.Array(SavedItemDto),
+}) {}
+export namespace LocalLibraryImportResponse {
+  export type Encoded = Schema.Codec.Encoded<typeof LocalLibraryImportResponse>
+}
+
 export class SavedItemsQuery extends Schema.Class<SavedItemsQuery>("SavedItemsQuery")({
   sort: Schema.optional(SavedItemSort),
   folder: Schema.optional(Schema.String),

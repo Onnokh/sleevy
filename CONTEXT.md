@@ -151,6 +151,10 @@ _Avoid_: Capture Capsule, inline capture row, full-screen composer
 A native iOS capture that is saved locally when the API is unavailable and synced later.
 _Avoid_: Failed capture, offline-only item, draft
 
+**Local Library**:
+The Saved Items and Folders the iOS app keeps on the device for a reader with no Account, enriched on the device. Connecting an Account imports it.
+_Avoid_: Offline mode, guest account, local cache
+
 **Web Companion**:
 The keyboard-driven desktop client for viewing, navigating, and managing Saved Items, with Manual URL Capture and API Key Settings.
 _Avoid_: API-hosted UI, passive feed, primary mobile client
