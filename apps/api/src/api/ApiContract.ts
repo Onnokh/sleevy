@@ -33,6 +33,10 @@ import {
   InvalidFolderNameError,
   InvalidHandleError,
   InvalidUrlError,
+  LOCAL_LIBRARY_IMPORT_FOLDER_LIMIT,
+  LOCAL_LIBRARY_IMPORT_ITEM_LIMIT,
+  LocalLibraryImportPayload,
+  LocalLibraryImportResponse,
   OnboardingDto,
   OnboardingPayload,
   AccountSettingsDto,
@@ -107,6 +111,8 @@ export {
   InvalidFolderNameError,
   InvalidHandleError,
   InvalidUrlError,
+  LocalLibraryImportPayload,
+  LocalLibraryImportResponse,
   OnboardingDto,
   OnboardingPayload,
   AccountSettingsDto,
@@ -323,6 +329,15 @@ const healthGroup = HttpApiGroup.make("health")
   )
 
 const savedItemsGroup = HttpApiGroup.make("saved-items")
+  .add(
+    HttpApiEndpoint.post("importLocalLibrary", "/v1/saved-items/import", {
+      payload: LocalLibraryImportPayload,
+      success: LocalLibraryImportResponse,
+      error: [InvalidUrlError, InvalidFolderNameError, RateLimitExceeded],
+    })
+      .annotate(OpenApi.Summary, "Import a Local Library")
+      .annotate(OpenApi.Description, `Import the Saved Items and Folders the iOS app kept on the device before the person connected an Account. Up to ${LOCAL_LIBRARY_IMPORT_ITEM_LIMIT} items and ${LOCAL_LIBRARY_IMPORT_FOLDER_LIMIT} Folders per request.\n\nThe device already enriched each item, so the server keeps the title, description, favicon, Preview Summary and Tags it sends and does not enrich, check, classify or file the item again. A Link the server already knows keeps its own metadata, and a Saved Item the Account already has keeps its fields: it only becomes read when the import says read, and gains the Folder when it has none.\n\nFolders match the Account's Folders by name, ignoring case, and are created when missing. An item's \`folderName\` that matches no Folder leaves the item unfiled. Items match by Normalized URL, so the same import twice creates nothing the second time.\n\nThe response holds one Saved Item per item sent, in request order. The request is one transaction: an invalid URL or Folder name refuses the whole import with \`400\`.`),
+  )
   .add(
     HttpApiEndpoint.get("list", "/v1/saved-items", {
       query: SavedItemsQuery,
@@ -654,6 +669,7 @@ const connectExchangeGroup = HttpApiGroup.make("connect-exchange")
 const oauthScopesByOperationId: Record<string, ReadonlyArray<ReadonlyArray<Scope>>> = {
   "captures.capture": [["saved-items:capture"]],
   "captures.captureBatch": [["saved-items:capture"]],
+  "saved-items.importLocalLibrary": [["saved-items:capture"]],
   "saved-items.list": [["saved-items:read"]],
   "saved-items.content": [["saved-items:read"]],
   "saved-items.markOpened": [["saved-items:write"]],

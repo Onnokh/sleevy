@@ -11,6 +11,7 @@ import { LinkContentRepository } from "../modules/content/LinkContentRepository.
 import { EnrichmentWorkflow } from "../modules/enrichment/EnrichmentWorkflow.js";
 import { FolderRepository } from "../modules/folders/FolderRepository.js";
 import { IdempotencyStore } from "../modules/idempotency/IdempotencyStore.js";
+import { LocalLibraryImport } from "../modules/local-library/LocalLibraryImport.js";
 import { McpTools } from "../modules/mcp/McpTools.js";
 import { OnboardingRepository } from "../modules/onboarding/OnboardingRepository.js";
 import { ProfileRepository } from "../modules/profiles/ProfileRepository.js";
@@ -57,6 +58,7 @@ export const appLayer = Layer.mergeAll(
   LinkContentRepository.defaultLayer,
   FolderRepository.defaultLayer,
   IdempotencyStore.defaultLayer,
+  LocalLibraryImport.defaultLayer,
   McpTools.defaultLayer,
   OnboardingRepository.defaultLayer,
   ProfileRepository.defaultLayer,

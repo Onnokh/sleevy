@@ -12,9 +12,15 @@ import {
   SavedItemRepository,
 } from "../modules/saved-items/SavedItemRepository.js"
 import { Analytics } from "../modules/analytics/Analytics.js"
+import { requireScope } from "../modules/auth/Scopes.js"
+import { LocalLibraryImport } from "../modules/local-library/LocalLibraryImport.js"
 import {
   CurrentUser,
   FolderNotFoundError,
+  InvalidFolderNameError,
+  InvalidUrlError,
+  LocalLibraryImportResponse,
+  Unauthorized,
   ReadableContentDto,
   SavedItemNotFoundError,
   SavedItemsResponse,
@@ -55,6 +61,54 @@ const missingFolder = (id: string) => new FolderNotFoundError({
 
 export const savedItemsGroupLive = HttpApiBuilder.group(sleevyApi, "saved-items", (handlers) =>
   handlers
+    // The import goes around capture on purpose: capture is what starts
+    // Enrichment, the Content Check and Auto-Filing, and a Local Library was
+    // enriched on the device. Nothing here may start them.
+    .handle("importLocalLibrary", gated("saved-items:capture", ({ payload }) =>
+      Effect.gen(function* () {
+        const localLibrary = yield* LocalLibraryImport
+        const analytics = yield* Analytics
+        const userId = yield* CurrentUser
+
+        const filesIntoFolders = payload.folders.length > 0 ||
+          payload.items.some((item) => item.folderName !== null)
+        if (filesIntoFolders) {
+          yield* requireScope("folders:write").pipe(
+            Effect.mapError((e) => new Unauthorized({ message: `Missing required scope: ${e.scope}.` })),
+          )
+        }
+
+        const savedItems = yield* localLibrary.import(userId, payload).pipe(
+          Effect.catchTags({
+            InvalidUrl: (error) =>
+              Effect.fail(new InvalidUrlError({
+                message: "Every URL must be a valid HTTP or HTTPS URL.",
+                url: error.url,
+              })),
+            InvalidLocalLibraryFolderName: () =>
+              Effect.fail(new InvalidFolderNameError({
+                message: "Folder name must contain between 1 and 80 characters.",
+              })),
+            EffectDrizzleQueryError: Effect.die,
+            SqlError: Effect.die,
+          }),
+        )
+
+        yield* Effect.logInfo("Imported Local Library", {
+          items: payload.items.length,
+          folders: payload.folders.length,
+        })
+        yield* analytics
+          .track({
+            name: "local_library_imported",
+            userId,
+            properties: { items: payload.items.length, folders: payload.folders.length },
+          })
+          .pipe(Effect.forkDetach)
+
+        return new LocalLibraryImportResponse({ savedItems: savedItems.map(savedItemToDto) })
+      }),
+    ))
     .handle("list", gated("saved-items:read", ({ query }) =>
       Effect.gen(function* () {
         const repo = yield* SavedItemRepository
