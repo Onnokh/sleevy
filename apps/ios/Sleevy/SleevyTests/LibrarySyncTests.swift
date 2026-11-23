@@ -268,7 +268,9 @@ struct LibrarySyncTests {
 
         await library.refreshInBackground()
 
-        #expect(library.inboxSnapshot.items.map(\.id) == ["new"])
+        // Recents keeps the save opened from the widget, now read.
+        #expect(library.inboxSnapshot.items.count == 2)
+        #expect(library.inboxSnapshot.items.first { $0.id == "opened" }?.isRead == true)
         #expect(library.completeLibrarySnapshot.items.count == 2)
         #expect(env.readState.all().isEmpty)
         #expect(env.network.calls == ["setReadState", "loadSavedItems", "loadFolders"])

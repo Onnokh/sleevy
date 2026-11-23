@@ -4,7 +4,8 @@ import Testing
 
 @MainActor
 struct RetrievalTests {
-    @Test func inboxProjectsUnreadItemsNewestFirst() {
+    /// Recents lists every save, read or not.
+    @Test func recentsProjectsEverySaveNewestFirst() {
         var olderUnread = SavedItem.fixture(id: "older", isRead: false)
         olderUnread.lastSavedAt = .init(timeIntervalSince1970: 100)
         var newerUnread = SavedItem.fixture(id: "newer", isRead: false)
@@ -19,7 +20,7 @@ struct RetrievalTests {
 
         let snapshot = RetrievalProjector.snapshot(for: .inbox, in: index)
 
-        #expect(snapshot.items.map(\.id) == ["newer", "older"])
+        #expect(snapshot.items.map(\.id) == ["read", "newer", "older"])
         #expect(snapshot.coverage == .complete)
     }
 
@@ -204,7 +205,7 @@ struct RetrievalTests {
         #expect(after.unreadDestinationCount == 0)
     }
 
-    @Test func inboxSnapshotTracksLoadAndOptimisticReadState() async {
+    @Test func recentsSnapshotKeepsASaveWhenItIsRead() async {
         let environment = RetrievalTestEnvironment()
         environment.network.items["unread"] = .fixture(id: "unread", isRead: false)
         environment.network.items["read"] = .fixture(id: "read", isRead: true)
@@ -212,13 +213,15 @@ struct RetrievalTests {
 
         await library.load()
 
-        #expect(library.snapshot(for: .inbox).items.map(\.id) == ["unread"])
+        #expect(Set(library.snapshot(for: .inbox).items.map(\.id)) == ["unread", "read"])
         #expect(library.snapshot(for: .inbox).coverage == .complete)
 
         environment.connectivity.emit(false)
         await library.setRead(library.snapshot(for: .completeLibrary).items.first(where: { $0.id == "unread" })!, isRead: true)
 
-        #expect(library.snapshot(for: .inbox).items.isEmpty)
+        let recents = library.snapshot(for: .inbox).items
+        #expect(recents.count == 2)
+        #expect(recents.allSatisfy { $0.isRead })
     }
 
     @Test func failedLoadsDistinguishMissingDataFromStaleCache() async {

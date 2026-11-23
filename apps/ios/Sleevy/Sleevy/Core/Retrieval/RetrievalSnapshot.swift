@@ -233,9 +233,9 @@ nonisolated enum RetrievalProjector {
     ) -> RetrievalSnapshot {
         switch request {
         case .inbox:
+            // Recents: every save, read or not, newest first.
             return RetrievalSnapshot(
                 items: index.globalItems
-                    .filter { !$0.isRead }
                     .sorted { ($0.lastSavedAt, $0.id) > ($1.lastSavedAt, $1.id) },
                 coverage: index.globalCoverage
             )

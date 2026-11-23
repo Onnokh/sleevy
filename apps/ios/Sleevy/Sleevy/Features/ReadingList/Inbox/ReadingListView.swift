@@ -21,7 +21,7 @@ struct ReadingListView: View {
         }
         .navigationTitle("Recents")
         .largeTitleWhereTheBarHasItsOwnLine()
-        .modifier(NavigationSubtitleIfAvailable(subtitle: navigationSubtitleText(unreadCount: snapshot.items.count)))
+        .modifier(NavigationSubtitleIfAvailable(subtitle: navigationSubtitleText(unreadCount: snapshot.items.count { !$0.isRead })))
         .addLinkButton(store: store)
         .task {
             await store.loadIfNeeded()
@@ -135,8 +135,8 @@ struct ReadingListView: View {
     }
 
     private func markOpened(_ item: SavedItem) async {
-        // Taken before the save leaves the Inbox, so the Reader View can
-        // still step to its neighbours.
+        // The saves around it, so the Reader View can step to its
+        // neighbours.
         let sequence = store.snapshot(for: .inbox).items.map(\.id)
 
         withAnimation(.snappy(duration: 0.26)) {

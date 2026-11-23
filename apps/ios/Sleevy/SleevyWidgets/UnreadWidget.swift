@@ -5,12 +5,12 @@ import WidgetKit
 
 // MARK: - Configuration
 
-/// Which unread scope the widget follows: the whole Inbox by default, or one
-/// Folder's share of it.
+/// Which unread scope the widget follows: the whole Inbox by default (shown
+/// to readers as Recents, as the app's tab is), or one Folder's share of it.
 struct UnreadWidgetConfigurationIntent: WidgetConfigurationIntent {
-    static var title: LocalizedStringResource { "Inbox" }
+    static var title: LocalizedStringResource { "Recents" }
     static var description: IntentDescription {
-        IntentDescription("Shows your unread saves, or those of one folder.")
+        IntentDescription("Shows your newest saves, or the unread saves of one folder.")
     }
 
     /// Optional because WidgetKit requires it of every widget parameter;
@@ -39,7 +39,7 @@ struct WidgetScope: AppEntity {
 
     static let inboxID = "inbox"
     static let libraryID = "library"
-    static let inbox = WidgetScope(id: inboxID, name: "Inbox", color: nil)
+    static let inbox = WidgetScope(id: inboxID, name: "Recents", color: nil)
     static let library = WidgetScope(id: libraryID, name: "Library", color: nil)
 
     let id: String
@@ -50,12 +50,12 @@ struct WidgetScope: AppEntity {
     var isInbox: Bool { id == Self.inboxID }
     var isLibrary: Bool { id == Self.libraryID }
 
-    /// The picker row: the Inbox wears the system tray, the Library the
+    /// The picker row: Recents wears the clock its tab wears, the Library the
     /// stack its tab wears; a Folder wears a folder glyph in the mid tone of
     /// the palette its card wears.
     var displayRepresentation: DisplayRepresentation {
         if isInbox {
-            return DisplayRepresentation(title: "\(name)", image: .init(systemName: "tray"))
+            return DisplayRepresentation(title: "\(name)", image: .init(systemName: "clock"))
         }
         if isLibrary {
             return DisplayRepresentation(title: "\(name)", image: .init(systemName: "rectangle.stack.fill"))
@@ -106,9 +106,11 @@ struct WidgetScopeQuery: EntityQuery {
         .inbox
     }
 
-    /// The Inbox, then the Library, then the Folders as the app published them.
+    /// Recents, then the Folders as the app published them. Recents lists
+    /// every save, so the Library is no longer a choice of its own; a widget
+    /// set to it before shows Recents.
     private func publishedScopes() -> [WidgetScope] {
-        [.inbox, .library] + (UnreadBacklogSnapshot.load()?.folders ?? []).map(WidgetScope.init)
+        [.inbox] + (UnreadBacklogSnapshot.load()?.folders ?? []).map(WidgetScope.init)
     }
 }
 
@@ -198,13 +200,15 @@ struct UnreadScope {
     let link: URL
 
     var isInbox: Bool { kind == .inbox }
-    /// The Library lists read items too, so its rows carry the Unread Dot.
-    var showsReadState: Bool { kind == .library }
-    /// What the count counts: unread items, or every save in the Library.
-    var countNoun: String { kind == .library ? "saves" : "unread" }
-    var emptyTitle: String { kind == .library ? "No saves yet" : "All caught up" }
-    var emptyDetail: String { kind == .library ? "Saves will appear here." : "Unread saves will appear here." }
-    var emptySymbol: String { kind == .library ? "rectangle.stack" : "checkmark.circle" }
+    /// Recents and the Library list read saves too, so their rows carry the
+    /// Unread Dot; a Folder's widget follows its unread share.
+    private var listsEverySave: Bool { kind != .folder }
+    var showsReadState: Bool { listsEverySave }
+    /// What the count counts: every save, or a Folder's unread ones.
+    var countNoun: String { listsEverySave ? "saves" : "unread" }
+    var emptyTitle: String { listsEverySave ? "No saves yet" : "All caught up" }
+    var emptyDetail: String { listsEverySave ? "Saves will appear here." : "Unread saves will appear here." }
+    var emptySymbol: String { listsEverySave ? "rectangle.stack" : "checkmark.circle" }
     /// The glyph the Lock Screen families show for the scope; the Inbox
     /// draws the brandmark instead.
     var symbol: String { kind == .library ? "rectangle.stack.fill" : "folder.fill" }
@@ -269,10 +273,12 @@ struct UnreadProvider: AppIntentTimelineProvider {
         let link: URL
 
         let configured = configuration.resolvedScope
-        if configured.isInbox {
+        // A widget set to the Library before shows Recents: both list every
+        // save, newest first.
+        if configured.isInbox || configured.isLibrary {
             scope = snapshot.inbox
             kind = .inbox
-            title = "Inbox"
+            title = "Recents"
             palette = .inbox
             link = SleevyDeepLink.inbox.url
         } else if configured.isLibrary {
@@ -342,7 +348,7 @@ struct UnreadProvider: AppIntentTimelineProvider {
         }
 
         return UnreadScope(
-            title: "Inbox",
+            title: "Recents",
             kind: .inbox,
             palette: .inbox,
             count: 12,
@@ -572,7 +578,7 @@ struct UnreadWidgetView: View {
         switch entry.state {
         case .signedOut:
             MessageView(
-                title: "No Inbox yet",
+                title: "Nothing in Recents yet",
                 detail: "Open Sleevy and sign in to see your unread saves here.",
                 accessoryTitle: "Sign in to Sleevy",
                 link: SleevyDeepLink.inbox.url
@@ -819,7 +825,7 @@ private struct InlineView: View {
     var body: some View {
         Label(
             scope.count == 0 ? "\(scope.title): \(scope.emptyTitle.lowercased())" : "\(scope.count) \(scope.countNoun) in \(scope.title)",
-            systemImage: scope.isInbox ? "tray" : (scope.kind == .library ? "rectangle.stack" : "folder")
+            systemImage: scope.isInbox ? "clock" : (scope.kind == .library ? "rectangle.stack" : "folder")
         )
         .containerBackground(for: .widget) { Color.clear }
         .widgetURL(scope.link)
@@ -828,7 +834,7 @@ private struct InlineView: View {
 
 // MARK: - Pieces
 
-/// The tile's caption: the scope's name alone — "Inbox" or the Folder name
+/// The tile's caption: the scope's name alone — "Recents" or the Folder name
 /// — the way the Library's cards carry theirs. The aurora is the brand
 /// here; a mark next to the word only cluttered the small tile.
 private struct ScopeLabel: View {
@@ -930,8 +936,8 @@ private struct RowView: View {
     let row: UnreadRow
     let now: Date
     let faviconSize: CGFloat
-    /// The Library lists read items too, so its unread rows get the Unread
-    /// Dot the app's Library rows carry; an unread-only scope needs none.
+    /// Recents lists read saves too, so its unread rows get the Unread Dot;
+    /// a Folder's unread-only list needs none.
     let showsReadState: Bool
 
     var body: some View {
@@ -1049,8 +1055,8 @@ struct UnreadWidget: Widget {
         ) { entry in
             UnreadWidgetView(entry: entry)
         }
-        .configurationDisplayName("Inbox")
-        .description("Your unread saves, newest first, for the whole Inbox or one folder. Tap one to open it.")
+        .configurationDisplayName("Recents")
+        .description("Your newest saves from Recents, or the unread saves of one folder. Tap one to open it.")
         .supportedFamilies([
             .systemSmall, .systemMedium, .systemLarge,
             .accessoryCircular, .accessoryRectangular, .accessoryInline,

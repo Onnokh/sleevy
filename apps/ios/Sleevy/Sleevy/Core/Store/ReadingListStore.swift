@@ -1023,7 +1023,10 @@ final class ReadingListStore {
             return
         }
 
-        let unread = inboxSnapshot.items
+        // Recents holds every save; a Folder's widget follows its unread
+        // share.
+        let recent = inboxSnapshot.items
+        let unread = recent.filter { !$0.isRead }
         let unreadByFolder = Dictionary(grouping: unread) { $0.folder?.id }
 
         // Every Folder the Account has, plus any a Saved Item still names:
@@ -1044,7 +1047,7 @@ final class ReadingListStore {
 
         let snapshot = UnreadBacklogSnapshot(
             accountID: userId,
-            inbox: Self.scope(unread),
+            inbox: Self.scope(recent),
             library: Self.scope(completeLibrarySnapshot.items),
             folders: publishedFolders,
             folderScopes: folderScopes,
