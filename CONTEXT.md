@@ -384,7 +384,7 @@ An embedded Folder identifier and name returned in a Saved Item response when th
 _Avoid_: Folder contents, folder statistics, folder name without identity
 
 **Inbox**:
-The triage surface for recently saved unread Saved Items, ordered with the most recently saved item first.
+The surface for recently saved Saved Items, read or unread, ordered with the most recently saved item first. The Native iOS App shows it to readers as "Recents"; reading a Saved Item does not take it out.
 _Avoid_: Reading Queue, Library, feed
 
 **Library**:
@@ -480,7 +480,7 @@ A small dot that indicates a Saved Item has not been opened yet.
 _Avoid_: Badge, bold unread row
 
 **Unread Widget**:
-The Home Screen and Lock Screen widget of the Native iOS App that shows the size of the Unread Backlog, or one Folder's share of it, with its newest Saved Items, and opens one on tap. It can also follow the Library, where it shows the newest Saved Items read or unread with the Unread Dot and the total number of saves. Which scope it follows is a widget setting; the default is the whole Inbox.
+The Home Screen and Lock Screen widget of the Native iOS App that shows the newest Saved Items of a scope, and opens one on tap. Which scope it follows is a widget setting: the whole Inbox, shown as "Recents" with every save read or unread, the Unread Dot and the total number of saves (the default), or one Folder's unread share. A widget set to the Library before shows Recents.
 _Avoid_: Inbox widget, folder widget, library widget, badge count, reading activity widget
 
 **Unread Backlog Snapshot**:
@@ -638,7 +638,7 @@ _Avoid_: Deep link, route argument, UI test step
 - What no **Saved Item** can tell — the **Getting Started Card** put away, the **Command Palette** opened, the **iPhone Hand-off** seen, the **iPhone Card** hidden — is kept on the **Account** through the session-only `/v1/onboarding` endpoint, so it holds on every computer the person signs in on.
 - Closing the **iPhone Hand-off**, or checking its step off by hand, finishes the iPhone step of the **Getting Started Card**, because seeing the code is as far as a computer can take it; a save from the iPhone finishes it too.
 - The **iPhone Card** stays hidden while a new **Account** still has the iPhone step open on its **Getting Started Card**, so one screen never asks twice.
-- The **Unread Widget** shows the **Unread Backlog** count and its newest **Saved Items**, for the whole **Inbox** or one **Folder**, from the **Unread Backlog Snapshot**, which the **Native iOS App** publishes each time the **Inbox** or the **Folder** list changes and clears on sign-out.
+- The **Unread Widget** shows the newest **Saved Items** of the whole **Inbox** with the number of saves, or the **Unread Backlog** count and newest unread **Saved Items** of one **Folder**, from the **Unread Backlog Snapshot**, which the **Native iOS App** publishes each time the **Inbox** or the **Folder** list changes and clears on sign-out.
 - The **Native iOS App** requests background refresh opportunities for the **Unread Widget**, no earlier than 30 minutes after scheduling. iOS decides when to run them; each uses the app's existing sync to send queued changes and publish fresh **Unread Backlog Snapshots** without opening the app. Offline or expired attempts keep the last usable snapshot.
 - A **Widget Row Tap** marks the **Saved Item** read through the shared read-state queue and opens its **Original URL** directly; the **Native iOS App** sends the **Read State** to the REST API on its next sync. A tap on the widget's count panel is a **Deep Link** to the **Inbox** or the **Folder View**.
 - The **Home Tab** keeps **Clipboard Capture** in v1 because new captures enter the unread triage flow.
