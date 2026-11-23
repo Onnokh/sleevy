@@ -9,7 +9,10 @@ nonisolated enum SleevyDeepLink: Hashable, Sendable {
     case folder(id: String)
     case savedItem(id: String)
 
-    static let scheme = "sleevy"
+    /// `sleevy` for the App Store app, `sleevy-dev` for the Dev Variant, so a
+    /// widget opens the app it belongs to when both are installed.
+    static let scheme =
+        Bundle.main.object(forInfoDictionaryKey: "SleevyURLScheme") as? String ?? "sleevy"
 
     var url: URL {
         var components = URLComponents()

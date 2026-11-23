@@ -43,6 +43,10 @@ _Avoid_: Separate core package, web app API routes as domain logic, throwaway pr
 A runnable monorepo app under `apps/`, such as `apps/api`, `apps/web`, `apps/ios`, or `apps/chrome-extension`.
 _Avoid_: Package for deployable app, nested repo
 
+**Dev Variant**:
+The Debug build of the iOS app, installed as a separate app named "Sleevy Dev" with its own bundle ids (`app.sleevy.dev`), app group, keychain group, and `sleevy-dev` URL scheme, so it runs next to the App Store app instead of replacing it.
+_Avoid_: Debug app, staging app, dev build that overwrites Sleevy
+
 **API Contract**:
 The versioned HTTP schema that keeps iOS, web, and API request and response shapes aligned.
 _Avoid_: Informal JSON, client-specific DTOs

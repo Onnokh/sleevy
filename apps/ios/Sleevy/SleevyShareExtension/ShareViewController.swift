@@ -3,7 +3,7 @@ import UIKit
 import UniformTypeIdentifiers
 
 final class ShareViewController: UIViewController {
-    private static let appGroupIdentifier = "group.app.sleevy"
+    private static let appGroupIdentifier = SleevyUserPreferences.appGroupIdentifier
     private static let keychainService = "app.sleevy"
     private static let keychainAccessGroup = Bundle.main.object(forInfoDictionaryKey: "SleevyKeychainAccessGroup") as? String
     private static let authTokenAccount = "auth-token"

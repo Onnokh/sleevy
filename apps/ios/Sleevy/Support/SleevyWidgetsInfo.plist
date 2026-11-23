@@ -4,8 +4,12 @@
 <dict>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<key>SleevyURLScheme</key>
+	<string>$(SLEEVY_URL_SCHEME)</string>
+	<key>SleevyAppGroupIdentifier</key>
+	<string>$(SLEEVY_APP_GROUP)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Sleevy</string>
+	<string>$(SLEEVY_DISPLAY_NAME)</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
