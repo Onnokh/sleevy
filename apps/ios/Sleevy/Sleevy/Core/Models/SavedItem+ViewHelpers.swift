@@ -6,10 +6,19 @@ extension SavedItem {
             ?? Self.safeRemoteURL(originalURL)
     }
 
+    /// The title on one line: a post's title can hold line breaks, and a row
+    /// that shows two lines would show the first and then an empty one.
     var displayTitle: String {
-        title?.trimmingCharacters(in: .whitespacesAndNewlines).nonEmpty
-            ?? siteName?.trimmingCharacters(in: .whitespacesAndNewlines).nonEmpty
+        Self.singleLine(title)
+            ?? Self.singleLine(siteName)
             ?? displayDomain
+    }
+
+    private static func singleLine(_ text: String?) -> String? {
+        text?
+            .split(whereSeparator: { $0.isWhitespace || $0.isNewline })
+            .joined(separator: " ")
+            .nonEmpty
     }
 
     var displayDomain: String {
