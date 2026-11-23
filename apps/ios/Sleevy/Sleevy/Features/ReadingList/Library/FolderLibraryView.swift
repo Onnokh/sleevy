@@ -18,6 +18,7 @@ struct FolderLibraryView: View {
         )
 
         List {
+
             // One section, so the first date heading sits close under
             // the filters: the space between groups would push it down.
             Section {
@@ -69,6 +70,7 @@ struct FolderLibraryView: View {
                 LibrarySortMenu(sort: $sort, filter: $filter, isShowingFilters: $isShowingFilters)
             }
         }
+        .addLinkButton(store: store)
         .sheet(isPresented: $isShowingFilters) {
             LibraryFilterSheet(
                 filter: $filter,
@@ -127,6 +129,7 @@ struct TagLibraryView: View {
         let unread = projection.items.count { !$0.isRead }
 
         return List {
+
             // One section, so the first date heading sits close under
             // the filters: the space between groups would push it down.
             Section {
@@ -166,6 +169,7 @@ struct TagLibraryView: View {
                 LibrarySortMenu(sort: $sort, filter: $filter, isShowingFilters: $isShowingFilters)
             }
         }
+        .addLinkButton(store: store)
         .sheet(isPresented: $isShowingFilters) {
             // The Tag is the screen itself, so the sheet filters by the rest.
             LibraryFilterSheet(

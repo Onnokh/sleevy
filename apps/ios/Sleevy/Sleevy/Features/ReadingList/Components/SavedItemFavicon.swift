@@ -30,7 +30,12 @@ struct SavedItemFavicon: View {
 
     var body: some View {
         Group {
-            if let faviconURL {
+            if let brandMark {
+                brandMark
+                    .resizable()
+                    .scaledToFit()
+                    .foregroundStyle(.primary)
+            } else if let faviconURL {
                 if faviconURL.isSVG {
                     SVGRemoteImage(url: faviconURL, colorScheme: colorScheme) {
                         faviconFallback
@@ -50,6 +55,18 @@ struct SavedItemFavicon: View {
         }
         // No padding of its own: the row around it sets the spacing.
         .frame(width: size, height: size)
+    }
+
+    /// A mark the app carries for a site whose own favicon does not hold up:
+    /// GitHub's is a dark octocat, gone on a dark background, and some of its
+    /// pages state none. Drawn in the text colour, it shows in both themes.
+    private var brandMark: Image? {
+        guard case .item(let item) = source else { return nil }
+        let host = item.displayDomain.lowercased()
+        if host == "github.com" || host.hasSuffix(".github.com") {
+            return Image("GitHubMark")
+        }
+        return nil
     }
 
     private var faviconURL: URL? {

@@ -113,6 +113,21 @@ final class ShareViewController: UIViewController {
                 try? await Task.sleep(nanoseconds: 800_000_000)
                 activityIndicator.stopAnimating()
                 statusLabel.text = "Saved to Sleevy"
+                if !DemoCaptureFlag.holdsSuccess {
+                    // A first-run demo: queue the share for the demo Account,
+                    // and close as the real sheet does.
+                    if let userId = DemoCaptureFlag.userId {
+                        try? pendingCaptureStore.enqueue(
+                            url: sharedURL.absoluteString,
+                            for: userId,
+                            sourceName: Self.sourceName,
+                            captureChannel: CaptureChannel.shareExtension.rawValue
+                        )
+                    }
+                    try? await Task.sleep(nanoseconds: 400_000_000)
+                    extensionContext?.completeRequest(returningItems: nil)
+                    return
+                }
                 // Held far longer than the real sheet, which completes as soon
                 // as the capture returns: a screenshot run needs the success
                 // state on screen while it takes the picture.

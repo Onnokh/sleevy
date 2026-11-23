@@ -37,13 +37,18 @@ struct LibraryView: View {
                 ProgressView("Loading your library...")
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
-                libraryList(projection: projection)
+                libraryList(projection: projection, isFirstRun: isFirstRun(complete))
             }
         }
         .background(Color(.systemBackground))
         .navigationTitle("Library")
         .largeTitleWhereTheBarHasItsOwnLine()
-        .modifier(NavigationSubtitleIfAvailable(subtitle: savesText(complete.destinationCount)))
+        .modifier(NavigationSubtitleIfAvailable(
+            subtitle: isFirstRun(complete) ? "Nothing saved yet" : savesText(complete.destinationCount)
+        ))
+        // Before the sort menu: of two primary actions, the one applied first
+        // is last in the bar, and Add Link is last on every screen.
+        .addLinkButton(store: store)
         .toolbarPreferringVerticalBar {
             ToolbarItem(placement: .primaryAction) {
                 LibrarySortMenu(
@@ -76,15 +81,28 @@ struct LibraryView: View {
         }
     }
 
-    private func libraryList(projection: LibraryProjection) -> some View {
+    /// A new Account: loaded, and nothing saved, no Folders, nothing on its way.
+    private func isFirstRun(_ complete: LibraryProjection) -> Bool {
+        !store.isLoading
+            && complete.destinationCount == 0
+            && store.folders.isEmpty
+            && store.pendingSavedItems.isEmpty
+            && !filter.isActive
+    }
+
+    private func libraryList(projection: LibraryProjection, isFirstRun: Bool) -> some View {
         List {
+            if isFirstRun {
+                FirstRunRows(store: store)
+            }
+
             // One section, so the first date heading sits close under
             // the chips: the space between groups would push it down.
             Section {
                 // Folders are ways in, not the content: one compact strip, so
                 // the saves start near the top. Tags are in the sort menu.
                 // Beside the Library Sidebar, the sidebar lists them.
-                if !showsLibrarySidebar {
+                if !showsLibrarySidebar && !isFirstRun {
                     ChipStrip {
                         ForEach(store.folders) { folder in
                             FolderChip(

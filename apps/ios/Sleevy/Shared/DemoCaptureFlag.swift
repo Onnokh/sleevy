@@ -18,4 +18,18 @@ nonisolated enum DemoCaptureFlag {
         get { SleevyUserPreferences.defaults.bool(forKey: key) }
         set { SleevyUserPreferences.defaults.set(newValue, forKey: key) }
     }
+
+    /// The demo Account, so a share in a first-run demo lands in its
+    /// Pending Captures and reaches the demo Library like a real share.
+    static var userId: String? {
+        get { SleevyUserPreferences.defaults.string(forKey: "demo.capture-user") }
+        set { SleevyUserPreferences.defaults.set(newValue, forKey: "demo.capture-user") }
+    }
+
+    /// Whether the success state stays on screen for a screenshot run. A
+    /// first-run demo closes the sheet at once, as a real share does.
+    static var holdsSuccess: Bool {
+        get { SleevyUserPreferences.defaults.bool(forKey: "demo.capture-hold") }
+        set { SleevyUserPreferences.defaults.set(newValue, forKey: "demo.capture-hold") }
+    }
 }

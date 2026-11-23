@@ -11,13 +11,20 @@ import Foundation
 final class DemoReadingListAdapter: ReadingListNetworkPort {
     private var items: [SavedItem]
     private var folders: [Folder]
+    /// When each demo capture was made: it is enriched a few seconds later,
+    /// as the API would, so the first run shows the Enrichment Reveal.
+    private var captureTimes: [SavedItem.ID: Date] = [:]
 
-    init(items: [SavedItem] = DemoMode.savedItems, folders: [Folder] = DemoMode.folders) {
+    init(
+        items: [SavedItem] = DemoMode.startsEmpty ? [] : DemoMode.savedItems,
+        folders: [Folder] = DemoMode.startsEmpty ? [] : DemoMode.folders
+    ) {
         self.items = items
         self.folders = folders
     }
 
     func loadSavedItems(_ request: SavedItemFetchRequest) async throws(SyncFault) -> [SavedItem] {
+        enrichDueCaptures()
         switch request {
         case .completeLibrary:
             return items
@@ -59,7 +66,21 @@ final class DemoReadingListAdapter: ReadingListNetworkPort {
             updatedAt: Date()
         )
         items.insert(captured, at: 0)
+        captureTimes[captured.id] = Date()
         return captured
+    }
+
+    private func enrichDueCaptures() {
+        let now = Date()
+        for (id, time) in captureTimes where now.timeIntervalSince(time) > 3.5 {
+            guard let index = items.firstIndex(where: { $0.id == id }) else { continue }
+            let enrichment = DemoMode.enrichment(forHost: items[index].host)
+            items[index].title = enrichment.title
+            items[index].previewSummary = enrichment.summary
+            items[index].tags = enrichment.tags
+            items[index].enrichmentStatus = .enriched
+            captureTimes[id] = nil
+        }
     }
 
     func setReadState(itemId: String, isRead: Bool) async throws(SyncFault) -> SavedItem {
