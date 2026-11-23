@@ -137,7 +137,7 @@ struct SignedInTabView: View {
             await showFirstVisitIfNew()
         }
         .fullScreenCover(isPresented: $showsFirstVisit) {
-            FirstVisitCover(store: store)
+            FirstVisitCover(ownerID: session.userId, store: store)
                 .onDisappear { selectedTab = .library }
         }
         .onChange(of: scenePhase) { _, newPhase in
@@ -451,14 +451,14 @@ struct SignedInTabView: View {
     /// The First Visit, one time, for an Account with nothing saved. An
     /// Account that has saves never sees it.
     private func showFirstVisitIfNew() async {
-        guard !FirstVisit.isDone else { return }
+        guard !FirstVisit.isDone(for: session.userId) else { return }
         await store.loadIfNeeded(for: .completeLibrary)
         let library = store.snapshot(for: .completeLibrary)
         guard library.coverage.hasLoaded else { return }
         if library.items.isEmpty && store.folders.isEmpty && store.pendingSavedItems.isEmpty {
             showsFirstVisit = true
         } else {
-            FirstVisit.markDone()
+            FirstVisit.markDone(for: session.userId)
         }
     }
 

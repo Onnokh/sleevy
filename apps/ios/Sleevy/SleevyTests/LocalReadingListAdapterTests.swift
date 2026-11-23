@@ -119,3 +119,39 @@ struct LocalReadingListAdapterTests {
         #expect(FileManager.default.fileExists(atPath: fileURL.path) == false)
     }
 }
+
+/// The body of the import into an Account, as the API's schema reads it.
+struct LocalLibraryImportTests {
+    private static func item(_ n: Int) -> SavedItem {
+        let now = Date(timeIntervalSince1970: 1_800_000_000)
+        return SavedItem(
+            id: "local-\(n)", originalURL: "https://example.com/\(n)", normalizedURL: "https://example.com/\(n)",
+            host: "example.com", title: nil, description: nil, siteName: nil, faviconURL: nil,
+            faviconLightURL: nil, faviconDarkURL: nil, canonicalURL: nil, previewSummary: nil, type: "article",
+            tags: ["ai"], enrichmentStatus: .enriched, sourceName: nil, captureChannel: nil, folder: nil,
+            isRead: true, lastSavedAt: now, createdAt: now, updatedAt: now
+        )
+    }
+
+    @Test func emptyFieldsAreSentAsNull() throws {
+        let body = LocalLibraryImport(
+            folders: [.init(name: "Later", emoji: nil, color: nil)],
+            items: [.init(Self.item(1))]
+        )
+        let json = try #require(String(data: JSONEncoder().encode(body), encoding: .utf8))
+        #expect(json.contains(#""title":null"#))
+        #expect(json.contains(#""folderName":null"#))
+        #expect(json.contains(#""emoji":null"#))
+        #expect(json.contains(#""savedAt":"2027-01-15T08:00:00Z""#))
+        #expect(json.contains(#""isRead":true"#))
+    }
+
+    @Test func foldersGoFirstAndRequestsStayInsideTheLimits() {
+        let folders = (0..<120).map { LocalLibraryImport.Folder(name: "F\($0)", emoji: nil, color: nil) }
+        let items = (0..<1_201).map { LocalLibraryImport.Item(Self.item($0)) }
+        let requests = LocalLibraryImport.requests(folders: folders, items: items)
+
+        #expect(requests.map(\.folders.count) == [50, 50, 20, 0, 0, 0])
+        #expect(requests.map(\.items.count) == [0, 0, 0, 500, 500, 201])
+    }
+}

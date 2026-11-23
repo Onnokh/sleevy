@@ -291,24 +291,17 @@ final class AuthStore {
             LocalLibraryImport.Folder(name: $0.name, emoji: $0.emoji, color: $0.color)
         }
         let items = library.items.map(LocalLibraryImport.Item.init)
-        // The API takes at most 500 saves in one request.
-        var start = 0
-        repeat {
-            let batch = Array(items[start..<min(start + 500, items.count)])
-            do {
-                _ = try await api.send(
-                    "/v1/saved-items/import",
-                    method: .post,
-                    token: token,
-                    body: LocalLibraryImport(folders: start == 0 ? folders : [], items: batch)
-                )
-            } catch {
-                throw AuthError.authenticationFailed(
-                    "Sleevy could not move your saves to the Account. Your saves are still on this iPhone. Try again."
-                )
+        // The API takes at most 50 Folders and 500 saves in one request. The
+        // Folders go first, so every save finds its Folder by name.
+        do {
+            for request in LocalLibraryImport.requests(folders: folders, items: items) {
+                _ = try await api.send("/v1/saved-items/import", method: .post, token: token, body: request)
             }
-            start += 500
-        } while start < items.count
+        } catch {
+            throw AuthError.authenticationFailed(
+                "Sleevy could not move your saves to the Account. Your saves are still on this iPhone. Try again."
+            )
+        }
 
         localLibrary.erase()
         self.localLibrary = nil
@@ -528,11 +521,21 @@ private struct ProfileHandleResponse: Decodable {
 }
 
 /// The body of `POST /v1/saved-items/import`: a Local Library as it is.
-private struct LocalLibraryImport: Encodable {
+struct LocalLibraryImport: Encodable {
     struct Folder: Encodable {
         let name: String
         let emoji: String?
         let color: String?
+
+        // The API wants `null`, not a missing key, for an empty field.
+        func encode(to encoder: Encoder) throws {
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            try container.encode(name, forKey: .name)
+            try container.encode(emoji, forKey: .emoji)
+            try container.encode(color, forKey: .color)
+        }
+
+        private enum CodingKeys: String, CodingKey { case name, emoji, color }
     }
 
     struct Item: Encodable {
@@ -559,8 +562,40 @@ private struct LocalLibraryImport: Encodable {
             savedAt = item.lastSavedAt.formatted(.iso8601)
             folderName = item.folder?.name
         }
+
+        // The API wants `null`, not a missing key, for an empty field.
+        func encode(to encoder: Encoder) throws {
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            try container.encode(url, forKey: .url)
+            try container.encode(title, forKey: .title)
+            try container.encode(description, forKey: .description)
+            try container.encode(siteName, forKey: .siteName)
+            try container.encode(faviconUrl, forKey: .faviconUrl)
+            try container.encode(previewSummary, forKey: .previewSummary)
+            try container.encode(tags, forKey: .tags)
+            try container.encode(isRead, forKey: .isRead)
+            try container.encode(savedAt, forKey: .savedAt)
+            try container.encode(folderName, forKey: .folderName)
+        }
+
+        private enum CodingKeys: String, CodingKey {
+            case url, title, description, siteName, faviconUrl, previewSummary, tags, isRead, savedAt, folderName
+        }
     }
 
     let folders: [Folder]
     let items: [Item]
+
+    /// The Local Library in requests the API takes: Folders first, at most 50
+    /// a request, then saves, at most 500 a request.
+    static func requests(folders: [Folder], items: [Item]) -> [LocalLibraryImport] {
+        var requests: [LocalLibraryImport] = []
+        for start in stride(from: 0, to: folders.count, by: 50) {
+            requests.append(LocalLibraryImport(folders: Array(folders[start..<min(start + 50, folders.count)]), items: []))
+        }
+        for start in stride(from: 0, to: items.count, by: 500) {
+            requests.append(LocalLibraryImport(folders: [], items: Array(items[start..<min(start + 500, items.count)])))
+        }
+        return requests
+    }
 }

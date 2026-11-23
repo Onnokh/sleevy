@@ -24,7 +24,7 @@ struct SleevyApp: App {
         // Demo mode shows the first run again on every launch.
         if DemoMode.isEnabled {
             ShareSetup.reset()
-            FirstVisit.reset()
+            FirstVisit.reset(for: DemoMode.session.userId)
         }
     }
 
