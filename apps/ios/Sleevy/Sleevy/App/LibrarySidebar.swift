@@ -24,6 +24,7 @@ extension EnvironmentValues {
 /// web's colours. What a row opens is the root of the content column.
 struct LibrarySidebar: View {
     @Environment(ProfileStore.self) private var profileStore
+    @Environment(\.isLocalLibrary) private var isLocalLibrary
     var store: ReadingListStore
     @Binding var selection: LibrarySidebarItem?
     @State private var folderEditor: FolderEditor?
@@ -119,7 +120,9 @@ struct LibrarySidebar: View {
     private var accountRows: some View {
         List {
             Section {
-                link("Public Profile", systemImage: "globe", item: .profile)
+                if !isLocalLibrary {
+                    link("Public Profile", systemImage: "globe", item: .profile)
+                }
                 link("Settings", systemImage: "gearshape", item: .settings)
             }
         }
@@ -186,6 +189,7 @@ struct LibrarySidebar: View {
                 Label("Edit", systemImage: "pencil")
             }
 
+            if !isLocalLibrary {
             Button {
                 Task {
                     do {
@@ -199,6 +203,7 @@ struct LibrarySidebar: View {
                     folder.isPublished ? "Remove from Profile" : "Publish to Profile",
                     systemImage: "globe"
                 )
+            }
             }
 
             Divider()

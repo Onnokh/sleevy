@@ -127,10 +127,12 @@ struct SignedInTabView: View {
         .environment(profileLoader)
         .environment(profileStore)
         .environment(\.moveToFolder, moveToFolderAction)
+        .environment(\.isLocalLibrary, session.isLocal)
         .task {
             // Folder cards suppress their published marker while the profile
             // is private, so the record must be known outside the profile page.
-            await profileStore.load()
+            // A Local Library has no Account, so no profile to load.
+            if !session.isLocal { await profileStore.load() }
             await openDemoScreenIfNeeded()
             await showFirstVisitIfNew()
         }
@@ -513,6 +515,7 @@ struct SignedInTabView: View {
 
 private struct AccountToolbarModifier: ViewModifier {
     @Environment(AuthStore.self) private var authStore
+    @State private var isConnecting = false
     let session: AppSession
     let onSettings: () -> Void
     let onMyProfile: () -> Void
@@ -524,10 +527,18 @@ private struct AccountToolbarModifier: ViewModifier {
                 // actions: that puts the profile first in the vertical bar.
                 ToolbarItem(placement: .topBarTrailing) {
                     Menu {
-                        Button {
-                            onMyProfile()
-                        } label: {
-                            Label("My Profile", systemImage: "person.crop.circle")
+                        if session.isLocal {
+                            Button {
+                                isConnecting = true
+                            } label: {
+                                Label("Connect an Account…", systemImage: "arrow.triangle.2.circlepath")
+                            }
+                        } else {
+                            Button {
+                                onMyProfile()
+                            } label: {
+                                Label("My Profile", systemImage: "person.crop.circle")
+                            }
                         }
 
                         Button {
@@ -536,23 +547,29 @@ private struct AccountToolbarModifier: ViewModifier {
                             Label("Settings", systemImage: "gearshape")
                         }
 
-                        Divider()
+                        if !session.isLocal {
+                            Divider()
 
-                        Button(role: .destructive) {
-                            Task {
-                                await authStore.signOut()
+                            Button(role: .destructive) {
+                                Task {
+                                    await authStore.signOut()
+                                }
+                            } label: {
+                                Label("Sign Out", systemImage: "rectangle.portrait.and.arrow.right")
                             }
-                        } label: {
-                            Label("Sign Out", systemImage: "rectangle.portrait.and.arrow.right")
                         }
                     } label: {
                         AccountAvatarButton(
                             name: session.displayName,
-                            imageURL: session.provider == .google ? authStore.googleUserProfile?.imageURL : nil
+                            imageURL: session.provider == .google ? authStore.googleUserProfile?.imageURL : nil,
+                            isLocal: session.isLocal
                         )
                     }
                     .accessibilityLabel("\(session.displayName) account")
                 }
+            }
+            .sheet(isPresented: $isConnecting) {
+                ConnectAccountSheet(saveCount: authStore.readingListStore?.snapshot(for: .completeLibrary).items.count ?? 0)
             }
     }
 }

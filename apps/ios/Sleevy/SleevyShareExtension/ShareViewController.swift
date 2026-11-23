@@ -136,6 +136,23 @@ final class ShareViewController: UIViewController {
                 return
             }
 
+            // A Local Library: no Account, no token. The link goes in the
+            // queue the app reads when it opens; the app saves and enriches
+            // it on the device.
+            if LocalLibraryFlag.isOn {
+                try pendingCaptureStore.enqueue(
+                    url: sharedURL.absoluteString,
+                    for: LocalLibraryFlag.userId,
+                    sourceName: Self.sourceName,
+                    captureChannel: CaptureChannel.shareExtension.rawValue
+                )
+                activityIndicator.stopAnimating()
+                statusLabel.text = "Saved to Sleevy"
+                try? await Task.sleep(nanoseconds: 500_000_000)
+                extensionContext?.completeRequest(returningItems: nil)
+                return
+            }
+
             let token = try loadSharedAuthToken()
             do {
                 let response = try await captureClient.capture(

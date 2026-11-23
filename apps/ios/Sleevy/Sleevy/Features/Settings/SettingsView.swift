@@ -10,6 +10,8 @@ struct SettingsView: View {
     /// state and then flips.
     @State private var accountSettings: AccountSettings?
     @State private var isShowingOrganize = false
+    @State private var isConnecting = false
+    @Environment(\.isLocalLibrary) private var isLocalLibrary
 
     let session: AppSession
 
@@ -34,6 +36,15 @@ struct SettingsView: View {
                 Text("Read articles in Sleevy. Turn this off to open every saved item in your browser instead.")
             }
 
+            if isLocalLibrary {
+                Section {
+                    Button("Connect an Account…") { isConnecting = true }
+                } header: {
+                    Text("Account")
+                } footer: {
+                    Text("Your saves are on this iPhone only. Connect an Account to sync them with the web and your other devices.")
+                }
+            } else {
             Section("Account") {
                 LabeledContent("Name", value: session.displayName)
                 LabeledContent("Email", value: session.email)
@@ -48,6 +59,7 @@ struct SettingsView: View {
                 } label: {
                     Label("Sign Out", systemImage: "rectangle.portrait.and.arrow.right")
                 }
+            }
             }
 
             if let accountSettings {
@@ -84,6 +96,7 @@ struct SettingsView: View {
                 Text("New links saved from this iPhone will use this name as their source.")
             }
 
+            if !isLocalLibrary {
             Section {
                 Button(role: .destructive) {
                     isShowingDeleteConfirmation = true
@@ -101,6 +114,7 @@ struct SettingsView: View {
             } footer: {
                 Text("Permanently delete your account and all saved data.")
             }
+            }
         }
         // No extra margin: the grouped Form's built-in top padding already
         // lands on `ScreenLayout.contentTopSpacing`, which Library adds
@@ -109,6 +123,9 @@ struct SettingsView: View {
         .navigationBarTitleDisplayMode(.large)
         .onDisappear(perform: appSettings.normalizeSourceName)
         .task { await loadAccountSettings() }
+        .sheet(isPresented: $isConnecting) {
+            ConnectAccountSheet(saveCount: authStore.readingListStore?.snapshot(for: .completeLibrary).items.count ?? 0)
+        }
         .sheet(isPresented: $isShowingOrganize) {
             if let api {
                 OrganizeView(api: api)
@@ -141,9 +158,10 @@ struct SettingsView: View {
         }
     }
 
-    // Demo mode has no real Account behind it, so the section stays hidden.
+    // Demo mode and a Local Library have no Account behind them, so the
+    // section stays hidden.
     private var api: SleevyAPIClient? {
-        DemoMode.isEnabled ? nil : .live(tokenStore: authStore.tokenStore)
+        DemoMode.isEnabled || isLocalLibrary ? nil : .live(tokenStore: authStore.tokenStore)
     }
 
     private func loadAccountSettings() async {

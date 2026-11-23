@@ -19,6 +19,8 @@ final class AuthStore {
         }
     }
     private(set) var readingListStore: ReadingListStore?
+    /// The Local Library while this device uses Sleevy with no Account.
+    private(set) var localLibrary: LocalReadingListAdapter?
     private var readingListAccountID: String?
     private(set) var googleUserProfile: GoogleUserProfile?
     private(set) var isRestoringSession = false
@@ -72,11 +74,22 @@ final class AuthStore {
     private func prepareReadingList(for session: AppSession) {
         guard readingListAccountID != session.userId else { return }
         readingListStore?.stop()
-        let store = ReadingListStore(
-            session: session,
-            tokenStore: tokenStore,
-            network: DemoMode.isEnabled ? DemoReadingListAdapter() : nil
-        )
+        let network: (any ReadingListNetworkPort)?
+        if DemoMode.isEnabled {
+            network = DemoReadingListAdapter()
+        } else if session.isLocal {
+            let local = LocalReadingListAdapter()
+            localLibrary = local
+            network = local
+        } else {
+            localLibrary = nil
+            network = nil
+        }
+        let store = ReadingListStore(session: session, tokenStore: tokenStore, network: network)
+        // An enrichment on the device finished: load the library again.
+        localLibrary?.onChange = { [weak store] in
+            Task { await store?.refresh() }
+        }
         store.onAuthenticationInvalid = { [weak self] message in
             self?.invalidateSession(message: message)
         }
@@ -112,6 +125,12 @@ final class AuthStore {
             // The `signin` capture shows the signed-out landing instead.
             session = DemoMode.initialScreen == .signIn ? nil : DemoMode.session
             googleUserProfile = nil
+            return
+        }
+
+        // A Local Library needs no token and no server.
+        if LocalLibraryFlag.isOn && tokenStore.current.isEmpty {
+            session = .local
             return
         }
 
@@ -156,6 +175,15 @@ final class AuthStore {
         }
     }
 
+    /// Sleevy with no Account: a Local Library on this device. The reader can
+    /// connect an Account later; the Local Library is then imported.
+    func continueWithoutAccount() {
+        errorMessage = nil
+        LocalLibraryFlag.isOn = true
+        cache(session: .local)
+        session = .local
+    }
+
     func signInWithGoogle() async {
         guard !isSigningIn else { return }
 
@@ -170,6 +198,7 @@ final class AuthStore {
                 idToken: googleTokens.idToken,
                 accessToken: googleTokens.accessToken
             )
+            try await importLocalLibraryIfNeeded(token: session.token)
             tokenStore.rotate(to: session.token)
             cache(session: session)
             googleUserProfile = await googleSignInClient.restoreUserProfile()
@@ -195,6 +224,7 @@ final class AuthStore {
                 idToken: appleTokens.idToken,
                 nonce: appleTokens.nonce
             )
+            try await importLocalLibraryIfNeeded(token: session.token)
             tokenStore.rotate(to: session.token)
             cache(session: session)
             googleUserProfile = nil
@@ -247,6 +277,42 @@ final class AuthStore {
         errorMessage = nil
         clearPersistedSession()
         googleSignInClient.signOut()
+    }
+
+    /// Connecting an Account from a Local Library: the Local Library goes
+    /// into the Account first, with the summaries and Tags made on the
+    /// device; the server does not enrich it again. Only when that worked
+    /// does the app switch to the Account and erase the Local Library. If it
+    /// fails, the reader stays in the Local Library and nothing is lost.
+    private func importLocalLibraryIfNeeded(token: String) async throws {
+        guard session?.isLocal == true, let localLibrary else { return }
+        let library = localLibrary.snapshot
+        let folders = library.folders.map {
+            LocalLibraryImport.Folder(name: $0.name, emoji: $0.emoji, color: $0.color)
+        }
+        let items = library.items.map(LocalLibraryImport.Item.init)
+        // The API takes at most 500 saves in one request.
+        var start = 0
+        repeat {
+            let batch = Array(items[start..<min(start + 500, items.count)])
+            do {
+                _ = try await api.send(
+                    "/v1/saved-items/import",
+                    method: .post,
+                    token: token,
+                    body: LocalLibraryImport(folders: start == 0 ? folders : [], items: batch)
+                )
+            } catch {
+                throw AuthError.authenticationFailed(
+                    "Sleevy could not move your saves to the Account. Your saves are still on this iPhone. Try again."
+                )
+            }
+            start += 500
+        } while start < items.count
+
+        localLibrary.erase()
+        self.localLibrary = nil
+        LocalLibraryFlag.isOn = false
     }
 
     private func exchangeSocialTokensForSession(
@@ -459,4 +525,42 @@ private struct NativeSocialSignInRequest: Encodable {
 /// The slice of `GET /v1/profile` the shared handle needs.
 private struct ProfileHandleResponse: Decodable {
     let handle: String
+}
+
+/// The body of `POST /v1/saved-items/import`: a Local Library as it is.
+private struct LocalLibraryImport: Encodable {
+    struct Folder: Encodable {
+        let name: String
+        let emoji: String?
+        let color: String?
+    }
+
+    struct Item: Encodable {
+        let url: String
+        let title: String?
+        let description: String?
+        let siteName: String?
+        let faviconUrl: String?
+        let previewSummary: String?
+        let tags: [String]
+        let isRead: Bool
+        let savedAt: String
+        let folderName: String?
+
+        init(_ item: SavedItem) {
+            url = item.originalURL
+            title = item.title
+            description = item.description
+            siteName = item.siteName
+            faviconUrl = item.faviconURL
+            previewSummary = item.previewSummary
+            tags = item.tags
+            isRead = item.isRead
+            savedAt = item.lastSavedAt.formatted(.iso8601)
+            folderName = item.folder?.name
+        }
+    }
+
+    let folders: [Folder]
+    let items: [Item]
 }

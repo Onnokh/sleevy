@@ -86,6 +86,16 @@ struct ContentView: View {
                 .buttonStyle(LandingButtonStyle(variant: .secondary))
                 .disabled(authStore.isSigningIn)
 
+                // Sleevy with no Account: the saves stay on this iPhone. An
+                // Account can be connected later for sync.
+                Button("Use Without an Account") {
+                    authStore.continueWithoutAccount()
+                }
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .padding(.top, 6)
+                .disabled(authStore.isSigningIn)
+
                 if let errorMessage = authStore.errorMessage {
                     Text(errorMessage)
                         .font(.footnote)

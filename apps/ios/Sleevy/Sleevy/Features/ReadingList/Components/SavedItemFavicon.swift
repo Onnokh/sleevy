@@ -383,6 +383,8 @@ private enum SVGSnapshotError: Error {
 struct AccountAvatarButton: View {
     let name: String
     let imageURL: URL?
+    /// A Local Library has no person behind it: a phone, not initials.
+    var isLocal = false
 
     var body: some View {
         Group {
@@ -407,9 +409,15 @@ struct AccountAvatarButton: View {
             Circle()
                 .fill(Color(uiColor: .secondarySystemFill))
 
-            Text(name.initials)
-                .font(.system(size: 12, weight: .semibold))
-                .foregroundStyle(.primary)
+            if isLocal {
+                Image(systemName: "iphone")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(.primary)
+            } else {
+                Text(name.initials)
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(.primary)
+            }
         }
     }
 }

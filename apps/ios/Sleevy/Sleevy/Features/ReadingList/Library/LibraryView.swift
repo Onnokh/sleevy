@@ -263,6 +263,7 @@ struct FolderChip: View {
     let onSetPublished: @MainActor (Bool) -> Void
 
     @Environment(\.pushRoute) private var pushRoute
+    @Environment(\.isLocalLibrary) private var isLocalLibrary
 
     var body: some View {
         Button {
@@ -282,13 +283,15 @@ struct FolderChip: View {
 
             // The label states what the action does next, so the stored state
             // stays legible even while Profile Visibility is private.
-            Button {
-                onSetPublished(!folder.isPublished)
-            } label: {
-                Label(
-                    folder.isPublished ? "Remove from Profile" : "Publish to Profile",
-                    systemImage: "globe"
-                )
+            if !isLocalLibrary {
+                Button {
+                    onSetPublished(!folder.isPublished)
+                } label: {
+                    Label(
+                        folder.isPublished ? "Remove from Profile" : "Publish to Profile",
+                        systemImage: "globe"
+                    )
+                }
             }
 
             Divider()
