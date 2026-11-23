@@ -44,7 +44,7 @@ A runnable monorepo app under `apps/`, such as `apps/api`, `apps/web`, `apps/ios
 _Avoid_: Package for deployable app, nested repo
 
 **Dev Variant**:
-The Debug build of the iOS app, installed as a separate app named "Sleevy Dev" with its own bundle ids (`app.sleevy.dev`), app group, keychain group, and `sleevy-dev` URL scheme, so it runs next to the App Store app instead of replacing it.
+The Debug build of the iOS app, installed as a separate app named "Sleevy Dev" with its own bundle ids (`app.sleevy.dev`), app group, keychain group, `sleevy-dev` URL scheme, and a light blue icon, so it runs next to the App Store app instead of replacing it.
 _Avoid_: Debug app, staging app, dev build that overwrites Sleevy
 
 **API Contract**:

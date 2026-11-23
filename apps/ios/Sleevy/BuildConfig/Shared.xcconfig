@@ -13,6 +13,8 @@ SLEEVY_DISPLAY_NAME = Sleevy
 SLEEVY_DISPLAY_NAME[config=Debug] = Sleevy Dev
 SLEEVY_URL_SCHEME = sleevy
 SLEEVY_URL_SCHEME[config=Debug] = sleevy-dev
+SLEEVY_APP_ICON = AppIcon
+SLEEVY_APP_ICON[config=Debug] = AppIconDev
 SLEEVY_APP_BUNDLE_ID = app.sleevy$(SLEEVY_VARIANT_SUFFIX)
 SLEEVY_APP_GROUP = group.app.sleevy$(SLEEVY_VARIANT_SUFFIX)
 SLEEVY_KEYCHAIN_GROUP = $(AppIdentifierPrefix)app.sleevy$(SLEEVY_VARIANT_SUFFIX)
