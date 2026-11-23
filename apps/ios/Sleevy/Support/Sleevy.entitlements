@@ -8,11 +8,11 @@
 	</array>
 	<key>keychain-access-groups</key>
 	<array>
-		<string>$(AppIdentifierPrefix)app.sleevy</string>
+		<string>$(SLEEVY_KEYCHAIN_GROUP)</string>
 	</array>
 	<key>com.apple.security.application-groups</key>
 	<array>
-		<string>group.app.sleevy</string>
+		<string>$(SLEEVY_APP_GROUP)</string>
 	</array>
 </dict>
 </plist>

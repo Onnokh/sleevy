@@ -149,6 +149,17 @@ export class BetterAuth extends Context.Service<BetterAuth>()(
                   clientId: config.auth.appleClientId,
                   clientSecret: appleClientSecret,
                   appBundleIdentifier: config.auth.appleAppBundleIdentifier,
+                  // A native Sign in with Apple token names the app's bundle id
+                  // as its audience. The iOS Dev Variant is a separate app
+                  // (`<bundle id>.dev`), so accept that audience too.
+                  ...(config.auth.appleAppBundleIdentifier
+                    ? {
+                        audience: [
+                          config.auth.appleAppBundleIdentifier,
+                          `${config.auth.appleAppBundleIdentifier}.dev`,
+                        ],
+                      }
+                    : {}),
                 },
               }
             : {}),

@@ -21,7 +21,11 @@ enum SleevyThemePreference: String, CaseIterable, Identifiable {
 }
 
 enum SleevyUserPreferences {
-    nonisolated static let appGroupIdentifier = "group.app.sleevy"
+    /// The app group the app, the share extension and the widgets share. The
+    /// Dev Variant uses its own group, so it is read from Info.plist
+    /// (`SleevyAppGroupIdentifier`, set from the `SLEEVY_APP_GROUP` build setting).
+    nonisolated static let appGroupIdentifier =
+        Bundle.main.object(forInfoDictionaryKey: "SleevyAppGroupIdentifier") as? String ?? "group.app.sleevy"
     static let themeKey = "settings.theme"
     static let sourceNameKey = "settings.source-name"
     static let readerViewDisabledKey = "settings.reader-view-disabled"

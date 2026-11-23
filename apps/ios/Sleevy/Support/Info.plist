@@ -12,6 +12,8 @@
 	</array>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<key>CFBundleDisplayName</key>
+	<string>$(SLEEVY_DISPLAY_NAME)</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -43,7 +45,7 @@
 			<string>app.sleevy.deep-link</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>sleevy</string>
+				<string>$(SLEEVY_URL_SCHEME)</string>
 			</array>
 		</dict>
 	</array>
@@ -55,8 +57,12 @@
 	<string>$(GOOGLE_SERVER_CLIENT_ID)</string>
 	<key>SleevyAPIBaseURL</key>
 	<string>$(SLEEVY_API_BASE_URL)</string>
+	<key>SleevyURLScheme</key>
+	<string>$(SLEEVY_URL_SCHEME)</string>
+	<key>SleevyAppGroupIdentifier</key>
+	<string>$(SLEEVY_APP_GROUP)</string>
 	<key>SleevyKeychainAccessGroup</key>
-	<string>$(AppIdentifierPrefix)app.sleevy</string>
+	<string>$(SLEEVY_KEYCHAIN_GROUP)</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
