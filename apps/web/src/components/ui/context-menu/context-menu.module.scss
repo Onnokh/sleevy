@@ -53,6 +53,27 @@
   color: var(--faint);
 }
 
+/* A submenu's choice in force, beside its name: "Sort  Newest first". */
+.value {
+  margin-left: auto;
+  color: var(--faint);
+}
+
+.value + .chevron {
+  margin-left: 0;
+}
+
+.check {
+  margin-left: auto;
+  color: var(--text);
+}
+
+.separator {
+  height: 1px;
+  margin: 0.25rem 0.25rem;
+  background: var(--border);
+}
+
 @keyframes menu-in {
   from {
     opacity: 0;

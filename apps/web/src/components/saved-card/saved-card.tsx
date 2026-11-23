@@ -1,7 +1,7 @@
 import { type ReactNode, useRef } from "react"
 import { Link, useNavigate } from "@tanstack/react-router"
 import clsx from "clsx"
-import { differenceInHours, differenceInMinutes, format } from "date-fns"
+import { format, isSameDay, startOfDay, subDays } from "date-fns"
 import { ExternalLink, MoreVertical } from "lucide-react"
 
 import { type FolderSelector, type SavedItem } from "../../sleevy/saved-items"
@@ -26,19 +26,16 @@ export function faviconUrl(host: string) {
   return `https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://${host}&size=64`
 }
 
+/// When a save was made, short enough to sit beside its date heading: the
+/// time today, the weekday within the last week, then the date.
 function formatDate(value: string) {
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return null
 
   const now = new Date()
-  const minutes = differenceInMinutes(now, date)
-  if (minutes < 1) return "now"
-  if (minutes < 60) return `${minutes}m`
-
-  const hours = differenceInHours(now, date)
-  if (hours < 24) return `${hours}h`
-
-  return format(date, date.getFullYear() === now.getFullYear() ? "MMM d" : "MMM d, yyyy")
+  if (isSameDay(date, now)) return format(date, "HH:mm")
+  if (date > startOfDay(subDays(now, 6))) return format(date, "EEE")
+  return format(date, date.getFullYear() === now.getFullYear() ? "d MMM" : "d MMM yyyy")
 }
 
 /**
@@ -174,7 +171,7 @@ export function SavedCard({ item, folder, isSelected, pendingDelete, onDelete, o
   return (
     <div
       ref={rowRef}
-      className={clsx(styles.row, isSelected && styles.selected)}
+      className={clsx(styles.row, isSelected && styles.selected, item.isRead && styles.read)}
       draggable
       onDragStart={(event) => {
         event.dataTransfer.effectAllowed = "move"
@@ -193,8 +190,8 @@ export function SavedCard({ item, folder, isSelected, pendingDelete, onDelete, o
           className={styles.favicon}
           src={faviconUrl(item.host)}
           alt=""
-          width={28}
-          height={28}
+          width={26}
+          height={26}
           loading="lazy"
         />
 
@@ -217,7 +214,10 @@ export function SavedCard({ item, folder, isSelected, pendingDelete, onDelete, o
           </span>
         </div>
 
-        <span className={clsx(styles.date, !item.isRead && styles.unreadDate)}>{date}</span>
+        <span className={styles.meta}>
+          {item.isRead ? null : <span className={styles.unreadDot} aria-label="Unread" role="img" />}
+          <span className={styles.date}>{date}</span>
+        </span>
       </CardLink>
 
       <div className={styles["menu-wrapper"]}>

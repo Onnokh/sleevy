@@ -7,12 +7,12 @@ import { useKeyboardNav } from "../../contexts/keyboard-nav-context"
 import { useTheme } from "../../contexts/theme-context"
 import { useMediaQuery } from "../../hooks/use-media-query"
 import { AccountMenu } from "../account-menu/account-menu"
-import { CaptureDialog } from "../capture-dialog/capture-dialog"
+import { CaptureSheet } from "../capture-sheet/capture-sheet"
 import { CommandPalette } from "../command-palette/command-palette"
 import { FolderSidebar } from "../folders/folder-sidebar"
 import { KeyboardHelp } from "../keyboard-help/keyboard-help"
 import { IphoneCard } from "../onboarding/iphone-card"
-import { LibraryNav, SidebarActions, SourceFilterList, TagFilterList } from "../source-filter/source-filter"
+import { LibraryNav, SidebarAccountLinks, SourceFilterList, TagFilterList } from "../source-filter/source-filter"
 import { SidebarSheet } from "./sidebar-sheet"
 
 /// Below this the sidebar has nowhere to stand: its 360px would leave the
@@ -38,7 +38,12 @@ export function Dashboard({ user }: { readonly user: User }) {
   return (
     <>
       <div className="dashboard">
-        {compact ? null : <aside className="sidebar">{rows}</aside>}
+        {compact ? null : (
+          <>
+            <aside className="sidebar">{rows}</aside>
+            <div className="sidebar-crease" aria-hidden="true" />
+          </>
+        )}
         <main className="content">
           <Outlet />
         </main>
@@ -61,7 +66,7 @@ export function Dashboard({ user }: { readonly user: User }) {
           <SidebarSheet open={menuOpen} onOpenChange={setMenuOpen}>{rows}</SidebarSheet>
         </>
       ) : null}
-      {captureDialogOpen ? <CaptureDialog initialUrl={captureDialogInitialUrl} onClose={closeCaptureDialog} /> : null}
+      {captureDialogOpen ? <CaptureSheet initialUrl={captureDialogInitialUrl} onClose={closeCaptureDialog} /> : null}
       <CommandPalette />
       <KeyboardHelp />
     </>
@@ -78,7 +83,6 @@ function SidebarRows({ user }: { readonly user: User }): ReactNode {
           <Logo size={25} />
           <SidebarThemeToggle />
         </div>
-        <SidebarActions />
         <LibraryNav />
         <FolderSidebar />
         <TagFilterList />
@@ -86,6 +90,7 @@ function SidebarRows({ user }: { readonly user: User }): ReactNode {
       </div>
       <div className="sidebar-bottom">
         <IphoneCard />
+        <SidebarAccountLinks />
         <AccountMenu user={user} />
       </div>
     </>

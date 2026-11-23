@@ -19,11 +19,23 @@
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  border-right: 1px solid var(--border);
   padding: 1.5rem 1rem;
   background-color: var(--surface);
   max-height: 100vh;
   overflow: hidden;
+}
+
+/* The fold between the sidebar and the page, as the iOS app draws its two
+   pages on a wide screen: a line that fades out at both ends, with a soft
+   shadow on each side of it. */
+.sidebar-crease {
+  position: relative;
+  z-index: 1;
+  width: 1px;
+  flex-shrink: 0;
+  background: linear-gradient(transparent, var(--border) 12%, var(--border) 88%, transparent);
+  box-shadow: -6px 0 18px var(--shadow), 6px 0 18px color-mix(in srgb, var(--shadow) 70%, transparent);
+  pointer-events: none;
 }
 
 .sidebar-top {
@@ -163,52 +175,21 @@
   text-align: center;
 }
 
+/* The title, its subtitle, and the page's actions at the end of the title's
+   line, as the iOS large title and its toolbar. */
 .page-header {
   display: flex;
-  align-items: flex-end;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 1rem;
-  margin-bottom: 1.5rem;
+  margin: 1.5rem 0 1.75rem;
 }
 
-/* A flush header drops its title to the same line a brand card's title sits
-   on. The card bleeds a content inset upwards and stands 11rem tall with that
-   same inset inside it, so its text bottom lands 7rem below the top of the
-   content. Library home and Settings have no card to stand in, so they
-   reserve that height themselves and hang the heading off the bottom of it. */
-.page-header:not(.page-header-card) {
-  min-height: calc(11rem - var(--content-padding) * 2);
-}
-
-/* A screen's brand header card: the Inbox wears the aurora, a folder wears
-   its own corona. It bleeds past the content padding to the top, leading and
-   trailing edges the way the native card spans the physical screen edges, and
-   rounds only its bottom corners. Neither field carries a fill of its own, so
-   the card's backdrop IS the page: there is no seam to hide at the bleed. */
-.page-header-card {
-  position: relative;
-  align-items: flex-end;
-  min-height: 11rem;
-  margin: calc(var(--content-padding) * -1) calc(var(--content-padding) * -1) 1.5rem;
-  padding: var(--content-padding);
-  border-bottom-right-radius: 1.75rem;
-  border-bottom-left-radius: 1.75rem;
-  overflow: hidden;
-}
-
-.page-header-card > :not(canvas) {
-  position: relative;
-  z-index: 1;
-}
-
-.page-header-card-shader {
-  position: absolute;
-  z-index: 0;
-  inset: 0;
-}
-
-.folder-edit-button {
-  gap: 0.4rem;
+/* A list page's column, centred in the page: the measure of the iOS list on
+   a wide screen. It starts at the top, however short the list is. */
+.page-column {
+  max-width: 46rem;
+  margin-inline: auto;
 }
 
 .page-heading { min-width: 0; }
@@ -219,69 +200,71 @@
   flex-wrap: wrap;
   gap: 0.5rem;
   margin: 0;
-  font-size: 2rem;
+  font-size: 2.125rem;
   font-weight: 700;
-  line-height: 1.1;
-  letter-spacing: -0.03em;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
   text-wrap: balance;
 }
 
 .page-subtitle {
-  margin: 0.375rem 0 0;
-  color: var(--faint);
-  font-size: 0.875rem;
-  font-weight: 500;
+  margin: 0.25rem 0 0;
+  color: var(--muted);
+  font-size: 0.9375rem;
+  font-weight: 400;
   font-variant-numeric: tabular-nums;
   line-height: 1.3;
   text-wrap: pretty;
 }
 
-.page-title-filters {
-  display: inline-flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 0.375rem;
-  min-width: 0;
-  letter-spacing: normal;
+/* A row of chips under the title: the Folders on a narrow Library home, or
+   the filters in force. It scrolls sideways rather than wrapping, as the iOS
+   chip strip does. */
+.chip-strip {
+  display: flex;
+  gap: 0.5rem;
+  margin: -0.5rem -0.75rem 1.5rem;
+  padding: 0 0.75rem;
+  overflow-x: auto;
+  scrollbar-width: none;
 }
 
-.page-title-filter {
+.chip {
   display: inline-flex;
   align-items: center;
-  max-width: min(18rem, 100%);
-  min-height: 1.625rem;
-  overflow: hidden;
+  gap: 0.375rem;
+  flex-shrink: 0;
+  height: 2rem;
+  padding: 0 0.75rem;
   border: 1px solid var(--border);
   border-radius: 999px;
-  background: var(--panel-muted);
-  color: var(--muted);
-  font-size: 0.75rem;
-  font-weight: 500;
-  line-height: 1;
-}
-
-.page-title-filter-label {
-  flex-shrink: 0;
-  padding: 0 0.5rem 0 0.625rem;
-  color: var(--faint);
-  font-size: 0.625rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.page-title-filter-value {
-  min-width: 0;
-  overflow: hidden;
-  padding: 0.375rem 0.625rem 0.375rem 0.5rem;
-  border-left: 1px solid var(--border);
+  background: color-mix(in srgb, var(--text) 6%, transparent);
   color: var(--text);
-  text-overflow: ellipsis;
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-decoration: none;
   white-space: nowrap;
+  cursor: pointer;
 }
 
-/* Settings reads as a column of cards, the way the Library home reads as a
-   grid of Folder cards above its rows. It is the query container for those
+.chip:hover {
+  background: color-mix(in srgb, var(--text) 10%, transparent);
+}
+
+.chip:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.chip svg,
+.chip .chip-label,
+.chip .chip-count {
+  color: var(--muted);
+  font-weight: 400;
+}
+
+/* Settings reads as a column of cards. It is the query container for those
    cards: what decides whether a card can hold two columns is its own width,
    not the window's. The sidebar takes 21.5rem of it, so the content column
    runs out of room long before a viewport breakpoint would fire. */
@@ -357,12 +340,13 @@
   padding: 0;
 }
 
+/* Under the title, not in the middle of the window: a short page starts at
+   the top, as a long one does. */
 .empty-state {
-  min-height: calc(100vh - 8.5rem);
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  padding: 4rem 0 2rem;
   gap: 0.75rem;
   color: var(--muted);
   text-align: center;
@@ -372,7 +356,6 @@
    page, so the message stands near it rather than claiming a window of its
    own, which pushed it out of view and made an empty Inbox scroll. */
 .empty-state.empty-state-compact {
-  min-height: 0;
   padding: 2.5rem 0 1.5rem;
 }
 
@@ -460,30 +443,6 @@
     padding: 1.125rem;
   }
 
-  /* Stacked, so the heading and the page toolbar read top to bottom rather
-     than across. */
-  .page-header {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  /* Stacking moves the reserved height from the header to the heading. The
-     header cannot hold the title on the line any more: a column bottom-aligns
-     whatever comes last, so on a page with a toolbar the toolbar took the line
-     and pushed the title off it, while Inbox and Settings, which have none,
-     kept it. Reserving on the heading puts the title on the same line on all
-     four, and lets a toolbar flow below that line rather than fight it.
-
-     The number is the one the card is cut to: a card stands 11rem tall with a
-     content inset above and below the heading, so its heading fills exactly
-     this much, and a flush header reserves the same. */
-  .page-heading {
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
-    min-height: calc(11rem - var(--content-padding) * 2);
-  }
-
   .settings-form,
   .settings-form-inline {
     grid-template-columns: 1fr;
@@ -492,20 +451,3 @@
   }
 }
 
-/* The sidebar makes the usable page width much smaller than the viewport. A
-   viewport breakpoint therefore misses medium windows: the heading can be
-   squeezed to a few words while the toolbar keeps its single-row width. Use
-   the content container so the header stacks at the width it actually has. */
-@container dashboard-content (max-width: 48rem) {
-  .page-header {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .page-heading {
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
-    min-height: calc(11rem - var(--content-padding) * 2);
-  }
-}

@@ -144,7 +144,7 @@ A lightweight on-device preview shown before saving a clipboard URL.
 _Avoid_: Enrichment preview, server preview, metadata fetch
 
 **Capture Sheet**:
-A small native iOS sheet with one URL field, opened with the Add Link button, the last top-bar item on every list screen. It is the same sheet on every screen, and its system Paste button saves a copied link in one tap.
+A small sheet with one URL field, opened with the Add Link button, the last top-bar item on every list screen. It is the same sheet on every screen, and its Paste button saves a copied link in one tap. On iOS it is a native sheet with the system Paste button; the web app has the same sheet, rising from the bottom of the window, opened with the + at the end of each list page's title or with its keyboard shortcut.
 _Avoid_: Capture Capsule, inline capture row, full-screen composer
 
 **Pending Capture**:
