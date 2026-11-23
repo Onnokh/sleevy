@@ -28,3 +28,5 @@ Saves in a Local Library are enriched less well than saves in an Account: the pa
 A Local Library is on one device only. A backup of the device keeps it; deleting the app removes it.
 
 The API gets one more write path (the import) that skips Enrichment. Its input is trusted as the person's own data, as a capture is.
+
+Link data is shared by all Accounts. When an imported save points to a Link that the server already has, the server keeps its own data for that Link, and the data from the device is not used. Only a new Link gets the title, description and summary from the device.
