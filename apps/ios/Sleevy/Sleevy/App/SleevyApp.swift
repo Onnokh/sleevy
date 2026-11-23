@@ -20,6 +20,15 @@ struct SleevyApp: App {
     @State private var didRestoreSession = false
     private static let logger = Logger(subsystem: "app.sleevy", category: "deep-link")
 
+    init() {
+        // Demo mode shows the first run again on every launch.
+        if DemoMode.isEnabled {
+            ShareSetup.reset()
+            FirstVisit.reset()
+            UserDefaults.standard.removeObject(forKey: "onboarding.share-row-hidden")
+        }
+    }
+
     var body: some Scene {
         WindowGroup {
             ContentView()

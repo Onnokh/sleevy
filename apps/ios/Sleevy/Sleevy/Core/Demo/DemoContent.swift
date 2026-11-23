@@ -33,6 +33,8 @@ nonisolated enum DemoMode {
     /// Always writes, so a normal launch clears a flag left by a capture run.
     static func publishSharedFlag() {
         DemoCaptureFlag.isOn = isEnabled
+        DemoCaptureFlag.userId = isEnabled ? session.userId : nil
+        DemoCaptureFlag.holdsSuccess = isEnabled && !startsEmpty
     }
 }
 
@@ -410,6 +412,27 @@ nonisolated extension DemoMode {
         case tag
         case settings
         case signIn = "signin"
+        /// A new Account with no Saved Items and no Folders: the first run.
+        case firstRun = "firstrun"
+    }
+
+    /// The demo starts with an empty Account, for the first run.
+    static var startsEmpty: Bool {
+        initialScreen == .firstRun
+    }
+
+    /// What a demo capture is enriched with, a few seconds after it is made.
+    static func enrichment(forHost host: String) -> (title: String, summary: String, tags: [String]) {
+        let host = host.replacingOccurrences(of: "www.", with: "")
+        if let known = savedItems.first(where: { $0.host.replacingOccurrences(of: "www.", with: "") == host }),
+           let title = known.title {
+            return (title, known.previewSummary ?? "A page from \(host), read and summarized by Sleevy.", Array(known.tags.prefix(3)))
+        }
+        return (
+            host,
+            "A page from \(host), read and summarized by Sleevy so you know what it is before you open it.",
+            ["reading"]
+        )
     }
 
     static var initialScreen: Screen? {

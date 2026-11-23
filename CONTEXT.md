@@ -431,6 +431,14 @@ _Avoid_: Empty state, welcome screen, onboarding screen
 The first Saved Item made from the First-Run Inbox, shown large while it is enriched: a timed reveal of its real fields — the page fetched, then read, then its Preview Summary and Tags — that then folds into its Inbox row.
 _Avoid_: Enrichment progress, Enrichment Job stages, loading animation
 
+**First Visit**:
+The full-screen cover the iOS app shows one time, after sign-in, to an Account with no Saved Items and no Folders: a welcome, then the first save (with the share sheet, Paste, or the Capture Sheet), then the Enrichment Reveal of that save. It ends in the Library. An Account that already has saves never sees it.
+_Avoid_: Onboarding, welcome flow, tutorial
+
+**Share Setup**:
+The iOS steps that teach saving with the iOS Share Extension. The first save is the lesson: the reader opens the real share sheet and taps Sleevy. Only a reader who cannot find Sleevy gets the steps to add it to the share sheet Favorites, each with a still image of the real share sheet. Share Setup is done once a save came from the iOS Share Extension.
+_Avoid_: Share wizard, share tutorial, extension setup
+
 **Getting Started Card**:
 A four-step card above the Web Companion Inbox for a new Account: save a link, open it, open the Command Palette, and save from the iPhone. Each step checks itself off from what the person did, and the card can be put away and brought back from the Command Palette.
 _Avoid_: Checklist, onboarding wizard, product tour

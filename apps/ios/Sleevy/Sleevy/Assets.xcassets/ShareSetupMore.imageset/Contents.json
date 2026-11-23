@@ -1,0 +1,10 @@
+{
+  "images" : [
+    { "filename" : "ShareSetupMore.png", "idiom" : "universal", "scale" : "3x" },
+    {
+      "appearances" : [ { "appearance" : "luminosity", "value" : "dark" } ],
+      "filename" : "ShareSetupMore-dark.png", "idiom" : "universal", "scale" : "3x"
+    }
+  ],
+  "info" : { "author" : "xcode", "version" : 1 }
+}

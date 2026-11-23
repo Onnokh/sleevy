@@ -39,8 +39,14 @@ struct ReadingListView: View {
                       snapshot.items.isEmpty,
                       store.pendingSavedItems.isEmpty {
                 // Not before the first load: All Caught Up would flash at
-                // launch, before the saves arrive.
-                EmptyReadingListRow(height: emptyStateHeight)
+                // launch, before the saves arrive. An Account that never
+                // saved anything has nothing to catch up on.
+                if case let library = store.snapshot(for: .completeLibrary),
+                   library.coverage.hasLoaded, library.items.isEmpty, store.folders.isEmpty {
+                    FirstRunRecents(store: store, height: emptyStateHeight)
+                } else {
+                    EmptyReadingListRow(height: emptyStateHeight)
+                }
             }
 
 

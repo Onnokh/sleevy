@@ -13,6 +13,7 @@ struct SignedInTabView: View {
     @State private var profileLoader = PublicProfileLoader()
     @State private var profileStore: ProfileStore
     @State private var selectedTab: AppTab = .library
+    @State private var showsFirstVisit = false
     @State private var sleevyPath: [AppRoute] = []
     @State private var libraryPath: [AppRoute] = []
     @State private var searchPath: [AppRoute] = []
@@ -131,6 +132,11 @@ struct SignedInTabView: View {
             // is private, so the record must be known outside the profile page.
             await profileStore.load()
             await openDemoScreenIfNeeded()
+            await showFirstVisitIfNew()
+        }
+        .fullScreenCover(isPresented: $showsFirstVisit) {
+            FirstVisitCover(store: store)
+                .onDisappear { selectedTab = .library }
         }
         .onChange(of: scenePhase) { _, newPhase in
             handleScenePhaseChange(newPhase)
@@ -440,6 +446,20 @@ struct SignedInTabView: View {
     /// A pushed screen waits for its saves first, as a widget tap on a Saved
     /// Item does. Pushed too early, the Reader View stays on Item Unavailable,
     /// and a Folder View's list grows under its large title and collapses it.
+    /// The First Visit, one time, for an Account with nothing saved. An
+    /// Account that has saves never sees it.
+    private func showFirstVisitIfNew() async {
+        guard !FirstVisit.isDone else { return }
+        await store.loadIfNeeded(for: .completeLibrary)
+        let library = store.snapshot(for: .completeLibrary)
+        guard library.coverage.hasLoaded else { return }
+        if library.items.isEmpty && store.folders.isEmpty && store.pendingSavedItems.isEmpty {
+            showsFirstVisit = true
+        } else {
+            FirstVisit.markDone()
+        }
+    }
+
     private func openDemoScreenIfNeeded() async {
         guard let screen = DemoMode.initialScreen else { return }
 
@@ -474,6 +494,8 @@ struct SignedInTabView: View {
             sleevyPath = [.settings]
         case .signIn:
             break
+        case .firstRun:
+            selectedTab = .library
         }
     }
 
