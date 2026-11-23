@@ -29,109 +29,42 @@ struct ContentView: View {
         }
     }
 
-    /// The signed-out landing: the mark, the name, and the two ways in. The
-    /// same monochrome as the rest of the app; nothing moves behind it.
+    /// The signed-out landing: the mark, the promise, and the ways in. The
+    /// same glass and buttons as the Connect an Account sheet, so signing in
+    /// now and connecting later look like one thing.
     private var signedOutView: some View {
-        VStack(spacing: 0) {
-            Spacer()
+        VStack(alignment: .leading, spacing: 0) {
+            Spacer(minLength: 24)
 
             SleevyBrandmark()
-                .fill(.primary)
-                .frame(width: 66, height: 84)
-                .padding(.bottom, 28)
+                .fill(.white)
+                .frame(width: 33, height: 42)
+                .accessibilityLabel("Sleevy")
 
-            Text("Sleevy")
-                .font(.system(size: 34, weight: .bold))
+            SignInHeadline(text: "Save it now.\nRead it later.")
+                .padding(.top, 24)
 
-            Text("Save it now. Read it later.")
+            Text("Save from any app. Sleevy reads each page and keeps it for you.")
                 .font(.body)
-                .foregroundStyle(.secondary)
-                .padding(.top, 6)
+                .foregroundStyle(.white.opacity(0.7))
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.top, 14)
 
-            Spacer()
-
-            VStack(spacing: 12) {
-                Button {
-                    Task { await authStore.signInWithApple() }
-                } label: {
-                    if authStore.isSigningIn {
-                        ProgressView()
-                            .frame(maxWidth: .infinity, minHeight: 22)
-                    } else {
-                        Label("Continue with Apple", systemImage: "apple.logo")
-                            .frame(maxWidth: .infinity, minHeight: 22)
-                    }
-                }
-                .buttonStyle(LandingButtonStyle(variant: .primary))
-                .disabled(authStore.isSigningIn)
-
-                Button {
-                    Task { await authStore.signInWithGoogle() }
-                } label: {
-                    if authStore.isSigningIn {
-                        ProgressView()
-                            .frame(maxWidth: .infinity, minHeight: 22)
-                    } else {
-                        HStack(spacing: 8) {
-                            Image("GoogleLogo")
-                                .resizable()
-                                .scaledToFit()
-                                .frame(width: 18, height: 18)
-                                .accessibilityHidden(true)
-                            Text("Continue with Google")
-                        }
-                        .frame(maxWidth: .infinity, minHeight: 22)
-                    }
-                }
-                .buttonStyle(LandingButtonStyle(variant: .secondary))
-                .disabled(authStore.isSigningIn)
-
-                // Sleevy with no Account: the saves stay on this iPhone. An
-                // Account can be connected later for sync.
-                Button("Use Without an Account") {
-                    authStore.continueWithoutAccount()
-                }
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .padding(.top, 6)
-                .disabled(authStore.isSigningIn)
-
-                if let errorMessage = authStore.errorMessage {
-                    Text(errorMessage)
-                        .font(.footnote)
-                        .foregroundStyle(.red)
-                        .padding(.top, 4)
-                }
+            // Sleevy with no Account: the saves stay on this iPhone. An
+            // Account can be connected later for sync.
+            SignInButtons(progressTitle: "Signing in…", quietTitle: "Use Without an Account") {
+                authStore.continueWithoutAccount()
             }
-            .frame(maxWidth: 420)
-            .padding(.horizontal, 24)
-            .padding(.bottom, 24)
+            .padding(.top, 36)
         }
+        .frame(maxWidth: 420)
+        .padding(.horizontal, 24)
+        .padding(.bottom, 16)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color(.systemBackground))
-    }
-}
-
-/// The two sign-in buttons: a solid capsule for Apple, a grey one for
-/// Google. Primary-on-background, so both read in light and dark mode.
-private struct LandingButtonStyle: ButtonStyle {
-    enum Variant { case primary, secondary }
-    let variant: Variant
-
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .font(.body.weight(.semibold))
-            .foregroundStyle(variant == .primary ? Color(.systemBackground) : Color.primary)
-            .tint(variant == .primary ? Color(.systemBackground) : Color.primary)
-            .padding(.vertical, 16)
-            .background(
-                variant == .primary
-                    ? AnyShapeStyle(Color.primary)
-                    : AnyShapeStyle(Color(.secondarySystemBackground)),
-                in: Capsule()
-            )
-            .opacity(configuration.isPressed ? 0.75 : 1)
-            .animation(.easeOut(duration: 0.15), value: configuration.isPressed)
+        .background { SignInGlassBackdrop() }
+        // Dark while it shows, the status bar too; signed in, the app
+        // follows the reader's theme again.
+        .preferredColorScheme(.dark)
     }
 }
 

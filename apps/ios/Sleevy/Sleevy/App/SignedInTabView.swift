@@ -494,7 +494,7 @@ struct SignedInTabView: View {
         case .settings:
             selectedTab = .sleevy
             sleevyPath = [.settings]
-        case .signIn:
+        case .signIn, .connect:
             break
         case .firstRun:
             selectedTab = .library
@@ -515,7 +515,7 @@ struct SignedInTabView: View {
 
 private struct AccountToolbarModifier: ViewModifier {
     @Environment(AuthStore.self) private var authStore
-    @State private var isConnecting = false
+    @State private var isConnecting = DemoMode.initialScreen == .connect
     let session: AppSession
     let onSettings: () -> Void
     let onMyProfile: () -> Void

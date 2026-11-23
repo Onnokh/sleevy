@@ -414,6 +414,8 @@ nonisolated extension DemoMode {
         case signIn = "signin"
         /// A new Account with no Saved Items and no Folders: the first run.
         case firstRun = "firstrun"
+        /// The Connect an Account sheet, open on the Inbox.
+        case connect
     }
 
     /// The demo starts with an empty Account, for the first run.
