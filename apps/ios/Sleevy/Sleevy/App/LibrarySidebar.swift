@@ -28,6 +28,8 @@ struct LibrarySidebar: View {
     @Binding var selection: LibrarySidebarItem?
     @State private var folderEditor: FolderEditor?
     @State private var folderToDelete: Folder?
+    /// The height of the two rows pinned at the bottom.
+    @State private var accountRowsHeight: CGFloat = 88
     /// Closed at first, and kept as the reader leaves it, as on the web.
     @AppStorage("librarySidebar.showsTags") private var showsTags = false
 
@@ -43,10 +45,6 @@ struct LibrarySidebar: View {
         // one, a link row lets go of its fill once the tap is done, so the
         // row on screen would show nothing.
         List {
-            Section {
-                link("Public Profile", systemImage: "globe", item: .profile)
-                link("Settings", systemImage: "gearshape", item: .settings)
-            }
 
             Section {
                 link("Recents", systemImage: "clock", item: .recents, count: complete.items.count { !$0.isRead })
@@ -86,6 +84,14 @@ struct LibrarySidebar: View {
             }
         }
         .sidebarList()
+        // The Public Profile and Settings at the bottom, as the web keeps the
+        // account there: the lists come first.
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            accountRows
+        }
+        // The keyboard covers the sidebar; it does not push the rows up
+        // over the Folders.
+        .ignoresSafeArea(.keyboard, edges: .bottom)
         .folderActions(store: store, editor: $folderEditor, folderToDelete: $folderToDelete)
     }
 
@@ -106,6 +112,26 @@ struct LibrarySidebar: View {
         .buttonStyle(.plain)
         .accessibilityValue(showsTags ? "Open" : "Closed")
         .accessibilityAddTraits(.isHeader)
+    }
+
+    /// A list of its own, so the rows look as the others do, as tall as its
+    /// rows and still.
+    private var accountRows: some View {
+        List {
+            Section {
+                link("Public Profile", systemImage: "globe", item: .profile)
+                link("Settings", systemImage: "gearshape", item: .settings)
+            }
+        }
+        .sidebarList()
+        .scrollDisabled(true)
+        .onScrollGeometryChange(for: CGFloat.self) { geometry in
+            geometry.contentSize.height
+        } action: { _, height in
+            if height > 0 { accountRowsHeight = height }
+        }
+        .frame(height: accountRowsHeight)
+        .background(Color(.surface))
     }
 
     private func link(
