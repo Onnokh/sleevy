@@ -24,6 +24,18 @@ struct AppSession: Codable, Equatable {
         provider?.displayName
     }
 
+    /// The owner of a Local Library: no Account, no token.
+    static let local = AppSession(
+        token: "",
+        userId: LocalLibraryFlag.userId,
+        email: "",
+        name: "On this iPhone",
+        provider: nil
+    )
+
+    /// Whether this session is a Local Library rather than an Account.
+    var isLocal: Bool { userId == LocalLibraryFlag.userId }
+
     func withProvider(_ provider: AuthProvider?) -> AppSession {
         AppSession(
             token: token,

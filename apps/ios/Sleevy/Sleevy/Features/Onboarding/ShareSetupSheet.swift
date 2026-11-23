@@ -130,12 +130,19 @@ struct ShareSetupActions: View {
     /// Called when the reader shared the link with Sleevy.
     var onShared: (() -> Void)? = nil
     @Environment(\.openURL) private var openURL
+    @State private var usedOtherSleevy = false
+
+    /// This app's name in the share sheet: "Sleevy", or "Sleevy Dev".
+    private var appName: String {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String ?? "Sleevy"
+    }
 
     var body: some View {
         VStack(spacing: 12) {
             Button {
-                SystemShareSheet.present(url: ShareSetupSheet.practiceURL) { sharedToSleevy in
-                    guard sharedToSleevy else { return }
+                SystemShareSheet.present(url: ShareSetupSheet.practiceURL) { outcome in
+                    usedOtherSleevy = outcome == .otherSleevy
+                    guard outcome == .sleevy else { return }
                     ShareSetup.markDone()
                     onShared?()
                     Task { await store.refresh(.completeLibrary) }
@@ -149,6 +156,14 @@ struct ShareSetupActions: View {
             .buttonStyle(.borderedProminent)
             .tint(.primary)
             .foregroundStyle(Color(.systemBackground))
+
+            if usedOtherSleevy {
+                Text("You used another Sleevy app. Tap \(appName) in the share sheet.")
+                    .font(.footnote)
+                    .foregroundStyle(.orange)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
 
             if showsSafari {
                 Button("Or try it in Safari") { openURL(ShareSetupSheet.practiceURL) }
@@ -248,16 +263,28 @@ enum ShareSetup {
 /// The real iOS share sheet, shown over whatever is on screen.
 @MainActor
 enum SystemShareSheet {
-    /// `completion` gets true when the reader shared with Sleevy's own Share
-    /// Extension.
-    static func present(url: URL, completion: @escaping (Bool) -> Void) {
+    enum Outcome {
+        /// Shared with this app's own Share Extension.
+        case sleevy
+        /// Shared with another Sleevy app on this iPhone: the App Store app
+        /// next to the Dev Variant, which saves into its own Account.
+        case otherSleevy
+        /// Shared elsewhere, or not at all.
+        case other
+    }
+
+    static func present(url: URL, completion: @escaping (Outcome) -> Void) {
         let controller = UIActivityViewController(activityItems: [url], applicationActivities: nil)
         controller.completionWithItemsHandler = { activityType, completed, _, _ in
-            // This app's own Share Extension only: the App Store app and the
-            // Dev Variant can both be on one phone, each with its Account.
             let own = (Bundle.main.bundleIdentifier ?? "") + ".ShareExtension"
-            let isSleevy = activityType?.rawValue == own
-            completion(completed && isSleevy)
+            let type = activityType?.rawValue ?? ""
+            if completed && type == own {
+                completion(.sleevy)
+            } else if completed && type.hasPrefix("app.sleevy") && type.hasSuffix(".ShareExtension") {
+                completion(.otherSleevy)
+            } else {
+                completion(.other)
+            }
         }
         guard let top = topViewController() else { return }
         controller.popoverPresentationController?.sourceView = top.view

@@ -1,14 +1,15 @@
 import SwiftUI
 import UIKit
 
-/// Whether the First Visit was shown: one time, to an Account with nothing
-/// saved yet.
+/// Whether the First Visit was shown: one time for each owner (an Account,
+/// or the Local Library), while it has nothing saved yet. Per owner, so a
+/// new Local Library or a new Account on this iPhone gets it too.
 enum FirstVisit {
-    private static let key = "onboarding.first-visit-done"
+    private static func key(_ ownerID: String) -> String { "onboarding.first-visit-done.\(ownerID)" }
 
-    static var isDone: Bool { UserDefaults.standard.bool(forKey: key) }
-    static func markDone() { UserDefaults.standard.set(true, forKey: key) }
-    static func reset() { UserDefaults.standard.removeObject(forKey: key) }
+    static func isDone(for ownerID: String) -> Bool { UserDefaults.standard.bool(forKey: key(ownerID)) }
+    static func markDone(for ownerID: String) { UserDefaults.standard.set(true, forKey: key(ownerID)) }
+    static func reset(for ownerID: String) { UserDefaults.standard.removeObject(forKey: key(ownerID)) }
 }
 
 /// The First Visit: a full-screen cover, shown one time after the first sign
@@ -17,6 +18,8 @@ enum FirstVisit {
 /// with the save as its first row.
 struct FirstVisitCover: View {
     @Environment(\.dismiss) private var dismiss
+    /// The Account or Local Library this First Visit is for.
+    var ownerID: String
     @Environment(\.scenePhase) private var scenePhase
     var store: ReadingListStore
     @State private var step = Step.welcome
@@ -80,11 +83,11 @@ struct FirstVisitCover: View {
             guard phase == .active, step == .save else { return }
             Task { await store.refresh(.completeLibrary) }
         }
-        .onDisappear { FirstVisit.markDone() }
+        .onDisappear { FirstVisit.markDone(for: ownerID) }
     }
 
     private func finish() {
-        FirstVisit.markDone()
+        FirstVisit.markDone(for: ownerID)
         dismiss()
     }
 }

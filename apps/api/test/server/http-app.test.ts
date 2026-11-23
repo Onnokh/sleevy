@@ -1,5 +1,11 @@
 import { SUPPORTED_PROTOCOL_VERSIONS } from "@modelcontextprotocol/sdk/types.js"
-import { BATCH_CAPTURE_LIMIT, captureChannels, type PublicSavedItemsResponse } from "@sleevy/contract"
+import {
+  BATCH_CAPTURE_LIMIT,
+  captureChannels,
+  LOCAL_LIBRARY_IMPORT_FOLDER_LIMIT,
+  LOCAL_LIBRARY_IMPORT_ITEM_LIMIT,
+  type PublicSavedItemsResponse,
+} from "@sleevy/contract"
 import { describe, expect } from "bun:test"
 import { Effect, Layer, Option } from "effect"
 
@@ -38,6 +44,10 @@ import {
 import { AnonymousRateLimiter } from "../../src/modules/rate-limit/AnonymousRateLimiter.js"
 import { ApiKeyRateLimiter } from "../../src/modules/rate-limit/ApiKeyRateLimiter.js"
 import { IdempotencyStore } from "../../src/modules/idempotency/IdempotencyStore.js"
+import {
+  type LocalLibrary,
+  LocalLibraryImport,
+} from "../../src/modules/local-library/LocalLibraryImport.js"
 import { BearerRateLimiter } from "../../src/modules/rate-limit/BearerRateLimiter.js"
 import { ConnectAuthorizeRateLimiter } from "../../src/modules/rate-limit/ConnectAuthorizeRateLimiter.js"
 import { ConnectExchangeRateLimiter } from "../../src/modules/rate-limit/ConnectExchangeRateLimiter.js"
@@ -162,6 +172,12 @@ const routeLayer = (input: {
     readonly userId: UserId
     readonly url: string
     readonly captureChannel?: CaptureChannel | undefined
+  }) => void) | undefined
+  readonly onEnrich?: ((linkId: LinkId) => void) | undefined
+  readonly onAutoFile?: ((savedItemId: SavedItemId) => void) | undefined
+  readonly onLocalLibraryImport?: ((input: {
+    readonly userId: UserId
+    readonly library: LocalLibrary
   }) => void) | undefined
   readonly onConnectRateLimit?: ((input: {
     readonly limiter: "authorize" | "exchange"
@@ -320,11 +336,34 @@ const routeLayer = (input: {
         }),
     })),
     Layer.succeed(EnrichmentWorkflow, EnrichmentWorkflow.of({
-      enrich: () => Effect.void as never,
+      enrich: (enrichedLinkId: LinkId) =>
+        Effect.sync(() => input.onEnrich?.(enrichedLinkId)) as never,
     } as never)),
     Layer.succeed(AutoFiling, AutoFiling.of({
-      file: () => Effect.succeed({ _tag: "skipped", reason: "off" }) as never,
+      file: (_userId: UserId, filedSavedItemId: SavedItemId) =>
+        Effect.sync(() => {
+          input.onAutoFile?.(filedSavedItemId)
+          return { _tag: "skipped", reason: "off" }
+        }) as never,
     } as never)),
+    // One Saved Item per imported item, with the item's URL, so a test can
+    // read the response order. What the import writes is a Postgres question,
+    // proven in test/integration.
+    Layer.succeed(LocalLibraryImport, LocalLibraryImport.of({
+      import: (importUserId, library) =>
+        Effect.sync(() => {
+          input.onLocalLibraryImport?.({ userId: importUserId, library })
+          return library.items.map((item, index) => {
+            const saved = makeSavedItem(importUserId, { captureChannel: "ios-app" })
+            return {
+              ...saved,
+              savedItem: { ...saved.savedItem, id: `imported-${index}` as SavedItemId, isRead: item.isRead },
+              link: { ...saved.link, originalUrl: item.url, normalizedUrl: item.url },
+              enrichment: { ...saved.enrichment, status: "enriched" as const },
+            }
+          })
+        }),
+    })),
     Layer.succeed(Organizer, Organizer.of({
       available: false,
       get: () => Effect.succeed({ status: "idle", phase: null, done: 0, total: 0, plan: null }),
@@ -3165,6 +3204,177 @@ describe("HttpApp", () => {
             url: `https://example.com/${index}`,
           })),
         }),
+      }).pipe(Effect.provide(routeLayer({ apiKeyPermissions: { "saved-items": ["capture"] } })))
+
+      expect(response.status).toBe(400)
+    }))
+
+  const localLibraryItem = (url: string, overrides: Record<string, unknown> = {}) => ({
+    url,
+    title: "Device title",
+    description: null,
+    siteName: null,
+    faviconUrl: null,
+    previewSummary: "Device summary",
+    tags: ["ai"],
+    isRead: false,
+    savedAt: "2026-09-14T10:30:00.000Z",
+    folderName: null,
+    ...overrides,
+  })
+
+  const importRequest = (body: unknown, authorization = `Bearer ${apiKey}`) =>
+    request("/v1/saved-items/import", {
+      method: "POST",
+      headers: { authorization, "content-type": "application/json" },
+      body: globalThis.JSON.stringify(body),
+    })
+
+  it.effect("imports a Local Library with an App Session and answers one Saved Item per item, in order", () =>
+    Effect.gen(function* () {
+      const imports: Array<{ readonly userId: UserId; readonly library: LocalLibrary }> = []
+      const layer = routeLayer({
+        sessionUserId: userId,
+        apiKeyValid: false,
+        onLocalLibraryImport: (call) => imports.push(call),
+      })
+
+      const response = yield* importRequest({
+        folders: [{ name: "Reading", emoji: "📚", color: null }],
+        items: [
+          localLibraryItem("https://example.com/b", { isRead: true, folderName: "Reading" }),
+          localLibraryItem("https://example.com/a"),
+        ],
+      }, "Bearer session-token").pipe(Effect.provide(layer))
+
+      expect(response.status).toBe(200)
+      const body = (yield* json(response)) as {
+        readonly savedItems: ReadonlyArray<{
+          readonly id: string
+          readonly originalUrl: string
+          readonly isRead: boolean
+          readonly captureChannel: string
+          readonly enrichmentStatus: string
+          readonly folder: unknown
+        }>
+      }
+      expect(body.savedItems.map((item) => item.originalUrl)).toEqual([
+        "https://example.com/b",
+        "https://example.com/a",
+      ])
+      expect(body.savedItems[0]!.isRead).toBe(true)
+      expect(body.savedItems[0]!.captureChannel).toBe("ios-app")
+      expect(body.savedItems[0]!.enrichmentStatus).toBe("enriched")
+      expect(body.savedItems[0]).toHaveProperty("folder")
+
+      expect(imports).toHaveLength(1)
+      expect(imports[0]!.userId).toBe(userId)
+      expect(imports[0]!.library.items[0]!.savedAt.toISOString()).toBe("2026-09-14T10:30:00.000Z")
+      expect(imports[0]!.library.folders).toEqual([{ name: "Reading", emoji: "📚", color: null }])
+    }))
+
+  it.effect("starts no Enrichment and no Auto-Filing for an imported item", () =>
+    Effect.gen(function* () {
+      const enriched: LinkId[] = []
+      const filed: SavedItemId[] = []
+      const layer = routeLayer({
+        apiKeyPermissions: { "saved-items": ["capture"] },
+        onEnrich: (id) => enriched.push(id),
+        onAutoFile: (id) => filed.push(id),
+      })
+
+      const response = yield* importRequest({
+        folders: [],
+        items: [localLibraryItem("https://example.com/one"), localLibraryItem("https://example.com/two")],
+      }).pipe(Effect.provide(layer))
+      expect(response.status).toBe(200)
+
+      // Capture with the same stubs does start both, so the empty lists below
+      // are the import's doing and not the stubs'.
+      const captured = yield* request("/v1/captures", {
+        method: "POST",
+        headers: { authorization: `Bearer ${apiKey}`, "content-type": "application/json" },
+        body: globalThis.JSON.stringify({ url: "https://example.com/captured" }),
+      }).pipe(Effect.provide(layer))
+      expect(captured.status).toBe(201)
+      yield* Effect.promise(() => new Promise((resolve) => setTimeout(resolve, 20)))
+      expect(enriched).toEqual([linkId])
+      expect(filed).toEqual([savedItemId])
+    }))
+
+  it.effect("imports without the folders:write scope when nothing is filed into a Folder", () =>
+    Effect.gen(function* () {
+      const response = yield* importRequest({
+        folders: [],
+        items: [localLibraryItem("https://example.com/one")],
+      }).pipe(Effect.provide(routeLayer({ apiKeyPermissions: { "saved-items": ["capture"] } })))
+
+      expect(response.status).toBe(200)
+    }))
+
+  it.effect("refuses a Local Library import with Folders without the folders:write scope", () =>
+    Effect.gen(function* () {
+      const response = yield* importRequest({
+        folders: [],
+        items: [localLibraryItem("https://example.com/one", { folderName: "Reading" })],
+      }).pipe(Effect.provide(routeLayer({ apiKeyPermissions: { "saved-items": ["capture"] } })))
+
+      expect(response.status).toBe(401)
+      expect(yield* json<{ readonly message: string }>(response)).toMatchObject({
+        message: "Missing required scope: folders:write.",
+      })
+    }))
+
+  it.effect("refuses a Local Library import without the saved-items capture scope", () =>
+    Effect.gen(function* () {
+      const response = yield* importRequest({ folders: [], items: [] })
+        .pipe(Effect.provide(routeLayer({ apiKeyPermissions: { "saved-items": ["read"] } })))
+
+      expect(response.status).toBe(401)
+      expect(yield* json<{ readonly message: string }>(response)).toMatchObject({
+        message: "Missing required scope: saved-items:capture.",
+      })
+    }))
+
+  it.effect("refuses a Local Library import over the item or Folder limit", () =>
+    Effect.gen(function* () {
+      const imports: unknown[] = []
+      const layer = routeLayer({
+        apiKeyPermissions: { "saved-items": ["capture"], folders: ["write"] },
+        onLocalLibraryImport: (call) => imports.push(call),
+      })
+
+      const tooManyItems = yield* importRequest({
+        folders: [],
+        items: Array.from({ length: LOCAL_LIBRARY_IMPORT_ITEM_LIMIT + 1 }, (_unused, index) =>
+          localLibraryItem(`https://example.com/${index}`)),
+      }).pipe(Effect.provide(layer))
+      expect(tooManyItems.status).toBe(400)
+
+      const tooManyFolders = yield* importRequest({
+        folders: Array.from({ length: LOCAL_LIBRARY_IMPORT_FOLDER_LIMIT + 1 }, (_unused, index) => ({
+          name: `Folder ${index}`,
+          emoji: null,
+          color: null,
+        })),
+        items: [],
+      }).pipe(Effect.provide(layer))
+      expect(tooManyFolders.status).toBe(400)
+
+      const atTheLimit = yield* importRequest({
+        folders: [],
+        items: Array.from({ length: LOCAL_LIBRARY_IMPORT_ITEM_LIMIT }, (_unused, index) =>
+          localLibraryItem(`https://example.com/${index}`)),
+      }).pipe(Effect.provide(layer))
+      expect(atTheLimit.status).toBe(200)
+      expect(imports).toHaveLength(1)
+    }))
+
+  it.effect("refuses a Local Library item whose savedAt is not a date", () =>
+    Effect.gen(function* () {
+      const response = yield* importRequest({
+        folders: [],
+        items: [localLibraryItem("https://example.com/one", { savedAt: "yesterday" })],
       }).pipe(Effect.provide(routeLayer({ apiKeyPermissions: { "saved-items": ["capture"] } })))
 
       expect(response.status).toBe(400)

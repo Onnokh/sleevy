@@ -127,15 +127,17 @@ struct SignedInTabView: View {
         .environment(profileLoader)
         .environment(profileStore)
         .environment(\.moveToFolder, moveToFolderAction)
+        .environment(\.isLocalLibrary, session.isLocal)
         .task {
             // Folder cards suppress their published marker while the profile
             // is private, so the record must be known outside the profile page.
-            await profileStore.load()
+            // A Local Library has no Account, so no profile to load.
+            if !session.isLocal { await profileStore.load() }
             await openDemoScreenIfNeeded()
             await showFirstVisitIfNew()
         }
         .fullScreenCover(isPresented: $showsFirstVisit) {
-            FirstVisitCover(store: store)
+            FirstVisitCover(ownerID: session.userId, store: store)
                 .onDisappear { selectedTab = .library }
         }
         .onChange(of: scenePhase) { _, newPhase in
@@ -449,14 +451,14 @@ struct SignedInTabView: View {
     /// The First Visit, one time, for an Account with nothing saved. An
     /// Account that has saves never sees it.
     private func showFirstVisitIfNew() async {
-        guard !FirstVisit.isDone else { return }
+        guard !FirstVisit.isDone(for: session.userId) else { return }
         await store.loadIfNeeded(for: .completeLibrary)
         let library = store.snapshot(for: .completeLibrary)
         guard library.coverage.hasLoaded else { return }
         if library.items.isEmpty && store.folders.isEmpty && store.pendingSavedItems.isEmpty {
             showsFirstVisit = true
         } else {
-            FirstVisit.markDone()
+            FirstVisit.markDone(for: session.userId)
         }
     }
 
@@ -492,7 +494,7 @@ struct SignedInTabView: View {
         case .settings:
             selectedTab = .sleevy
             sleevyPath = [.settings]
-        case .signIn:
+        case .signIn, .connect:
             break
         case .firstRun:
             selectedTab = .library
@@ -513,6 +515,7 @@ struct SignedInTabView: View {
 
 private struct AccountToolbarModifier: ViewModifier {
     @Environment(AuthStore.self) private var authStore
+    @State private var isConnecting = DemoMode.initialScreen == .connect
     let session: AppSession
     let onSettings: () -> Void
     let onMyProfile: () -> Void
@@ -524,10 +527,18 @@ private struct AccountToolbarModifier: ViewModifier {
                 // actions: that puts the profile first in the vertical bar.
                 ToolbarItem(placement: .topBarTrailing) {
                     Menu {
-                        Button {
-                            onMyProfile()
-                        } label: {
-                            Label("My Profile", systemImage: "person.crop.circle")
+                        if session.isLocal {
+                            Button {
+                                isConnecting = true
+                            } label: {
+                                Label("Connect an Account…", systemImage: "arrow.triangle.2.circlepath")
+                            }
+                        } else {
+                            Button {
+                                onMyProfile()
+                            } label: {
+                                Label("My Profile", systemImage: "person.crop.circle")
+                            }
                         }
 
                         Button {
@@ -536,23 +547,29 @@ private struct AccountToolbarModifier: ViewModifier {
                             Label("Settings", systemImage: "gearshape")
                         }
 
-                        Divider()
+                        if !session.isLocal {
+                            Divider()
 
-                        Button(role: .destructive) {
-                            Task {
-                                await authStore.signOut()
+                            Button(role: .destructive) {
+                                Task {
+                                    await authStore.signOut()
+                                }
+                            } label: {
+                                Label("Sign Out", systemImage: "rectangle.portrait.and.arrow.right")
                             }
-                        } label: {
-                            Label("Sign Out", systemImage: "rectangle.portrait.and.arrow.right")
                         }
                     } label: {
                         AccountAvatarButton(
                             name: session.displayName,
-                            imageURL: session.provider == .google ? authStore.googleUserProfile?.imageURL : nil
+                            imageURL: session.provider == .google ? authStore.googleUserProfile?.imageURL : nil,
+                            isLocal: session.isLocal
                         )
                     }
                     .accessibilityLabel("\(session.displayName) account")
                 }
+            }
+            .sheet(isPresented: $isConnecting) {
+                ConnectAccountSheet(saveCount: authStore.readingListStore?.snapshot(for: .completeLibrary).items.count ?? 0)
             }
     }
 }
