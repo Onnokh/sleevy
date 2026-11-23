@@ -57,6 +57,12 @@ nonisolated enum LocalEnricher {
         return result
     }
 
+    /// Auto-Filing on the device: the one Folder, by name, that the save
+    /// clearly fits, or nil. Nil also where the device has no model.
+    static func folder(for page: PageEnrichment, from folderNames: [String]) async -> String? {
+        await OnDeviceModel.folder(for: page, from: folderNames)
+    }
+
     /// Whether the on-device model can write summaries and Tags here.
     static var hasOnDeviceModel: Bool { OnDeviceModel.isAvailable }
 
@@ -105,7 +111,44 @@ nonisolated private enum OnDeviceModel {
         return nil
     }
 
+    static func folder(for page: PageEnrichment, from folderNames: [String]) async -> String? {
+        #if canImport(FoundationModels)
+        if #available(iOS 26.0, *) {
+            return await folderWithFoundationModels(for: page, from: folderNames)
+        }
+        #endif
+        return nil
+    }
+
     #if canImport(FoundationModels)
+    /// The answer "no Folder fits", next to the Folder names.
+    private static let noFolder = "none"
+
+    @available(iOS 26.0, *)
+    private static func folderWithFoundationModels(for page: PageEnrichment, from folderNames: [String]) async -> String? {
+        guard case .available = SystemLanguageModel.default.availability, !folderNames.isEmpty else { return nil }
+        let about = [page.title, page.summary ?? page.description].compactMap { $0 }.joined(separator: "\n")
+        guard !about.isEmpty else { return nil }
+
+        let choice = DynamicGenerationSchema(
+            name: "Folder",
+            description: "The name of the one Folder the page clearly belongs in, or \(noFolder)",
+            anyOf: folderNames + [noFolder]
+        )
+        guard let schema = try? GenerationSchema(root: choice, dependencies: []) else { return nil }
+        let session = LanguageModelSession(instructions: """
+            A person sorts the web pages they save into Folders. Pick the one \
+            Folder this page clearly belongs in, from its name alone. When no \
+            Folder clearly fits, or more than one could, answer \(noFolder).
+            """)
+        let prompt = "Folders: \(folderNames.joined(separator: ", "))\n\nPage:\n\(String(about.prefix(2_000)))"
+        guard let response = try? await session.respond(to: prompt, schema: schema),
+              let name = try? response.content.value(String.self),
+              name != noFolder, folderNames.contains(name)
+        else { return nil }
+        return name
+    }
+
     @available(iOS 26.0, *)
     @Generable
     struct PageReading {

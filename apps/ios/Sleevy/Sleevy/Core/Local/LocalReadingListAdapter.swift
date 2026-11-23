@@ -15,13 +15,16 @@ final class LocalReadingListAdapter: ReadingListNetworkPort {
     private var enriching: Set<String> = []
     private let fileURL: URL?
     private let enrich: @Sendable (URL) async -> PageEnrichment?
+    private let pickFolder: @Sendable (PageEnrichment, [String]) async -> String?
 
     init(
         fileURL: URL? = LocalLibraryFile.defaultURL,
-        enrich: @escaping @Sendable (URL) async -> PageEnrichment? = { await LocalEnricher.enrich(url: $0) }
+        enrich: @escaping @Sendable (URL) async -> PageEnrichment? = { await LocalEnricher.enrich(url: $0) },
+        pickFolder: @escaping @Sendable (PageEnrichment, [String]) async -> String? = { await LocalEnricher.folder(for: $0, from: $1) }
     ) {
         self.fileURL = fileURL
         self.enrich = enrich
+        self.pickFolder = pickFolder
         self.library = fileURL.flatMap(LocalLibraryFile.load) ?? LocalLibraryFile()
         // Enrichments the app did not finish before it was closed.
         for item in library.items where item.enrichmentStatus == .pending {
@@ -194,13 +197,26 @@ final class LocalReadingListAdapter: ReadingListNetworkPort {
         else { return }
         enriching.insert(id)
         let enrich = self.enrich
+        let pickFolder = self.pickFolder
         Task { [weak self] in
             let page = await enrich(url)
-            self?.finishEnrichment(of: id, with: page)
+            // Auto-Filing: only a save that arrived without a Folder.
+            var folderName: String?
+            if let page, let names = self?.unfiledFolderNames(for: id) {
+                folderName = await pickFolder(page, names)
+            }
+            self?.finishEnrichment(of: id, with: page, folderName: folderName)
         }
     }
 
-    private func finishEnrichment(of id: String, with page: PageEnrichment?) {
+    /// The Folder names to file a save into, or nil when the save already
+    /// has a Folder or there is none.
+    private func unfiledFolderNames(for id: String) -> [String]? {
+        guard library.items.first(where: { $0.id == id })?.folder == nil, !library.folders.isEmpty else { return nil }
+        return library.folders.map(\.name)
+    }
+
+    private func finishEnrichment(of id: String, with page: PageEnrichment?, folderName: String? = nil) {
         enriching.remove(id)
         guard let index = library.items.firstIndex(where: { $0.id == id }) else { return }
         var item = library.items[index]
@@ -222,6 +238,10 @@ final class LocalReadingListAdapter: ReadingListNetworkPort {
                     markdown: markdown,
                     extractedAt: Date()
                 )
+            }
+            if item.folder == nil, let folderName,
+               let folder = library.folders.first(where: { $0.name == folderName }) {
+                item.folder = FolderSummary(id: folder.id, name: folder.name, emoji: folder.emoji, color: folder.color)
             }
             item.enrichmentStatus = .enriched
         } else {

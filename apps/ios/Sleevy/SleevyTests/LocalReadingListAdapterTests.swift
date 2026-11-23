@@ -76,7 +76,8 @@ struct LocalReadingListAdapterTests {
 
     @Test func theLibraryIsKeptOnDisk() async throws {
         let fileURL = makeFileURL()
-        let adapter = LocalReadingListAdapter(fileURL: fileURL) { _ in Self.page }
+        // No Auto-Filing here: the save is moved by hand.
+        let adapter = LocalReadingListAdapter(fileURL: fileURL, enrich: { _ in Self.page }) { _, _ in nil }
         let folder = try await adapter.createFolder(name: "Swift", emoji: "🦅", color: "orange")
         let saved = try await adapter.capture(url: "https://www.swift.org/", sourceName: nil, captureChannel: nil)
         _ = try await enriched(adapter)
@@ -99,6 +100,30 @@ struct LocalReadingListAdapterTests {
 
         #expect(try await adapter.loadFolders().isEmpty)
         #expect(try await adapter.loadSavedItems(.libraryRoot).map(\.id) == [saved.id])
+    }
+
+    @Test func aNewSaveIsFiledIntoTheFolderItFits() async throws {
+        let fileURL = makeFileURL()
+        let setup = LocalReadingListAdapter(fileURL: fileURL) { _ in nil }
+        let swift = try await setup.createFolder(name: "Swift", emoji: nil, color: nil)
+        _ = try await setup.createFolder(name: "Cooking", emoji: nil, color: nil)
+
+        let adapter = LocalReadingListAdapter(fileURL: fileURL, enrich: { _ in Self.page }) { _, names in
+            names.contains("Swift") ? "Swift" : nil
+        }
+        _ = try await adapter.capture(url: "https://www.swift.org/blog/swift-6.2/", sourceName: nil, captureChannel: nil)
+        let item = try await enriched(adapter)
+        #expect(item.folder?.id == swift.id)
+    }
+
+    @Test func noFolderFitsLeavesTheSaveUnfiled() async throws {
+        let fileURL = makeFileURL()
+        let setup = LocalReadingListAdapter(fileURL: fileURL) { _ in nil }
+        _ = try await setup.createFolder(name: "Cooking", emoji: nil, color: nil)
+
+        let adapter = LocalReadingListAdapter(fileURL: fileURL, enrich: { _ in Self.page }) { _, _ in nil }
+        _ = try await adapter.capture(url: "https://www.swift.org/", sourceName: nil, captureChannel: nil)
+        #expect(try await enriched(adapter).folder == nil)
     }
 
     @Test func publishingAFolderNeedsAnAccount() async throws {
