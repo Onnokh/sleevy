@@ -25,7 +25,6 @@ struct SleevyApp: App {
         if DemoMode.isEnabled {
             ShareSetup.reset()
             FirstVisit.reset()
-            UserDefaults.standard.removeObject(forKey: "onboarding.share-row-hidden")
         }
     }
 

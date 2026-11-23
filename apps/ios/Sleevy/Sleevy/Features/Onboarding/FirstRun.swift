@@ -155,38 +155,6 @@ struct FirstRunRecents: View {
     }
 }
 
-// MARK: - Share Setup row
-
-/// After the first save, until Share Setup is done: the same row as in the
-/// first run, so the way to save from any app stays one tap away. A swipe
-/// hides it.
-struct ShareSetupRow: View {
-    var store: ReadingListStore
-    @AppStorage("onboarding.share-row-hidden") private var isHidden = false
-    @State private var isSettingUpShare = false
-
-    var body: some View {
-        if !isHidden {
-            StartRow(
-                systemImage: "square.and.arrow.up",
-                title: "Save from any app",
-                subtitle: "In Safari or X, tap Share, then Sleevy"
-            ) {
-                Button("Set Up") { isSettingUpShare = true }
-                    .buttonStyle(.bordered)
-                    .buttonBorderShape(.capsule)
-                    .controlSize(.small)
-            }
-            .swipeActions(edge: .trailing) {
-                Button("Hide", systemImage: "eye.slash") { isHidden = true }
-            }
-            .sheet(isPresented: $isSettingUpShare) {
-                ShareSetupSheet(store: store)
-            }
-        }
-    }
-}
-
 // MARK: - Enrichment Reveal
 
 /// Under the first save's row while it is enriched: Sleevy reading the page,

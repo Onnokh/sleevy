@@ -7,12 +7,7 @@ enum FirstVisit {
     private static let key = "onboarding.first-visit-done"
 
     static var isDone: Bool { UserDefaults.standard.bool(forKey: key) }
-    /// Also hides the Share Setup row in the Library: the First Visit just
-    /// taught it.
-    static func markDone() {
-        UserDefaults.standard.set(true, forKey: key)
-        UserDefaults.standard.set(true, forKey: "onboarding.share-row-hidden")
-    }
+    static func markDone() { UserDefaults.standard.set(true, forKey: key) }
     static func reset() { UserDefaults.standard.removeObject(forKey: key) }
 }
 

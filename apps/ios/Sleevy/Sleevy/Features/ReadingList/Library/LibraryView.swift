@@ -37,7 +37,7 @@ struct LibraryView: View {
                 ProgressView("Loading your library...")
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
-                libraryList(projection: projection, isFirstRun: isFirstRun(complete), saveCount: complete.destinationCount)
+                libraryList(projection: projection, isFirstRun: isFirstRun(complete))
             }
         }
         .background(Color(.systemBackground))
@@ -90,14 +90,10 @@ struct LibraryView: View {
             && !filter.isActive
     }
 
-    private func libraryList(projection: LibraryProjection, isFirstRun: Bool, saveCount: Int) -> some View {
+    private func libraryList(projection: LibraryProjection, isFirstRun: Bool) -> some View {
         List {
             if isFirstRun {
                 FirstRunRows(store: store)
-            } else if saveCount > 0, !ShareSetup.isDone(in: store) {
-                Section {
-                    ShareSetupRow(store: store)
-                }
             }
 
             // One section, so the first date heading sits close under
