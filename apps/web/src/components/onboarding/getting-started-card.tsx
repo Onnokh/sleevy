@@ -24,7 +24,7 @@ const PaletteKeys = () => kbd(useHotkeyLabel("Mod+K"))
 const STEP_COPY: Record<GettingStartedStepKey, StepCopy> = {
   save: {
     title: "Save a link",
-    todo: "Paste one in the Inbox, or press N.",
+    todo: "Paste one in Recents, or press N.",
     done: "Your first link is saved.",
     marker: kbd("N"),
   },

@@ -11,7 +11,7 @@ const shortcuts = [
   { keys: ["c"], description: "Copy URL" },
   { keys: ["d"], description: "Delete item" },
   { keys: ["n"], description: "Capture URL" },
-  { keys: ["g", "i"], description: "Go to Inbox" },
+  { keys: ["g", "i"], description: "Go to Recents" },
   { keys: ["g", "l"], description: "Go to Library" },
   { keys: ["Mod", "K"], description: "Command palette" },
   { keys: ["?"], description: "This help" },

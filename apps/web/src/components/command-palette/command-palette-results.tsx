@@ -1,6 +1,6 @@
 import type { ComponentProps } from "react"
 import { CommandGroup, CommandItem, useCommandState } from "cmdk"
-import { Folder as FolderIcon, Hash, Inbox, Keyboard, Library, ListChecks, Monitor, Plus, RotateCcw, Rss, Settings } from "lucide-react"
+import { Clock, Folder as FolderIcon, Hash, Keyboard, Library, ListChecks, Monitor, Plus, RotateCcw, Rss, Settings } from "lucide-react"
 
 import type { Folder } from "../../sleevy/folders"
 import type { SavedItem } from "../../sleevy/saved-items"
@@ -131,9 +131,9 @@ export function CommandPaletteResults({
       </CommandGroup>
 
       <CommandGroup heading="Navigation">
-        <CommandItem value={COMMAND_VALUES.inbox} keywords={["go to inbox", "inbox"]} onSelect={onNavigateInbox}>
-        <Inbox size={ICON_SIZE} className="cmdk-icon" />
-        <div className="cmdk-item-text"><span className="cmdk-item-title">Inbox</span></div>
+        <CommandItem value={COMMAND_VALUES.inbox} keywords={["go to recents", "recents", "inbox"]} onSelect={onNavigateInbox}>
+        <Clock size={ICON_SIZE} className="cmdk-icon" />
+        <div className="cmdk-item-text"><span className="cmdk-item-title">Recents</span></div>
         <CommandItemMeta action="Navigation" modifierKey={modifierKey} shortcut={shortcutForValue(COMMAND_VALUES.inbox, modifierKey ?? "Ctrl")} />
         </CommandItem>
         <CommandItem value={COMMAND_VALUES.library} keywords={["go to library", "library"]} onSelect={onNavigateLibrary}>

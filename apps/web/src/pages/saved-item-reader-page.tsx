@@ -67,11 +67,8 @@ export function SavedItemReaderPage() {
     ?? allItemsQuery.data?.savedItems.find((item) => item.id === savedItemId)
 
   // What the list is showing. It is a Library surface whatever it was opened
-  // from: the Inbox is the triage surface for *unread* Saved Items, and this
-  // list keeps the read ones too, which is the Library's job — read Saved Items
-  // leave the Inbox and stay in the Library. Naming it "Inbox" promised a set
-  // it does not hold, and the rows a reader knew from the Inbox turned up in
-  // unfamiliar places with read ones between them.
+  // from: it holds only the Saved Items with a Reader View, in the Library's
+  // order, so naming it after Recents would promise a set it does not hold.
   //
   // The No Folder Filter has no user-facing label of its own, so the unfiled
   // root is simply the Library too. Only a Folder View is named, after its

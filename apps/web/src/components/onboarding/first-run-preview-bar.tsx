@@ -8,7 +8,7 @@ export function FirstRunPreviewBar({ preview }: { readonly preview: FirstRunPrev
     <div className={styles.bar} role="status">
       <span className={styles.label}>First-run preview</span>
       <span className={styles.note}>
-        Saves are real. Only this Inbox is in preview{preview.sampleAi ? ", with a sample summary" : ""}.
+        Saves are real. Only Recents is in preview{preview.sampleAi ? ", with a sample summary" : ""}.
       </span>
       <button type="button" className={styles.exit} onClick={exitFirstRunPreview}>Exit preview</button>
     </div>

@@ -3,7 +3,7 @@ import { SleevyPage } from "../../pages/sleevy-page"
 
 export const Route = createFileRoute("/_app/inbox")({
   head: () => ({
-    meta: [{ title: "Inbox - Sleevy" }],
+    meta: [{ title: "Recents - Sleevy" }],
   }),
   component: SleevyPage,
 })

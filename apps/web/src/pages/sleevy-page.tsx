@@ -35,7 +35,10 @@ export function SleevyPage() {
   const loadedItems = savedItemsQuery.data?.savedItems ?? []
   const allItems = preview ? previewSavedItems(loadedItems, preview) : loadedItems
   const revealItem = revealed ? allItems.find((item) => item.id === revealed.id) ?? revealed : null
-  const items = allItems.filter((item) => !item.isRead && item.id !== revealItem?.id)
+  // Recents: every save, read or not, newest first. Reading one does not
+  // take it out.
+  const items = allItems.filter((item) => item.id !== revealItem?.id)
+  const unreadCount = items.filter((item) => !item.isRead).length
   const isLoaded = !savedItemsQuery.isLoading && !savedItemsQuery.isError
   const isFirstRun = isLoaded && allItems.length === 0 && !revealItem
 
@@ -63,17 +66,17 @@ export function SleevyPage() {
   const subtitle = isFirstRun
     ? "Nothing saved yet"
     : revealItem
-      ? `${items.length + 1} unread`
-      : `${items.length} unread`
+      ? `${unreadCount + 1} unread`
+      : `${unreadCount} unread`
 
   return (
     <>
-      <PageTitleBar title="Inbox" watch={titleEl} />
+      <PageTitleBar title="Recents" watch={titleEl} />
 
       <div className="page-header page-header-card">
         <AuroraBackground className="page-header-card-shader" />
         <div className="page-heading">
-          <h1 className="page-title" ref={setTitleEl}>Inbox</h1>
+          <h1 className="page-title" ref={setTitleEl}>Recents</h1>
           {savedItemsQuery.data ? <p className="page-subtitle">{subtitle}</p> : null}
         </div>
       </div>
@@ -119,8 +122,8 @@ export function SleevyPage() {
             <span className="empty-state-icon" aria-hidden="true">
               <CircleCheck size={28} strokeWidth={1.75} />
             </span>
-            <p>All caught up.</p>
-            <p className="empty-state-hint">Unread saves will appear here.</p>
+            <p>No saves yet.</p>
+            <p className="empty-state-hint">Your saves will appear here.</p>
           </div>
         ) : (
           <ul className="item-list">

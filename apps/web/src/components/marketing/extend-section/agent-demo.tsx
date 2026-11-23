@@ -1,6 +1,6 @@
 import { type CSSProperties, type RefObject, useEffect, useState } from "react"
 import clsx from "clsx"
-import { Folder as FolderIcon, Inbox as InboxIcon } from "lucide-react"
+import { Clock as RecentsIcon, Folder as FolderIcon } from "lucide-react"
 import { AnimatePresence, m, type Transition } from "motion/react"
 
 import {
@@ -251,7 +251,7 @@ function AppPane({ state }: { state: PaneState }) {
         >
           <div className={styles.paneHead}>
             <p className={styles.paneTitle}>
-              {state.view === "folder" ? <FolderIcon size={18} strokeWidth={1.75} /> : <InboxIcon size={18} strokeWidth={1.75} />}
+              {state.view === "folder" ? <FolderIcon size={18} strokeWidth={1.75} /> : <RecentsIcon size={18} strokeWidth={1.75} />}
               {state.title}
             </p>
             <p className={styles.paneSubtitle}>{state.subtitle}</p>

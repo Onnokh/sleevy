@@ -1,6 +1,6 @@
 import { createContext, use, useMemo, useState, type DragEvent, type ReactNode } from "react"
 import { Link, useLocation, useNavigate } from "@tanstack/react-router"
-import { ChevronRight, Globe2, Hash, Inbox, Library, MoreVertical, Settings, SquarePlus } from "lucide-react"
+import { ChevronRight, Clock, Globe2, Hash, Library, MoreVertical, Settings, SquarePlus } from "lucide-react"
 
 import { useKeyboardNav } from "../../contexts/keyboard-nav-context"
 import { useProfile } from "../../sleevy/profile"
@@ -260,7 +260,7 @@ export function LibraryNav() {
     <SidebarSection
       heading="Sleeve"
       items={[
-        { key: "inbox", label: "Inbox", count: unreadCount, icon: <Inbox size={14} />, to: "/inbox", exact: true },
+        { key: "inbox", label: "Recents", count: unreadCount, icon: <Clock size={14} />, to: "/inbox", exact: true },
         {
           key: "library",
           label: "Library",
