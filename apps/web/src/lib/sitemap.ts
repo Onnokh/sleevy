@@ -68,6 +68,21 @@ export const staticSitemapUrls: ReadonlyArray<SitemapUrl> = [
   { loc: `${SITE_ORIGIN}/articles/chrome-bookmarks-bar`, lastmod: "2026-09-11", changefreq: "monthly", priority: "0.8" },
 ]
 
+// The documentation pages the fixed list does not name yet, as sitemap entries.
+// The docs source adds one API Reference page for each OpenAPI operation, so
+// these come and go with the API Contract. They take the `lastmod` of the API
+// Reference index, which changes when the generated reference does.
+export const docsSitemapUrls = (docsPaths: ReadonlyArray<string>): ReadonlyArray<SitemapUrl> => {
+  const listed = new Set(staticSitemapUrls.map((url) => url.loc))
+  const apiReference = staticSitemapUrls.find((url) => url.loc === `${SITE_ORIGIN}/docs/api-reference`)
+  const lastmod = apiReference?.lastmod ?? staticSitemapUrls[0].lastmod
+  return [...new Set(docsPaths)]
+    .map((path) => `${SITE_ORIGIN}${path}`)
+    .filter((loc) => !listed.has(loc))
+    .sort()
+    .map((loc) => ({ loc, lastmod }))
+}
+
 // A Handle is 3 to 30 characters of a-z, 0-9, `-`, and `_`, so no Public Profile
 // URL can carry a character XML has to escape. Escaping anyway costs nothing and
 // keeps one malformed entry from breaking the whole document.

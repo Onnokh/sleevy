@@ -16,6 +16,8 @@ import { source, slugsToMarkdownPath } from "../../lib/source"
 import { DocsShell } from "../../components/docs/docs-layout"
 import { useMDXComponents } from "../../components/docs/mdx-components"
 import { OpenAPIPage } from "../../components/docs/api-page"
+import { metaDescription } from "../../lib/meta-description"
+import { StructuredData } from "../../components/marketing/structured-data"
 
 // Annotated explicitly: letting TS infer `loaderData` from the sibling `loader`
 // option is circular and collapses the route's loader type to `never`.
@@ -24,7 +26,8 @@ type DocsLoaderData = Awaited<ReturnType<typeof serverLoader>>
 export const Route = createFileRoute("/docs/$")({
   head: ({ loaderData }: { loaderData?: DocsLoaderData }) => {
     if (!loaderData) return {}
-    const { title, description, url } = loaderData
+    const { title, url } = loaderData
+    const description = loaderData.description ? metaDescription(loaderData.description) : undefined
     const fullTitle = `${title} | Sleevy docs`
     return {
       meta: [
@@ -108,6 +111,32 @@ function PageActions({ markdownUrl }: { markdownUrl: string }) {
   )
 }
 
+// Every documentation page is a technical article, so a crawler can tell it
+// apart from a marketing page. TechArticle is the schema.org Article subtype for
+// how-to and reference text; the author and publisher are the Organization the
+// home page describes.
+function docsArticle({ title, description, url }: { title?: string; description?: string; url: string }) {
+  const pageUrl = `https://sleevy.app${url}`
+  return {
+    "@context": "https://schema.org",
+    "@type": "TechArticle",
+    "@id": `${pageUrl}#article`,
+    url: pageUrl,
+    mainEntityOfPage: { "@type": "WebPage", "@id": pageUrl },
+    ...(title ? { headline: title } : {}),
+    ...(description ? { description } : {}),
+    inLanguage: "en",
+    isPartOf: { "@type": "WebSite", "@id": "https://sleevy.app/#website" },
+    author: {
+      "@type": "Organization",
+      "@id": "https://sleevy.app/#organization",
+      name: "Sleevy",
+      url: "https://sleevy.app/",
+    },
+    publisher: { "@id": "https://sleevy.app/#organization" },
+  }
+}
+
 function Page() {
   const page = useFumadocsLoader(Route.useLoaderData())
   if (!page) return null
@@ -127,5 +156,10 @@ function Page() {
     content = <Suspense>{clientLoader.useContent(page.path, page)}</Suspense>
   }
 
-  return <DocsShell tree={page.pageTree}>{content}</DocsShell>
+  return (
+    <DocsShell tree={page.pageTree}>
+      <StructuredData data={docsArticle(page)} />
+      {content}
+    </DocsShell>
+  )
 }

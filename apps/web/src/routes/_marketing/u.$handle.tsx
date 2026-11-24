@@ -67,7 +67,9 @@ export const Route = createFileRoute("/_marketing/u/$handle")({
     if (!loaderData) return {}
     const { profile, items } = loaderData
     const title = `@${profile.handle} on Sleevy`
-    const description = `${profile.publicSavedItemCount} links saved publicly by @${profile.handle}.`
+    // Long enough that crawlers do not flag it as too short, and short enough
+    // for the 160-character limit with the longest Handle (30 characters).
+    const description = `${profile.publicSavedItemCount} links saved publicly by @${profile.handle} on Sleevy. Browse the reading list, newest first, and save any link to your own read-later queue.`
 
     return {
       meta: [

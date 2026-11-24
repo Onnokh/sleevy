@@ -1,4 +1,5 @@
 import styles from "./privacy-page.module.scss"
+import { EmailLink } from "../components/marketing/email-link"
 
 const sections = [
   {
@@ -89,7 +90,7 @@ export function PrivacyPage() {
       </div>
 
       <p className={styles.contact}>
-        For privacy questions, data requests, or deletion help, contact <a href="mailto:privacy@sleevy.app">privacy@sleevy.app</a>.
+        For privacy questions, data requests, or deletion help, contact <EmailLink address="privacy@sleevy.app" />.
       </p>
     </article>
   )

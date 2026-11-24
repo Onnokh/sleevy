@@ -78,6 +78,7 @@ export function MarketingFooter() {
           <Link to="/articles">Articles</Link>
           <Link to="/docs/$" params={{ _splat: "" }}>Sleevy API documentation</Link>
           <a href="https://github.com/Onnokh/sleevy" target="_blank" rel="noopener noreferrer">GitHub</a>
+          <Link to="/about">About</Link>
           <Link to="/support">Support</Link>
           <Link to="/privacy">Privacy</Link>
         </nav>

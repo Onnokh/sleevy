@@ -111,7 +111,6 @@ const homePageStructuredData = {
         "@type": "ServiceChannel",
         serviceUrl: "https://api.sleevy.app",
         name: "Sleevy REST API",
-        serviceLocation: { "@id": "https://sleevy.app/#organization" },
       },
     },
     {

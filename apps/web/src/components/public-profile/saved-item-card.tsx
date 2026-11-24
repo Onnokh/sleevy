@@ -22,8 +22,15 @@ const OUTBOUND_REL = "ugc nofollow noopener noreferrer"
 
 const bareHost = (host: string) => host.replace(/^www\./, "")
 
-const faviconFor = (item: PublicSavedItem) =>
-  item.faviconUrl ?? item.faviconLightUrl ?? item.faviconDarkUrl ?? null
+// Link Metadata can carry an image address over plain http. This page is served
+// over https, so such an image is mixed content: browsers upgrade or block it,
+// and crawlers report the page for it. The https address is asked for instead.
+const httpsImage = (url: string) => url.replace(/^http:\/\//i, "https://")
+
+const faviconFor = (item: PublicSavedItem) => {
+  const favicon = item.faviconUrl ?? item.faviconLightUrl ?? item.faviconDarkUrl ?? null
+  return favicon ? httpsImage(favicon) : null
+}
 
 // A host with no favicon gets its initial rather than an empty square, so a card
 // is never anonymous. x.com serves none that the fetcher captures, which used to
@@ -113,7 +120,7 @@ const PostCard = ({
       <div className={styles.postBody}>
         <header className={styles.author}>
           {item.authorAvatarUrl
-            ? <img className={styles.avatar} src={item.authorAvatarUrl} alt="" loading="lazy" />
+            ? <img className={styles.avatar} src={httpsImage(item.authorAvatarUrl)} alt="" loading="lazy" />
             : <span className={styles.avatarFallback} aria-hidden="true">{initialOf(name)}</span>}
           <div className={styles.authorNames}>
             <span className={styles.authorName}>{name}</span>
@@ -135,7 +142,7 @@ const PostCard = ({
       {/* The same thumbnail a Link Card uses, so a post keeps the rhythm of the
           list rather than standing three cards tall. */}
       {item.imageUrl
-        ? <img className={styles.thumbnail} src={item.imageUrl} alt="" loading="lazy" />
+        ? <img className={styles.thumbnail} src={httpsImage(item.imageUrl)} alt="" loading="lazy" />
         : null}
 
       <Cover item={item} label={label} />
@@ -174,7 +181,7 @@ const LinkCard = ({
       </div>
 
       {item.imageUrl
-        ? <img className={styles.thumbnail} src={item.imageUrl} alt="" loading="lazy" />
+        ? <img className={styles.thumbnail} src={httpsImage(item.imageUrl)} alt="" loading="lazy" />
         : null}
 
       <Cover item={item} label={title} />
