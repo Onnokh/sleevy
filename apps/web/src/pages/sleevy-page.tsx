@@ -6,12 +6,13 @@ import { type SavedItem, useDeleteItem, useMarkAsRead, useSavedItems, useSetRead
 import { gettingStartedSteps, useGettingStarted } from "../sleevy/onboarding"
 import { previewSavedItems, useFirstRunPreview } from "../sleevy/first-run-preview"
 import { FirstRunPreviewBar } from "../components/onboarding/first-run-preview-bar"
-import { AuroraBackground } from "../components/aurora/aurora-background"
 import { EnrichmentReveal } from "../components/onboarding/enrichment-reveal"
 import { FirstRunInbox } from "../components/onboarding/first-run-inbox"
 import { GettingStartedCard } from "../components/onboarding/getting-started-card"
+import { PageActions } from "../components/ui/page-actions/page-actions"
 import { PageTitleBar } from "../components/ui/page-title-bar/page-title-bar"
 import { SavedCard } from "../components/saved-card/saved-card"
+import { SavedItemList } from "../components/saved-card/saved-item-list"
 import { SavedListSkeleton } from "../components/saved-card/saved-card-skeleton"
 import { useKeyboardNav } from "../contexts/keyboard-nav-context"
 import { useOpenSavedItem } from "../hooks/use-open-saved-item"
@@ -73,68 +74,70 @@ export function SleevyPage() {
     <>
       <PageTitleBar title="Recents" watch={titleEl} />
 
-      <div className="page-header page-header-card">
-        <AuroraBackground className="page-header-card-shader" />
-        <div className="page-heading">
-          <h1 className="page-title" ref={setTitleEl}>Recents</h1>
-          {savedItemsQuery.data ? <p className="page-subtitle">{subtitle}</p> : null}
-        </div>
-      </div>
-
-      {savedItemsQuery.isLoading ? <SavedListSkeleton /> : null}
-      {savedItemsQuery.isError ? <p>Could not load saved items.</p> : null}
-
-      {/* The layout features the first save needs: the capture field grows
-          into the Enrichment Reveal, the reveal folds into its row, and the
-          Getting Started Card opens above it. */}
-      <LazyMotion features={domMax}>
-        <MotionConfig reducedMotion="user">
-          {isFirstRun ? <FirstRunInbox onCaptured={setRevealed} /> : null}
-          {revealItem ? (
-            <EnrichmentReveal
-              item={revealItem}
-              onSettled={() => {
-                setRevealed(null)
-                setJustSettled(true)
-              }}
-            />
-          ) : null}
-
-          {showsGettingStarted ? (
-            <GettingStartedCard
-              steps={steps}
-              opens={justSettled}
-              onDismiss={gettingStarted.dismiss}
-              onIphoneDone={gettingStarted.markIphoneHandOffSeen}
-              onStep={(key) => {
-                if (key === "save") openCaptureDialog()
-                else if (key === "open") setSelectedIndex(0)
-                else openPalette()
-              }}
-            />
-          ) : null}
-        </MotionConfig>
-      </LazyMotion>
-
-      {isLoaded && !isFirstRun && !revealItem ? (
-        items.length === 0 ? (
-          <div className={showsGettingStarted ? "empty-state empty-state-compact" : "empty-state"}>
-            <span className="empty-state-icon" aria-hidden="true">
-              <CircleCheck size={28} strokeWidth={1.75} />
-            </span>
-            <p>No saves yet.</p>
-            <p className="empty-state-hint">Your saves will appear here.</p>
+      <div className="page-column">
+        <div className="page-header">
+          <div className="page-heading">
+            <h1 className="page-title" ref={setTitleEl}>Recents</h1>
+            {savedItemsQuery.data ? <p className="page-subtitle">{subtitle}</p> : null}
           </div>
-        ) : (
-          <ul className="item-list">
-            {items.map((item, index) => (
-              <li key={item.id}>
+          <PageActions />
+        </div>
+
+        {savedItemsQuery.isLoading ? <SavedListSkeleton /> : null}
+        {savedItemsQuery.isError ? <p>Could not load saved items.</p> : null}
+
+        {/* The layout features the first save needs: the capture field grows
+            into the Enrichment Reveal, the reveal folds into its row, and the
+            Getting Started Card opens above it. */}
+        <LazyMotion features={domMax}>
+          <MotionConfig reducedMotion="user">
+            {isFirstRun ? <FirstRunInbox onCaptured={setRevealed} /> : null}
+            {revealItem ? (
+              <EnrichmentReveal
+                item={revealItem}
+                onSettled={() => {
+                  setRevealed(null)
+                  setJustSettled(true)
+                }}
+              />
+            ) : null}
+
+            {showsGettingStarted ? (
+              <GettingStartedCard
+                steps={steps}
+                opens={justSettled}
+                onDismiss={gettingStarted.dismiss}
+                onIphoneDone={gettingStarted.markIphoneHandOffSeen}
+                onStep={(key) => {
+                  if (key === "save") openCaptureDialog()
+                  else if (key === "open") setSelectedIndex(0)
+                  else openPalette()
+                }}
+              />
+            ) : null}
+          </MotionConfig>
+        </LazyMotion>
+
+        {isLoaded && !isFirstRun && !revealItem ? (
+          items.length === 0 ? (
+            <div className={showsGettingStarted ? "empty-state empty-state-compact" : "empty-state"}>
+              <span className="empty-state-icon" aria-hidden="true">
+                <CircleCheck size={28} strokeWidth={1.75} />
+              </span>
+              <p>No saves yet.</p>
+              <p className="empty-state-hint">Your saves will appear here.</p>
+            </div>
+          ) : (
+            <SavedItemList
+              items={items}
+              groupsByDate
+              renderItem={(item, index) => (
                 <SavedCard item={item} isSelected={index === selectedIndex} pendingDelete={index === selectedIndex && pendingDelete} onDelete={(id) => deleteMutation.mutate(id)} onOpen={(id) => markAsReadMutation.mutate(id)} onSetReadState={(id, isRead) => setReadStateMutation.mutate({ id, isRead })} />
-              </li>
-            ))}
-          </ul>
-        )
-      ) : null}
+              )}
+            />
+          )
+        ) : null}
+      </div>
 
       {preview ? <FirstRunPreviewBar preview={preview} /> : null}
     </>
