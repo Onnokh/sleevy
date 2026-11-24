@@ -20,6 +20,11 @@ struct ContentView: View {
                 if authStore.isRestoringSession {
                     ProgressView("Checking session...")
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if !authStore.hasRestoredSession {
+                    // A cold start before the first session check: no
+                    // session yet does not mean signed out.
+                    Color.clear
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
                     signedOutView
                         .frame(maxWidth: .infinity, maxHeight: .infinity)

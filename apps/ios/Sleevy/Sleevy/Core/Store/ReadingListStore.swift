@@ -39,7 +39,11 @@ final class ReadingListStore {
     private(set) var completeLibrarySnapshot = RetrievalSnapshot.notRequested
     private(set) var libraryRootSnapshot = RetrievalSnapshot.notRequested
     private var folderSnapshots: [String: RetrievalSnapshot] = [:]
-    private(set) var folders: [Folder] = []
+    /// Kept on disk too, so a cold start shows the Folders with the cached
+    /// saves and not only when the server answers.
+    private(set) var folders: [Folder] = [] {
+        didSet { persistFolders() }
+    }
     private(set) var pendingSavedItems: [PendingSavedItem] = []
     private(set) var pendingCaptureCount = 0
     private(set) var status = SyncStatus()
@@ -945,6 +949,7 @@ final class ReadingListStore {
     // MARK: - Persistence & pending captures
 
     private func restoreCachedItems() async {
+        restoreCachedFolders()
         guard let cached = await cache.load() else { return }
         // Mutate the live index rather than swapping in the decoded instance:
         // `updateIndex` detects item changes by comparing `itemRevision`, and
@@ -1149,6 +1154,23 @@ final class ReadingListStore {
             appropriateFor: nil,
             create: true
         )
+    }
+
+    private func restoreCachedFolders() {
+        guard folders.isEmpty,
+              let data = statusDefaults.data(forKey: Self.foldersDefaultsKey(for: userId)),
+              let cached = try? JSONDecoder().decode([Folder].self, from: data)
+        else { return }
+        folders = cached
+    }
+
+    private func persistFolders() {
+        guard let data = try? JSONEncoder().encode(folders) else { return }
+        statusDefaults.set(data, forKey: Self.foldersDefaultsKey(for: userId))
+    }
+
+    private static func foldersDefaultsKey(for userId: String) -> String {
+        "reading-list-folders.\(userId)"
     }
 
     private static func lastSyncDefaultsKey(for userId: String) -> String {
