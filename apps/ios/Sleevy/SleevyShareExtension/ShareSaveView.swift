@@ -1,3 +1,4 @@
+import Metal
 import Observation
 import SwiftUI
 
@@ -36,6 +37,12 @@ struct ShareSaveView: View {
     var model: ShareSaveModel
     var onClose: () -> Void
 
+    /// Whether this GPU draws the live glass (Apple 9: A17 Pro, M3 and
+    /// later). Others get a still of the same glass, so the save sheet runs
+    /// one shader, the light, instead of two: an extension has little memory
+    /// and GPU time on an older iPhone, and the sheet must never cost the save.
+    static let drawsLiveGlass = MTLCreateSystemDefaultDevice()?.supportsFamily(.apple9) ?? false
+
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
@@ -46,7 +53,7 @@ struct ShareSaveView: View {
             ZStack(alignment: .topLeading) {
                 // The glass keeps its own 30 frames a second; it only asks
                 // where the light stands at each of them.
-                SleevyGlassBackdrop { date in
+                SleevyGlassBackdrop(still: Self.drawsLiveGlass ? nil : Image("ShareGlassStill")) { date in
                     SleevyGlassLight(
                         point: CGPoint(x: pill.midX / size.width, y: pill.midY / size.height),
                         strength: Frame(model: model, now: date, reduceMotion: reduceMotion).lightStrength

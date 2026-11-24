@@ -66,6 +66,14 @@ final class ShareViewController: UIViewController {
             save.view.trailingAnchor.constraint(equalTo: view.trailingAnchor),
         ])
         save.didMove(toParent: self)
+
+        // The save starts now, before the sheet draws its first frame: what
+        // the sheet shows must never decide whether the link is kept.
+        guard !hasStarted else { return }
+        hasStarted = true
+        Task { @MainActor in
+            await submitSharedItem()
+        }
     }
 
     /// Shows the save, lets the inhale play, and closes the sheet.
@@ -74,17 +82,6 @@ final class ShareViewController: UIViewController {
         let hold = ShareSaveModel.inhaleDuration + (phase == .savedOffline ? 1.0 : 0.5)
         try? await Task.sleep(for: .seconds(hold))
         extensionContext?.completeRequest(returningItems: nil)
-    }
-
-    override func viewDidAppear(_ animated: Bool) {
-        super.viewDidAppear(animated)
-
-        guard !hasStarted else { return }
-        hasStarted = true
-
-        Task { @MainActor in
-            await submitSharedItem()
-        }
     }
 
     private func submitSharedItem() async {
@@ -134,6 +131,11 @@ final class ShareViewController: UIViewController {
             }
 
             let token = try loadSharedAuthToken()
+            // The link goes in the queue first, the queue the app sends when
+            // it opens, and leaves it only when the API has it. If this
+            // extension is stopped before then (a crash, or iOS ends it for
+            // its memory), the link is not lost.
+            let queued = try? queueCaptureFirst(sharedURL)
             do {
                 let response = try await captureClient.capture(
                     url: sharedURL.absoluteString,
@@ -142,13 +144,22 @@ final class ShareViewController: UIViewController {
                     captureChannel: CaptureChannel.shareExtension.rawValue
                 )
                 persistRotatedToken(from: response.http)
+                if let queued {
+                    try? pendingCaptureStore.remove(id: queued.id, for: queued.userId)
+                }
                 await finish(.saved)
             } catch {
                 guard shouldQueueCapture(after: error) else {
+                    // The API refused the link: the app must not send it again.
+                    if let queued {
+                        try? pendingCaptureStore.remove(id: queued.id, for: queued.userId)
+                    }
                     throw error
                 }
 
-                try queueCapture(sharedURL)
+                if queued == nil {
+                    try queueCapture(sharedURL)
+                }
                 await finish(.savedOffline)
             }
         } catch {
@@ -238,6 +249,19 @@ final class ShareViewController: UIViewController {
         }
 
         throw ShareExtensionError.missingSharedURL
+    }
+
+    /// Queues the link for the signed-in Account and returns where it is, so
+    /// it can be removed when the API confirms the save.
+    private func queueCaptureFirst(_ sharedURL: URL) throws -> (id: UUID, userId: String) {
+        let session = try loadSharedAppSession()
+        let id = try pendingCaptureStore.enqueue(
+            url: sharedURL.absoluteString,
+            for: session.userId,
+            sourceName: Self.sourceName,
+            captureChannel: CaptureChannel.shareExtension.rawValue
+        )
+        return (id, session.userId)
     }
 
     private func queueCapture(_ sharedURL: URL) throws {
