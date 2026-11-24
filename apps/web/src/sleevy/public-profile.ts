@@ -147,6 +147,8 @@ export const fetchReadingActivity = (handle: string) =>
 export type IndexableProfile = {
   readonly handle: string
   readonly lastModifiedAt: string
+  // How many numbered pages of published Saved Items the profile has.
+  readonly savedItemPageCount?: number
 }
 
 export type IndexableProfiles = {

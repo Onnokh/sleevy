@@ -98,21 +98,34 @@ const escapeXml = (value: string) =>
 // for a page whose exact time of day tells a crawler nothing.
 export const sitemapDay = (isoTimestamp: string) => isoTimestamp.slice(0, 10)
 
-// The Public Profile of one Handle, as a sitemap entry. `lastmod` is when the
-// page last changed, which the API reports as the creation time of the newest
-// Saved Item the profile publishes.
-export const profileSitemapUrl = (profile: {
+// Every numbered page of the Public Profile of one Handle, as sitemap entries:
+// `/u/{handle}` for page 1 and `/u/{handle}?page={n}` after it, the same
+// addresses the pages name as their canonical URL. `lastmod` is when the
+// profile last changed, which the API reports as the creation time of the
+// newest Saved Item it publishes; a new save moves every later item one place
+// down, so every page changed at that moment.
+//
+// `savedItemPageCount` is optional so that a web server deployed before the API
+// that reports it still lists page 1.
+export const profileSitemapUrls = (profile: {
   readonly handle: string
   readonly lastModifiedAt: string
-}): SitemapUrl => ({
-  loc: `${SITE_ORIGIN}/u/${profile.handle}`,
-  lastmod: sitemapDay(profile.lastModifiedAt),
-  // A Public Profile changes whenever its Account saves something.
-  changefreq: "weekly",
-  // Below every marketing page: these are pages Sleevy hosts, not pages Sleevy
-  // wrote.
-  priority: "0.5",
-})
+  readonly savedItemPageCount?: number | undefined
+}): ReadonlyArray<SitemapUrl> => {
+  const pages = Math.max(1, Math.trunc(profile.savedItemPageCount ?? 1))
+  const lastmod = sitemapDay(profile.lastModifiedAt)
+  const base = `${SITE_ORIGIN}/u/${profile.handle}`
+
+  return Array.from({ length: pages }, (_, index) => ({
+    loc: index === 0 ? base : `${base}?page=${index + 1}`,
+    lastmod,
+    // A Public Profile changes whenever its Account saves something.
+    changefreq: "weekly",
+    // Below every marketing page: these are pages Sleevy hosts, not pages
+    // Sleevy wrote. A later page holds older saves, so it ranks below page 1.
+    priority: index === 0 ? "0.5" : "0.3",
+  }))
+}
 
 const renderUrl = (url: SitemapUrl) =>
   [

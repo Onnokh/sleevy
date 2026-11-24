@@ -11,6 +11,7 @@
     "dev:raw": "bun --watch src/index.ts",
     "generate:discovery": "bun run scripts/generate-discovery.ts",
     "search:backfill": "bun scripts/backfill-content-passages.ts",
+    "images:backfill": "bun scripts/backfill-image-check.ts",
     "prepare": "effect-language-service patch",
     "start": "bun src/index.ts",
     "test": "bun test",

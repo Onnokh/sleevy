@@ -286,13 +286,16 @@ export namespace PublicSavedItemsQuery {
 // One Public Profile a search engine may be offered. The Handle is the whole
 // address — a Public Profile lives at /u/{handle} — and `lastModifiedAt` is when
 // that page last changed, which is the creation time of the newest Saved Item it
-// publishes. A profile that is public but not yet indexable is absent, so a
+// publishes. `savedItemPageCount` is how many numbered pages of published Saved
+// Items the profile has, so a caller can list `/u/{handle}?page=2` and onward
+// as well. A profile that is public but not yet indexable is absent, so a
 // caller lists what it finds here and decides nothing itself.
 export class IndexableProfileDto extends Schema.Class<IndexableProfileDto>(
   "IndexableProfileDto",
 )({
   handle: Schema.String,
   lastModifiedAt: Schema.DateFromString,
+  savedItemPageCount: Schema.Number,
 }) {}
 export namespace IndexableProfileDto {
   export type Encoded = Schema.Codec.Encoded<typeof IndexableProfileDto>

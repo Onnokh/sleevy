@@ -100,6 +100,8 @@ GET /v1/public/profiles/{handle}/activity
 GET /v1/public/indexable-profiles?page={n}
 ```
 
+`indexable-profiles` lists the Handles a search engine may be offered. Each entry carries the Handle, `lastModifiedAt` (the creation time of the newest published Saved Item), and `savedItemPageCount` (how many numbered `saved-items` pages the profile has), so a sitemap can name every page of every Public Profile.
+
 A Handle nobody holds and a Handle whose Profile Visibility is private answer identically, so these routes never disclose which Handles exist.
 
 The profile response carries the Handle, the join date, the published Saved Item count, and `isIndexable`, which the API computes: true only when the Account is at least 7 days old and publishes at least 5 Saved Items. Callers render a robots directive from that value rather than deciding it themselves.

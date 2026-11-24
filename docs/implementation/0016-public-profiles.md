@@ -37,7 +37,7 @@ Seven tickets, one commit each on `feature/public-profiles`.
 | `GET /v1/public/profiles/{handle}` | none | Handle, join date, public item count, and the indexable boolean. |
 | `GET /v1/public/profiles/{handle}/saved-items` | none | 50 per page, addressed by page number. |
 | `GET /v1/public/profiles/{handle}/activity` | none | 52 weeks of daily counts. |
-| `GET /v1/public/indexable-profiles` | none | Handles a search engine may be offered, walked by the sitemap. |
+| `GET /v1/public/indexable-profiles` | none | Handles a search engine may be offered, each with its newest save date and its page count, walked by the sitemap. |
 
 Account administration is deliberately session-only: the v1 REST API does not expose it through API Keys, so no scope was widened.
 
