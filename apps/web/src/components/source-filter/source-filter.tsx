@@ -1,8 +1,7 @@
 import { createContext, use, useMemo, useState, type DragEvent, type ReactNode } from "react"
 import { Link, useLocation, useNavigate } from "@tanstack/react-router"
-import { ChevronRight, Clock, Globe2, Hash, Library, MoreVertical, Settings, SquarePlus } from "lucide-react"
+import { ChevronRight, Clock, Globe2, Hash, Library, MoreVertical, Settings } from "lucide-react"
 
-import { useKeyboardNav } from "../../contexts/keyboard-nav-context"
 import { useProfile } from "../../sleevy/profile"
 import { useSidebarSheet } from "../app-layout/sidebar-sheet"
 import { useMoveItemsToSource, useSavedItems, type Topic } from "../../sleevy/saved-items"
@@ -14,11 +13,12 @@ import styles from "./source-filter.module.scss"
 const SECTION_STORAGE_PREFIX = "sleevy:sidebar-section:"
 const isServer = typeof window === "undefined"
 
-// Sections start open, so a reader who has never closed one sees the sidebar
-// exactly as before. Only an explicit close is worth remembering.
+// Tags and Sources start closed, as the iOS sidebar's Tags do, so Recents,
+// the Library and the Folders fit on a laptop or iPad screen. A section stays
+// as the reader leaves it.
 function storedSectionOpen(heading: string | undefined): boolean {
-  if (isServer || heading === undefined) return true
-  return localStorage.getItem(SECTION_STORAGE_PREFIX + heading) !== "closed"
+  if (isServer || heading === undefined) return false
+  return localStorage.getItem(SECTION_STORAGE_PREFIX + heading) === "open"
 }
 
 function rememberSectionOpen(heading: string, open: boolean) {
@@ -97,8 +97,8 @@ function SidebarSection({ heading, items, activeValue, onSelect, collapsible = f
   items: SidebarItem[]
   activeValue?: string | null
   onSelect?: (value: string | null) => void
-  // A collapsible section is a disclosure the reader can close. Open is the
-  // state it starts in, so the sidebar reads the same as before on first paint.
+  // A collapsible section is a disclosure the reader opens and closes. It
+  // starts closed, and stays as the reader leaves it.
   collapsible?: boolean
 }) {
   const [open, setOpen] = useState(() => storedSectionOpen(heading))
@@ -210,9 +210,11 @@ function SidebarSection({ heading, items, activeValue, onSelect, collapsible = f
   )
 }
 
-export function SidebarActions() {
+/// The Public Profile and Settings, at the foot of the sidebar over the
+/// account: places a reader visits now and then, not every day. Capture is
+/// the + at the end of every page's title.
+export function SidebarAccountLinks() {
   const { profile } = useProfile()
-  const { openCaptureDialog } = useKeyboardNav()
   const profileAction = profile?.visibility === "public" && profile.handle
     ? {
         key: "public-profile",
@@ -231,12 +233,6 @@ export function SidebarActions() {
   return (
     <SidebarSection
       items={[
-        {
-          key: "capture",
-          label: "Capture item",
-          icon: <SquarePlus size={14} />,
-          onClick: () => openCaptureDialog(),
-        },
         profileAction,
         {
           key: "settings",
@@ -254,7 +250,9 @@ export function LibraryNav() {
   const moveMutation = useMoveSavedItemToFolder()
   const items = data?.savedItems ?? []
   const unreadCount = items.filter((i) => !i.isRead).length
-  const totalCount = items.filter((item) => item.folder === null).length
+  // The whole Library, Folders included, as the iOS sidebar and the Library
+  // page's subtitle count it.
+  const totalCount = items.length
 
   return (
     <SidebarSection
