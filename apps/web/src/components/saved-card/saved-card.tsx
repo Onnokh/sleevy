@@ -190,8 +190,8 @@ export function SavedCard({ item, folder, isSelected, pendingDelete, onDelete, o
           className={styles.favicon}
           src={faviconUrl(item.host)}
           alt=""
-          width={26}
-          height={26}
+          width={28}
+          height={28}
           loading="lazy"
         />
 

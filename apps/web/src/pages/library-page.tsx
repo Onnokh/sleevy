@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react"
 import { Link } from "@tanstack/react-router"
-import { ArrowUpDown, Folder as FolderIcon, Library, X } from "lucide-react"
+import { ArrowUpDown, ChevronRight, Folder as FolderIcon, Library, X } from "lucide-react"
 
 import { type SavedItem, type SavedItemSort, useDeleteItem, useMarkAsRead, useSavedItems, useSetReadState } from "../sleevy/saved-items"
 import { SavedCard } from "../components/saved-card/saved-card"
@@ -16,6 +16,7 @@ import {
 } from "../components/source-filter/source-filter-utils"
 import { useKeyboardNav } from "../contexts/keyboard-nav-context"
 import { useMediaQuery } from "../hooks/use-media-query"
+import { useTitleBearing } from "../hooks/use-title-bearing"
 import { useOpenSavedItem } from "../hooks/use-open-saved-item"
 import { useSelectedItemActions } from "../hooks/use-selected-item-actions"
 import { folderErrorMessage, type Folder, useFolders, useRenameFolder, useSetFolderPublished } from "../sleevy/folders"
@@ -92,6 +93,7 @@ export function LibraryPage({ folderId }: { readonly folderId?: string }) {
   }, [items.length, selectedIndex, setSelectedIndex])
 
   const pageTitle = folderId ? (folder?.name ?? "Folder") : "Library"
+  useTitleBearing(folderId ? titleEl : null, pageTitle)
   const savesText = (count: number) => `${count} ${count === 1 ? "save" : "saves"}`
   // As the iOS app says it. The Library home counts the whole Library,
   // Folders included, as its sidebar row does. A Folder counts its own saves,
@@ -143,7 +145,19 @@ export function LibraryPage({ folderId }: { readonly folderId?: string }) {
       <div className="page-column">
         <div className="page-header">
           <div className="page-heading">
-            <h1 className="page-title" ref={setTitleEl}>{pageTitle}</h1>
+            {/* A Folder is a level down in the Library: the Library, the way back,
+                comes first on its title line. */}
+            {folderId ? (
+              <div className="page-title-row">
+                <Link to="/library" className="page-title-home" aria-label="Library" title="Library">
+                  <Library size={24} strokeWidth={2.25} aria-hidden="true" />
+                </Link>
+                <ChevronRight className="page-title-separator" size={16} strokeWidth={2.25} absoluteStrokeWidth aria-hidden="true" />
+                <h1 className="page-title" ref={setTitleEl}>{pageTitle}</h1>
+              </div>
+            ) : (
+              <h1 className="page-title" ref={setTitleEl}>{pageTitle}</h1>
+            )}
             {savedItemsQuery.data ? <p className="page-subtitle">{subtitle}</p> : null}
           </div>
           <PageActions>

@@ -182,7 +182,7 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 1rem;
-  margin: 1.5rem 0 1.75rem;
+  margin: 1rem 0 1.25rem;
 }
 
 /* A list page's column, centred in the page: the measure of the iOS list on
@@ -193,6 +193,67 @@
 }
 
 .page-heading { min-width: 0; }
+
+/* A Folder's title line: the Library icon, the way back, then the Folder's
+   name. Spaced on the ink, on the 4 px grid: the icon's ink starts on the
+   column's edge, and 12 px of space lies on each side of the chevron.
+
+   The ink, from the icons' geometry:
+   - Library icon, 24 px in a 32 px button: ink from 2.875 to 21.125 px.
+   - Chevron, 16 px, a 2.25 px line: ink from 4.875 to 11.125 px.
+   So the icon's ink ends at 18.25 px from the edge, the chevron's ink runs
+   from 30.25 to 36.5 px, and the title's ink starts at 48.5 px. */
+.page-title-row {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  /* As tall as a title's line, so the subtitle stays where it is on the
+     other pages. */
+  min-height: calc(2.125rem * 1.15);
+}
+
+.page-title-home {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 2rem;
+  height: 2rem;
+  /* 4 px of button padding and 2.875 px of icon bearing: the ink starts on
+     the edge, and the button ends at 25.125 px. */
+  margin-left: -6.875px;
+  border-radius: 0.5rem;
+  color: var(--muted);
+}
+
+.page-title-home:hover {
+  background: color-mix(in srgb, var(--text) 8%, transparent);
+  color: var(--text);
+}
+
+.page-title-home:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.page-title-separator {
+  flex-shrink: 0;
+  /* From 25.125 px to 25.375 px: the chevron's ink then starts at 30.25 px,
+     12 px after the icon's. */
+  margin-left: 0.25px;
+  color: var(--faint);
+}
+
+/* Centre the icons on the capitals, not on a line box that also holds room
+   for descenders. */
+.page-title-row .page-title {
+  display: block;
+  min-width: 0;
+  /* From the chevron's box end at 41.375 px to 48.5 px, less the first
+     letter's own bearing: its ink starts 12 px after the chevron's. */
+  margin-left: calc(7.125px - var(--title-bearing, 0px));
+  text-box: trim-both cap alphabetic;
+}
 
 .page-title {
   display: flex;
