@@ -1,5 +1,6 @@
 import { StructuredData } from "../components/marketing/structured-data"
 import styles from "./support-page.module.scss"
+import { EmailLink } from "../components/marketing/email-link"
 
 const contactStructuredData = {
   "@context": "https://schema.org",
@@ -35,7 +36,7 @@ export function ContactPage() {
       <section>
         <h2>Help with the app</h2>
         <p>
-          Email <a href="mailto:support@sleevy.app">support@sleevy.app</a> for anything to do
+          Email <EmailLink address="support@sleevy.app" /> for anything to do
           with using Sleevy: signing in, saving links, sync between devices, folders, or
           deleting your account.
         </p>
@@ -50,7 +51,7 @@ export function ContactPage() {
       <section>
         <h2>Privacy and data requests</h2>
         <p>
-          Email <a href="mailto:privacy@sleevy.app">privacy@sleevy.app</a> to ask what is
+          Email <EmailLink address="privacy@sleevy.app" /> to ask what is
           stored about you, to request a copy, or to have your data deleted. You can also
           delete your account and its data yourself from settings at any time. The{" "}
           <a href="/privacy">privacy policy</a> explains what is kept and why.
@@ -61,7 +62,7 @@ export function ContactPage() {
         <h2>Security reports</h2>
         <p>
           If you have found a vulnerability, email{" "}
-          <a href="mailto:support@sleevy.app">support@sleevy.app</a> with{" "}
+          <EmailLink address="support@sleevy.app" /> with{" "}
           <strong>SECURITY</strong> in the subject line and enough detail to reproduce it,
           and please give it a chance to be fixed before publishing. Reports are welcome and
           taken seriously.
@@ -76,7 +77,7 @@ export function ContactPage() {
           <a href="/docs/mcp">MCP guide</a>. If you are wiring up an agent, the{" "}
           <a href="/auth.md">authentication walkthrough</a> covers getting and revoking a
           credential. Questions the docs do not answer go to{" "}
-          <a href="mailto:support@sleevy.app">support@sleevy.app</a>.
+          <EmailLink address="support@sleevy.app" />.
         </p>
       </section>
     </article>

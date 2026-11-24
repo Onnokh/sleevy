@@ -1,10 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router"
 
 import {
+  docsSitemapUrls,
   profileSitemapUrl,
   renderSitemap,
   staticSitemapUrls,
 } from "../lib/sitemap"
+import { source } from "../lib/source"
 import { fetchIndexableProfiles } from "../sleevy/public-profile"
 
 // The sitemap robots.txt names. It replaces the former static
@@ -16,13 +18,22 @@ import { fetchIndexableProfiles } from "../sleevy/public-profile"
 // A sitemap that fails is worse than one missing the Public Profiles: a crawler
 // that gets a 500 learns nothing about the site at all. So the API is allowed to
 // be unreachable, and the fixed URLs are served on their own when it is.
+// Every documentation page the docs source holds, including the API Reference
+// page generated for each OpenAPI operation. The fixed list only names the
+// hand-written pages, so without this the operation pages were linked but never
+// listed.
+const fixedUrls = () => [
+  ...staticSitemapUrls,
+  ...docsSitemapUrls(source.getPages().map((page) => page.url)),
+]
+
 const sitemapUrls = async () => {
   try {
     const profiles = await fetchIndexableProfiles()
-    return [...staticSitemapUrls, ...profiles.map(profileSitemapUrl)]
+    return [...fixedUrls(), ...profiles.map(profileSitemapUrl)]
   } catch (error) {
     console.error("sitemap: listing indexable Public Profiles failed", error)
-    return staticSitemapUrls
+    return fixedUrls()
   }
 }
 
