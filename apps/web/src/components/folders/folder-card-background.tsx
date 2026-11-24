@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react"
 
 import { useTheme } from "../../contexts/theme-context"
 import { onFolderCardShaderRestored, renderFolderCard } from "./folder-card-shader"
-import styles from "./folder-card-grid.module.scss"
+import styles from "./folder-card-background.module.scss"
 
 type FolderCardBackgroundProps = {
   readonly folderId: string
