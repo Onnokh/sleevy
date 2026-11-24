@@ -9,7 +9,9 @@ final class AuthStore {
         didSet {
             if let session {
                 prepareReadingList(for: session)
-                scheduleWidgetRefresh()
+                // In `init` the app has not yet registered the refresh task,
+                // and scheduling it then stops the app.
+                if !isAdoptingStartingSession { scheduleWidgetRefresh() }
             } else {
                 readingListStore?.stop()
                 readingListStore = nil
@@ -18,12 +20,16 @@ final class AuthStore {
             }
         }
     }
+    @ObservationIgnored private var isAdoptingStartingSession = false
     private(set) var readingListStore: ReadingListStore?
     /// The Local Library while this device uses Sleevy with no Account.
     private(set) var localLibrary: LocalReadingListAdapter?
     private var readingListAccountID: String?
     private(set) var googleUserProfile: GoogleUserProfile?
     private(set) var isRestoringSession = false
+    /// False until the first `restoreSession` ends. Until then, no session
+    /// does not yet mean signed out, so the signed-out landing must wait.
+    private(set) var hasRestoredSession = false
     private(set) var isSigningIn = false
     var errorMessage: String?
 
@@ -48,6 +54,7 @@ final class AuthStore {
         self.googleSignInClient = makeGoogleSignInClient()
         self.appleSignInClient = makeAppleSignInClient()
         self.api = Self.makeHTTPClient(encoder: encoder, decoder: decoder)
+        adoptStartingSession()
     }
 
     init(
@@ -116,8 +123,25 @@ final class AuthStore {
         await readingListStore?.refreshInBackground()
     }
 
+    /// The first frame of a cold start. A cached Account with its token, or a
+    /// Local Library, shows the Library at once; `restoreSession` then checks
+    /// the Account with the server. Without this, the frames before that
+    /// check showed the signed-out landing.
+    private func adoptStartingSession() {
+        guard !DemoMode.isEnabled else { return }
+        isAdoptingStartingSession = true
+        defer { isAdoptingStartingSession = false }
+        let hasToken = !tokenStore.current.isEmpty
+        if hasToken, let cachedSession = readCachedSession() {
+            session = cachedSession
+        } else if !hasToken && LocalLibraryFlag.isOn {
+            session = .local
+        }
+    }
+
     func restoreSession() async {
         guard !isRestoringSession else { return }
+        defer { hasRestoredSession = true }
 
         // Marketing-capture mode signs in as the demo Account without a token
         // exchange, so screenshots never show a real reader.

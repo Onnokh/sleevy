@@ -82,8 +82,12 @@ struct LibraryView: View {
     }
 
     /// A new Account: loaded, and nothing saved, no Folders, nothing on its way.
+    /// Not before the first answer, from the cache or the API: at a cold
+    /// start the store is empty for a moment, and the first-run rows then
+    /// showed, only to jump away when the saves arrived.
     private func isFirstRun(_ complete: LibraryProjection) -> Bool {
-        !store.isLoading
+        store.snapshot(for: .completeLibrary).coverage.hasLoaded
+            && !store.isLoading
             && complete.destinationCount == 0
             && store.folders.isEmpty
             && store.pendingSavedItems.isEmpty
