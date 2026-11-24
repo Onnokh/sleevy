@@ -47,6 +47,20 @@ struct PendingCaptureQueueTests {
         #expect(try queue.load().isEmpty)
     }
 
+    /// The Share Extension queues a link before it sends it, and removes it
+    /// by the returned id once the API has it.
+    @Test func enqueueReturnsTheIdThatRemovesExactlyThatCapture() throws {
+        let store = makeStore(makeContainer())
+        try store.enqueue(url: "https://example.com/earlier", for: "user-1")
+        let id = try store.enqueue(url: "https://example.com/shared", for: "user-1")
+
+        #expect(try store.load(for: "user-1").first?.id == id)
+
+        try store.remove(id: id, for: "user-1")
+
+        #expect(try store.load(for: "user-1").map(\.url) == ["https://example.com/earlier"])
+    }
+
     @Test func removeProcessedDropsOnlyTheGivenIdsAndKeepsTheRest() throws {
         let queue = makeQueue()
         try queue.enqueue(url: "https://example.com/a", sourceName: nil, captureChannel: nil)

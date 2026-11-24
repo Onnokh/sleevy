@@ -85,12 +85,16 @@ nonisolated struct SleevyPendingCaptureStore: Sendable {
     /// Overrides the app group container; used by tests to point at a temp directory.
     var containerURLOverride: URL? = nil
 
-    func enqueue(url: String, for userId: String, sourceName: String? = nil, captureChannel: String? = nil) throws {
+    /// Returns the id of the queued capture, so a caller that sends it
+    /// itself can remove it again once the API has it.
+    @discardableResult
+    func enqueue(url: String, for userId: String, sourceName: String? = nil, captureChannel: String? = nil) throws -> UUID {
+        let id = UUID()
         try withExclusiveAccess(for: userId) { queueURL in
             var pendingCaptures = try load(from: queueURL)
             pendingCaptures.insert(
                 SleevyPendingCapture(
-                    id: UUID(),
+                    id: id,
                     url: url,
                     queuedAt: Date(),
                     sourceName: sourceName,
@@ -100,6 +104,7 @@ nonisolated struct SleevyPendingCaptureStore: Sendable {
             )
             try persist(pendingCaptures, to: queueURL)
         }
+        return id
     }
 
     func remove(id: UUID, for userId: String) throws {

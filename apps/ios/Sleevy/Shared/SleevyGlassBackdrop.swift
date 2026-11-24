@@ -10,6 +10,9 @@ import SwiftUI
 /// grid over it is drawn once, not on every frame. Reduce Motion and Low
 /// Power Mode get the glass held still.
 struct SleevyGlassBackdrop: View {
+    /// The glass at one moment, drawn in place of the live glass where the
+    /// GPU may not keep up: no shader runs and nothing is drawn again.
+    var still: Image? = nil
     /// Where the glass is lit, and how strongly, at a moment; nil, or a nil
     /// answer, lets the light roam.
     var light: ((Date) -> SleevyGlassLight?)?
@@ -23,31 +26,35 @@ struct SleevyGlassBackdrop: View {
     @State private var lowPower = ProcessInfo.processInfo.isLowPowerModeEnabled
 
     var body: some View {
-        let still = reduceMotion || lowPower
+        let held = reduceMotion || lowPower
         ZStack {
             Self.ground
-            GeometryReader { proxy in
-                let small = CGSize(
-                    width: ceil(proxy.size.width / Self.pointsPerPixel),
-                    height: ceil(proxy.size.height / Self.pointsPerPixel)
-                )
-                TimelineView(.animation(minimumInterval: 1 / 30, paused: still)) { context in
-                    let seconds = still ? 0 : context.date.timeIntervalSince(start)
-                    let lit = light?(context.date)
-                    Rectangle()
-                        .colorEffect(ShaderLibrary.sleevyGlass(
-                            .float2(small),
-                            .float(seconds),
-                            .float2(lit.map { CGPoint(x: $0.point.x, y: 1 - $0.point.y) } ?? Self.roam(seconds)),
-                            .float(lit?.strength ?? 0.25)
-                        ))
-                        .frame(width: small.width, height: small.height)
-                        // Drawn off screen at one pixel per two points, then
-                        // scaled up: the field is soft, the GPU does a
-                        // thirty-sixth of the work.
-                        .drawingGroup(opaque: true)
-                        .environment(\.displayScale, 1)
-                        .scaleEffect(Self.pointsPerPixel, anchor: .topLeading)
+            if let still {
+                still.resizable()
+            } else {
+                GeometryReader { proxy in
+                    let small = CGSize(
+                        width: ceil(proxy.size.width / Self.pointsPerPixel),
+                        height: ceil(proxy.size.height / Self.pointsPerPixel)
+                    )
+                    TimelineView(.animation(minimumInterval: 1 / 30, paused: held)) { context in
+                        let seconds = held ? 0 : context.date.timeIntervalSince(start)
+                        let lit = light?(context.date)
+                        Rectangle()
+                            .colorEffect(ShaderLibrary.sleevyGlass(
+                                .float2(small),
+                                .float(seconds),
+                                .float2(lit.map { CGPoint(x: $0.point.x, y: 1 - $0.point.y) } ?? Self.roam(seconds)),
+                                .float(lit?.strength ?? 0.25)
+                            ))
+                            .frame(width: small.width, height: small.height)
+                            // Drawn off screen at one pixel per two points, then
+                            // scaled up: the field is soft, the GPU does a
+                            // thirty-sixth of the work.
+                            .drawingGroup(opaque: true)
+                            .environment(\.displayScale, 1)
+                            .scaleEffect(Self.pointsPerPixel, anchor: .topLeading)
+                    }
                 }
             }
             ScreenDoor()
