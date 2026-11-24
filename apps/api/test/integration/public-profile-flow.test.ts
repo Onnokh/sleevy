@@ -645,6 +645,8 @@ describe("public profile integration flow", () => {
 
     const [profile] = page.profiles
     expect(profile?.handle).toBe(handle)
+    // The five published Saved Items, and neither withheld one.
+    expect(profile?.publicSavedItemCount).toBe(5)
     const changedMinutesAgo = (Date.now() - profile!.lastModifiedAt.getTime()) / 60_000
     // The 61-minute-old published item, not the 5-minute-old withheld one and
     // not the Duplicate Save a minute ago.

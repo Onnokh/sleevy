@@ -74,6 +74,9 @@ export type PublicSavedItemsPage = {
 export type IndexableProfile = {
   readonly handle: string
   readonly lastModifiedAt: Date
+  // How many Saved Items the profile publishes, so the caller can name every
+  // numbered page of it.
+  readonly publicSavedItemCount: number
 }
 
 export type IndexableProfilesPage = {
@@ -207,7 +210,11 @@ export class PublicProfileRepository extends Context.Service<PublicProfileReposi
             return {
               profiles: indexable
                 .slice(start, start + pageSize)
-                .map(({ handle, lastModifiedAt }) => ({ handle, lastModifiedAt })),
+                .map(({ handle, lastModifiedAt, publicSavedItemCount }) => ({
+                  handle,
+                  lastModifiedAt,
+                  publicSavedItemCount,
+                })),
               totalCount: indexable.length,
             } satisfies IndexableProfilesPage
           },

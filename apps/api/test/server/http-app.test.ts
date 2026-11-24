@@ -492,6 +492,7 @@ const routeLayer = (input: {
             .map((profile) => ({
               handle: profile.handle,
               lastModifiedAt: profile.lastModifiedAt ?? now,
+              publicSavedItemCount: profile.publicSavedItemCount,
             }))
           const start = (page.page - 1) * page.pageSize
           return {
@@ -2725,6 +2726,14 @@ describe("HttpApp", () => {
               publicSavedItemCount: 5,
               lastModifiedAt,
             },
+            // Enough published Saved Items for three numbered pages.
+            {
+              handle: "three-pages",
+              visibility: "public",
+              joinedAt: new Date(Date.now() - daysInMs(30)),
+              publicSavedItemCount: 101,
+              lastModifiedAt,
+            },
             {
               handle: "too-few-items",
               visibility: "public",
@@ -2754,10 +2763,18 @@ describe("HttpApp", () => {
       // A profile that is public but not yet indexable is absent, with no
       // placeholder and no count standing in for it.
       expect(yield* json(response)).toEqual({
-        profiles: [{
-          handle: "old-and-full",
-          lastModifiedAt: lastModifiedAt.toISOString(),
-        }],
+        profiles: [
+          {
+            handle: "old-and-full",
+            lastModifiedAt: lastModifiedAt.toISOString(),
+            savedItemPageCount: 1,
+          },
+          {
+            handle: "three-pages",
+            lastModifiedAt: lastModifiedAt.toISOString(),
+            savedItemPageCount: 3,
+          },
+        ],
         page: 1,
         pageSize: INDEXABLE_PROFILES_PAGE_SIZE,
         totalPages: 1,

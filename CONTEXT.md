@@ -531,6 +531,10 @@ _Avoid_: Full URL, breadcrumb
 An image URL discovered during enrichment and loaded directly by clients.
 _Avoid_: Proxied image, cached asset
 
+**Image Check**:
+One request to an **External Image URL** before it is stored, which decides what is kept: the address the image resolved to when it answers with an image, nothing when it answers that the image is gone or is not an image, and the address unchanged when the answer says nothing about the image (a rate limit, a server error, or no answer).
+_Avoid_: Image validation, image proxy, image cache
+
 **Last Saved At**:
 The timestamp of the most recent capture or Duplicate Save for a Saved Item.
 _Avoid_: Updated at, created at
@@ -713,6 +717,7 @@ _Avoid_: Deep link, route argument, UI test step
 - **Saved Metadata** may include a **Preview Summary**.
 - Saved Item list rows use **Stable Row Height**, showing **Preview Summary** when available without changing row rhythm.
 - **Saved Metadata** may include an **External Image URL** loaded directly by iOS and web clients.
+- Every **External Image URL** in **Link Metadata** — the image, the **Link Author** avatar, and the favicon variants — passes an **Image Check** during **Enrichment**, so a client is not given an address already known to be broken or to redirect. The check keeps no copy of the image.
 - **Extracted Page Content** is not persisted; it is derived per **Enrichment Job** from the **Readable Content** when there is any, and from the fetched page directly when there is not.
 - **Readable Content** is produced by a best-effort **Enrichment Job** stage that skips rather than fails, so a **Link** that yields no prose stays exactly as usable as one saved before the Reader View existed.
 - A **Link** whose **Type** is not an article normally yields no **Readable Content**, because the extraction check rejects it rather than a rule about **Type** excluding it.
@@ -881,9 +886,10 @@ _Avoid_: Deep link, route argument, UI test step
 - A public Saved Item page is addressed by page number, and page 1 answers even when an Account publishes nothing, so every page of a **Public Profile** is a URL a crawler can reach.
 - A public Saved Item representation carries the **Original URL**, host, title, favicon variants, image, **Type**, **Effective Tags**, **Preview Summary**, and the Saved Item creation time, and nothing else.
 - **Search Indexability** is true only when the **Account** is at least 7 days old and has at least 5 public **Saved Items**.
-- `GET /v1/public/indexable-profiles` returns one page of the **Handles** whose **Public Profile** has **Search Indexability**, 1000 to a page, each with the creation time of the newest **Saved Item** that Public Profile shows.
+- `GET /v1/public/indexable-profiles` returns one page of the **Handles** whose **Public Profile** has **Search Indexability**, 1000 to a page, each with the creation time of the newest **Saved Item** that Public Profile shows and the number of public Saved Item pages it has.
 - A **Public Profile** without **Search Indexability** is absent from `GET /v1/public/indexable-profiles`, and the route answers with an empty page rather than a not-found when no Handle qualifies.
 - The **Web Companion** serves `/sitemap.xml` from that listing together with its own fixed marketing and documentation URLs, and serves the fixed URLs alone when the listing cannot be read.
+- The sitemap names every public Saved Item page of a listed **Public Profile**: `/u/{handle}` for page 1 and `/u/{handle}?page={n}` for each page after it.
 - Every **Public Profile Endpoint** is subject to the **Public Profile Rate Limit** rather than the **API Key Rate Limit**.
 - A request over the **Public Profile Rate Limit** receives a **Rate Limit Response**.
 - A successful **Public Profile Endpoint** response may be cached for five minutes; a not-found response is not cached.

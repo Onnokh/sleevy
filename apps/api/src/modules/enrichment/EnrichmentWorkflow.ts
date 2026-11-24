@@ -19,6 +19,7 @@ import {
 } from "../content/ReadableContentExtractor.js"
 import { SavedItemIntake } from "../saved-items/SavedItemIntake.js"
 import { PageDocument, PageFetcher } from "../fetch/PageFetcher.js"
+import { ImageCheck } from "../metadata/ImageCheck.js"
 import { Metadata, MetadataFetcher } from "../metadata/MetadataFetcher.js"
 import { OEmbedFetcher } from "../metadata/OEmbedFetcher.js"
 
@@ -51,6 +52,7 @@ export class EnrichmentWorkflow extends Context.Service<EnrichmentWorkflow>()(
       const intake = yield* SavedItemIntake
       const contentExtractor = yield* ReadableContentExtractor
       const contentRepository = yield* LinkContentRepository
+      const imageCheck = yield* ImageCheck
 
       // Extraction is local. Where a page needs a browser to yield its markup
       // at all, PageFetcher's Cloudflare tier has already produced it, so this
@@ -153,8 +155,16 @@ export class EnrichmentWorkflow extends Context.Service<EnrichmentWorkflow>()(
             )
 
             if (Option.isSome(result)) {
-              metadata = Option.some(result.value)
-              linkMetadata = applyMetadata(linkMetadata, result.value)
+              // Every image address is checked before it is stored, so a
+              // Public Profile is not given an image that is already broken or
+              // that redirects. The check never fails: an address it cannot
+              // judge is kept as it is.
+              const checked = new Metadata({
+                ...result.value,
+                ...(yield* imageCheck.checkImages(result.value)),
+              })
+              metadata = Option.some(checked)
+              linkMetadata = applyMetadata(linkMetadata, checked)
             }
           }
 
@@ -356,6 +366,7 @@ export class EnrichmentWorkflow extends Context.Service<EnrichmentWorkflow>()(
 
   static readonly defaultLayer = EnrichmentWorkflow.layer.pipe(
     Layer.provide(MetadataFetcher.layer),
+    Layer.provide(ImageCheck.defaultLayer),
     Layer.provide(OEmbedFetcher.layer),
     Layer.provide(AiEnricher.defaultLayer),
     Layer.provide(JevClassifier.defaultLayer),

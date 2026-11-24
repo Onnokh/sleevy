@@ -1,3 +1,5 @@
+import { useEffect, useRef, useState, type ReactNode } from "react"
+
 import type { PublicSavedItem } from "../../sleevy/public-profile"
 import { RemoveFromProfileButton } from "./remove-from-profile-button"
 import { SaveToLibraryButton } from "./save-to-library-button"
@@ -27,6 +29,44 @@ const bareHost = (host: string) => host.replace(/^www\./, "")
 // and crawlers report the page for it. The https address is asked for instead.
 const httpsImage = (url: string) => url.replace(/^http:\/\//i, "https://")
 
+// An External Image URL that fails to load is drawn as its fallback, never as
+// a broken image. The API drops an address its Image Check found broken, but an
+// image can still fail later: a host that rate limits, or one that removes the
+// image after the check. The server render cannot know, so the browser decides.
+//
+// An image can fail before React attaches its error handler, so the state is
+// also read once on mount: a finished image with no width did not load.
+const ExternalImage = ({
+  src,
+  className,
+  fallback = null,
+}: {
+  readonly src: string
+  readonly className: string
+  readonly fallback?: ReactNode
+}) => {
+  const [failed, setFailed] = useState(false)
+  const ref = useRef<HTMLImageElement>(null)
+
+  useEffect(() => {
+    const image = ref.current
+    if (image && image.complete && image.naturalWidth === 0) setFailed(true)
+  }, [])
+
+  if (failed) return fallback
+
+  return (
+    <img
+      ref={ref}
+      className={className}
+      src={src}
+      alt=""
+      loading="lazy"
+      onError={() => setFailed(true)}
+    />
+  )
+}
+
 const faviconFor = (item: PublicSavedItem) => {
   const favicon = item.faviconUrl ?? item.faviconLightUrl ?? item.faviconDarkUrl ?? null
   return favicon ? httpsImage(favicon) : null
@@ -39,10 +79,11 @@ const initialOf = (name: string) => bareHost(name).charAt(0).toUpperCase()
 
 const Favicon = ({ item }: { readonly item: PublicSavedItem }) => {
   const favicon = faviconFor(item)
+  const fallback = <span className={styles.faviconFallback} aria-hidden="true">{initialOf(item.host)}</span>
 
   return favicon
-    ? <img className={styles.favicon} src={favicon} alt="" loading="lazy" />
-    : <span className={styles.faviconFallback} aria-hidden="true">{initialOf(item.host)}</span>
+    ? <ExternalImage key={favicon} className={styles.favicon} src={favicon} fallback={fallback} />
+    : fallback
 }
 
 // The X mark, inlined because x.com publishes no favicon this page can reach and
@@ -114,14 +155,22 @@ const PostCard = ({
   const authorHandle = item.authorHandle ?? null
   const name = item.authorName ?? authorHandle ?? bareHost(item.host)
   const label = `Post by ${name}`
+  const avatarFallback = <span className={styles.avatarFallback} aria-hidden="true">{initialOf(name)}</span>
 
   return (
     <article className={styles.card}>
       <div className={styles.postBody}>
         <header className={styles.author}>
           {item.authorAvatarUrl
-            ? <img className={styles.avatar} src={httpsImage(item.authorAvatarUrl)} alt="" loading="lazy" />
-            : <span className={styles.avatarFallback} aria-hidden="true">{initialOf(name)}</span>}
+            ? (
+              <ExternalImage
+                key={item.authorAvatarUrl}
+                className={styles.avatar}
+                src={httpsImage(item.authorAvatarUrl)}
+                fallback={avatarFallback}
+              />
+            )
+            : avatarFallback}
           <div className={styles.authorNames}>
             <span className={styles.authorName}>{name}</span>
             {authorHandle ? <span className={styles.authorHandle}>{authorHandle}</span> : null}
@@ -142,7 +191,7 @@ const PostCard = ({
       {/* The same thumbnail a Link Card uses, so a post keeps the rhythm of the
           list rather than standing three cards tall. */}
       {item.imageUrl
-        ? <img className={styles.thumbnail} src={httpsImage(item.imageUrl)} alt="" loading="lazy" />
+        ? <ExternalImage key={item.imageUrl} className={styles.thumbnail} src={httpsImage(item.imageUrl)} />
         : null}
 
       <Cover item={item} label={label} />
@@ -181,7 +230,7 @@ const LinkCard = ({
       </div>
 
       {item.imageUrl
-        ? <img className={styles.thumbnail} src={httpsImage(item.imageUrl)} alt="" loading="lazy" />
+        ? <ExternalImage key={item.imageUrl} className={styles.thumbnail} src={httpsImage(item.imageUrl)} />
         : null}
 
       <Cover item={item} label={title} />

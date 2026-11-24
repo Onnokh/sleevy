@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router"
 
 import {
   docsSitemapUrls,
-  profileSitemapUrl,
+  profileSitemapUrls,
   renderSitemap,
   staticSitemapUrls,
 } from "../lib/sitemap"
@@ -30,7 +30,7 @@ const fixedUrls = () => [
 const sitemapUrls = async () => {
   try {
     const profiles = await fetchIndexableProfiles()
-    return [...fixedUrls(), ...profiles.map(profileSitemapUrl)]
+    return [...fixedUrls(), ...profiles.flatMap(profileSitemapUrls)]
   } catch (error) {
     console.error("sitemap: listing indexable Public Profiles failed", error)
     return fixedUrls()

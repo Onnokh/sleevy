@@ -31,6 +31,7 @@ import {
 import { EnrichmentWorkflow } from "../../src/modules/enrichment/EnrichmentWorkflow.js"
 import { PageDocument } from "../../src/modules/fetch/PageDocument.js"
 import { PageFetcher } from "../../src/modules/fetch/PageFetcher.js"
+import { applyImageCheck, ImageCheck, type LinkImages } from "../../src/modules/metadata/ImageCheck.js"
 import { MetadataFetcher } from "../../src/modules/metadata/MetadataFetcher.js"
 import { OEmbedFetcher } from "../../src/modules/metadata/OEmbedFetcher.js"
 import { SavedItemIntake } from "../../src/modules/saved-items/SavedItemIntake.js"
@@ -132,9 +133,23 @@ const workflowLayer = (input: {
   readonly onContentStored?: ((article: ExtractedArticle) => void) | undefined
   readonly contentStoreFails?: boolean | undefined
   readonly onFinish?: ((result: FinishedEnrichment) => void) | undefined
+  readonly checkImages?: ((images: LinkImages) => LinkImages) | undefined
 }) =>
   EnrichmentWorkflow.layer.pipe(
     Layer.provideMerge(MetadataFetcher.layer),
+    // No network in a unit test: the Image Check keeps every address unless a
+    // test states what it answers.
+    Layer.provideMerge(
+      Layer.succeed(
+        ImageCheck,
+        ImageCheck.of({
+          check: () => Effect.succeed({ _tag: "unknown" }),
+          // With no answers, applyImageCheck keeps every address.
+          checkImages: (images) =>
+            Effect.succeed(applyImageCheck(input.checkImages?.(images) ?? images, new Map())),
+        }),
+      ),
+    ),
     Layer.provideMerge(
       Layer.succeed(
         SavedItemIntake,
@@ -273,6 +288,42 @@ describe("EnrichmentWorkflow", () => {
       )
     },
   )
+
+  it.effect("stores the image addresses the Image Check resolved", () => {
+    let checked: LinkImages | undefined
+    let finished: FinishedEnrichment | undefined
+
+    return Effect.gen(function* () {
+      const workflow = yield* EnrichmentWorkflow
+      yield* workflow.enrich(linkId)
+
+      // The check saw the addresses the page named.
+      expect(checked?.imageUrl).toBe("http://example.com/og.png")
+      expect(checked?.faviconUrl).toBe("https://example.com/gone.ico")
+      // And the stored Link Metadata holds what it answered: the image at the
+      // address its redirect ended at, and no favicon instead of a broken one.
+      expect(finished?.metadata.imageUrl).toBe("https://cdn.example.com/og.png")
+      expect(finished?.metadata.faviconUrl).toBeUndefined()
+      expect(finished?.metadata.title).toBe("Effect API Testing")
+    }).pipe(
+      Effect.provide(workflowLayer({
+        readableHtml: [
+          "<!doctype html>",
+          "<title>Effect API Testing - Example</title>",
+          '<meta property="og:image" content="http://example.com/og.png">',
+          '<link rel="icon" href="https://example.com/gone.ico">',
+          "<body><p>Short.</p></body>",
+        ].join(""),
+        checkImages: (images) => {
+          checked = images
+          return { ...images, imageUrl: "https://cdn.example.com/og.png", faviconUrl: undefined }
+        },
+        onFinish: (result) => {
+          finished = result
+        },
+      })),
+    )
+  })
 
   it.effect("hands the extracted page content to one AI call", () => {
     const aiInputs: AiEnrichmentInput[] = []

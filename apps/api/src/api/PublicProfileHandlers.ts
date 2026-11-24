@@ -98,7 +98,15 @@ export const publicProfilesGroupLive = HttpApiBuilder.group(
           .pipe(Effect.orDie)
 
         return new IndexableProfilesResponse({
-          profiles: profiles.map((profile) => new IndexableProfileDto(profile)),
+          profiles: profiles.map(({ handle, lastModifiedAt, publicSavedItemCount }) =>
+            new IndexableProfileDto({
+              handle,
+              lastModifiedAt,
+              // The same page size and the same rule as the saved-items route,
+              // so the sitemap names exactly the pages that route serves.
+              savedItemPageCount: pageCount(publicSavedItemCount),
+            })
+          ),
           page,
           pageSize: INDEXABLE_PROFILES_PAGE_SIZE,
           totalPages: pageCount(totalCount, INDEXABLE_PROFILES_PAGE_SIZE),
